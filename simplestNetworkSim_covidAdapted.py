@@ -257,7 +257,7 @@ def generateMeanPlot(listOfPlots):
 #  The values are number of people in that node in that state
 #  diseaseProgressionProbs should have outward probabilities per timestep (rates)
 #  So we will need to do some accounting
-#  We probably should ad the internal infection process here as well? 
+#  We probably should add the internal infection process here as well? 
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
     dictOfNewStates = {}
     for (age, state) in currentInternalStateDict:
@@ -281,26 +281,27 @@ def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, disease
     for vertex in currStates:
         nextProgressionState = internalStateDiseaseUpdate(currStates[vertex], diseaseProgressionProbs)
         dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
+        
+        
+# This is a strawman version of this function for testing
+def setupInternalPopulations(graph, listOfStates, ages):
+    dictOfInternalStates = {}
+    dictOfInternalStates[0] = {}
+    currentTime = 0
+    for node in list(graph.nodes()):
+        dictOfInternalStates[0][node] = {}
+        for state in listOfStates:
+            for age in ages:
+                dictOfInternalStates[0][node][(age, state)] = 0
+        for age in ages:
+            dictOfInternalStates[0][node][(age, 'S')] = 20
+        
+    randomNode = random.choice(list(graph.nodes()))
+#     Note the arbitrary age seed, and all are asymptomatic, and number is fixed and arbitrary
+    dictOfInternalStates[0][node][(ages[0], 'A')] = 5
     
-
-
-
+    return dictOfInternalStates    
     
-def doProgression(dictOfStates, currentTime):
-    # currentTime = max(dictOfStates.values())
-    nextTime = currentTime +1
-    currStates = dictOfStates[currentTime]
-    dictOfStates[nextTime] = {}
-    
-    for vertex in currStates:
-       # get the state, then then possibilities
-       state = currStates[vertex]
-       if state =='R' or state == 'D':
-           dictOfStates[nextTime][vertex] = state
-       elif state != 'S': 
-           dictOfStates[nextTime][vertex] = chooseFromDistrib(fromStateTrans[state])
-       else:
-           dictOfStates[nextTime][vertex] = dictOfStates[currentTime][vertex]
     
     
  #  A bit of sample model operation.     
@@ -318,45 +319,52 @@ numGroups = 50
 sizeGroups = 6
 baseWeight = 0.1
 strongWeight = 0.8
+ages=['y', 'm', 'o']
 
-baseGraph = generateHouseholdsAggregateGraph(1000, 0.06)
+# baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
+baseGraph = nx.path_graph(10)
 for (u, v) in list(baseGraph.edges()):
     baseGraph[u][v]['weight'] = baseWeight
+    
+states = setupInternalPopulations(baseGraph, compNames, ages)
+for node in states[0]:
+    print(states[0][node])
 
-pos = nx.get_node_attributes(baseGraph, 'pos')
-strongEdges = generateChildcareEdgesAggregate(baseGraph, numGroups, sizeGroups)
-for (u, v) in strongEdges:
-    baseGraph.add_edge(u, v)
-    baseGraph[u][v]['weight'] = strongWeight
 
-baseGraph.add_edges_from(strongEdges)
-
-longDistance = generateIllicitEdges(baseGraph, 100)
-
-paraDict = readParameters(sys.argv[1])
-fromStateTrans = setUpParametersVanilla(paraDict)
-print(fromStateTrans)
-
-basicPlots = []
-withGroups = []
-withIllicit = []
-time = 200
-numTrials = 100
-for i in range(numTrials): 
-    withGroups.append(basicSimulation(baseGraph, 4, time, 0.1))
-print('Done withGroups')
+# pos = nx.get_node_attributes(baseGraph, 'pos')
+# strongEdges = generateChildcareEdgesAggregate(baseGraph, numGroups, sizeGroups)
+# for (u, v) in strongEdges:
+#     baseGraph.add_edge(u, v)
+#     baseGraph[u][v]['weight'] = strongWeight
+# 
+# baseGraph.add_edges_from(strongEdges)
+# 
+# longDistance = generateIllicitEdges(baseGraph, 100)
+# 
+# paraDict = readParameters(sys.argv[1])
+# fromStateTrans = setUpParametersVanilla(paraDict)
+# print(fromStateTrans)
+# 
+# basicPlots = []
+# withGroups = []
+# withIllicit = []
+# time = 200
+# numTrials = 100
+# for i in range(numTrials): 
+#     withGroups.append(basicSimulation(baseGraph, 4, time, 0.1))
+# print('Done withGroups')
+# # for i in range(numTrials):
+# #     basicPlots.append(basicSimulation(baseGraph, 4, time, 0.1))
+# # print('Done basic')
+# addIllicitEdges(baseGraph, sizeGroups^2*numGroups)
 # for i in range(numTrials):
-#     basicPlots.append(basicSimulation(baseGraph, 4, time, 0.1))
-# print('Done basic')
-addIllicitEdges(baseGraph, sizeGroups^2*numGroups)
-for i in range(numTrials):
-    withIllicit.append(basicSimulation(baseGraph, 4, time, 0.1))
-print('Done withIllicit')
-
-plt.plot(generateMeanPlot(withIllicit), color='maroon', label = 'with_illicit')
-plt.plot(generateMeanPlot(withGroups), color='green', label = 'with_groups')
-# plt.plot(generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
-plt.legend()
-# plt.ylim(top=200)
-
-plt.savefig('allThree_fewerIllicit_lowerchilcarerisk_forSlides.pdf')
+#     withIllicit.append(basicSimulation(baseGraph, 4, time, 0.1))
+# print('Done withIllicit')
+# 
+# plt.plot(generateMeanPlot(withIllicit), color='maroon', label = 'with_illicit')
+# plt.plot(generateMeanPlot(withGroups), color='green', label = 'with_groups')
+# # plt.plot(generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
+# plt.legend()
+# # plt.ylim(top=200)
+# 
+# plt.savefig('allThree_fewerIllicit_lowerchilcarerisk_forSlides.pdf')
