@@ -242,6 +242,67 @@ def generateMeanPlot(listOfPlots):
         
     
     
+ # Internal states for nodes -
+#   The plan is that each node can have an associated dictionary that gives internal compartments
+#   (in the disease compartment sense)
+#   changes we will need to make:
+#   - add internal disease progression function
+#   - add setup of internal states
+#   - add capacity to read populations
+#   - do we want age structure?
+#   - change the basic simulation to use the right disease update infrastructure
+#   - alter the network infectious process to take the internal state into account
+
+# internalStateDict should have keys like (age, compartment) - for dev for now, we're just using one age.
+#  The values are number of people in that node in that state
+#  diseaseProgressionProbs should have outward probabilities per timestep (rates)
+#  So we will need to do some accounting
+#  We probably should ad the internal infection process here as well? 
+def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
+    dictOfNewStates = {}
+    for (age, state) in currentInternalStateDict:
+        if state =='R' or state == 'D':
+            dictOfNewStates[(age, state)] = currentInternalStateDict[(age, state)]
+        else:
+            dictOfNewStates[(age, compartment)] = 0
+    for (age, compartment) in currentInternalStateDict:
+        outTransitions = diseaseProgressionProbs[(age, compartment)]
+        numberInPrevState = currentInternalStateDict[(age, compartment)]
+#         we're going to have non-integer numbers of people for now
+        for nextState in outTransitions:
+            numberInNext = outTransitions[nextState]*currentInternalStateDict[(age, compartment)]
+            dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
+    return dictOfNewStates
+
+def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, diseaseProgressionProbs):
+    nextTime = currentTime +1
+    currStates = dictOfNodeInternalStates[currentTime]
+    dictOfNodeInternalStates[nextTime] = {}
+    for vertex in currStates:
+        nextProgressionState = internalStateDiseaseUpdate(currStates[vertex], diseaseProgressionProbs)
+        dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
+    
+
+
+
+    
+def doProgression(dictOfStates, currentTime):
+    # currentTime = max(dictOfStates.values())
+    nextTime = currentTime +1
+    currStates = dictOfStates[currentTime]
+    dictOfStates[nextTime] = {}
+    
+    for vertex in currStates:
+       # get the state, then then possibilities
+       state = currStates[vertex]
+       if state =='R' or state == 'D':
+           dictOfStates[nextTime][vertex] = state
+       elif state != 'S': 
+           dictOfStates[nextTime][vertex] = chooseFromDistrib(fromStateTrans[state])
+       else:
+           dictOfStates[nextTime][vertex] = dictOfStates[currentTime][vertex]
+    
+    
  #  A bit of sample model operation.     
     
     
