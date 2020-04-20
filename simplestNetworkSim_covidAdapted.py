@@ -3,6 +3,7 @@ import random
 import sys
 from collections import Counter
 import matplotlib.pyplot as plt
+import json
 
 
 compartments = {}
@@ -13,6 +14,13 @@ def doSetup(G, dictOfStates):
     dictOfStates[0] = {}
     for guy in G.nodes():
         dictOfStates[0][guy] = 'S'
+
+# making this general to include arbitrary future attributes.  Location is the primary one for right now
+# keeps them in a dictionary and returns that.  Keys are  
+def readNodeAttributesJSON(filename):
+    f = open(filename,) 
+    node_data = json.load(f)
+    return node_data
 
 
 # this could use some exception-catching (in fact, basically everything could) 
@@ -321,8 +329,8 @@ baseWeight = 0.1
 strongWeight = 0.8
 ages=['y', 'm', 'o']
 
-# baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
-baseGraph = nx.path_graph(10)
+baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
+
 for (u, v) in list(baseGraph.edges()):
     baseGraph[u][v]['weight'] = baseWeight
     
