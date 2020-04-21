@@ -22,8 +22,23 @@ def readNodeAttributesJSON(filename):
     node_data = json.load(f)
     return node_data
 
+# this could use some exception-catching (in fact, basically everything could)
+# we're going to have a nested dictionary - age to dictionary of parameters
+def readParametersAgeStructured(filename):
+    agesDictionary = {}
+    for line in open(filename, 'r'):
+        split = line.strip().split(":")
+        label = split[0].strip()
+        agePar = label.split(",")
+        age = agePar[0].strip()
+        paramName = agePar[1].strip()
+        if age not in agesDictionary:
+            agesDictionary[age] = {}
+        agesDictionary[age][paramName] = float(split[1].strip())
+    return agesDictionary
 
-# this could use some exception-catching (in fact, basically everything could) 
+
+# this could use some exception-catching (in fact, basically everything could)
 def readParameters(filename):
     parametersDictionary = {}
     for line in open(filename, 'r'):
@@ -59,6 +74,13 @@ def setUpParametersVanilla(dictOfParams):
     fromStateTrans['H'] = {'H':1-dictOfParams['h_escape'], 'D': dictOfParams['h_escape']*dictOfParams['h_to_d'], 'R':dictOfParams['h_escape']*(1- dictOfParams['h_to_d'])}
     return fromStateTrans
 
+def setUpParametersAges(dictByAge):
+    ageToStateTrans = {}
+    for age in dictByAge:
+        ageToStateTrans[age] = {}
+        ageToStateTrans[age] = setUpParametersVanilla(dictByAge[age])
+    return ageToStateTrans
+    
 
 def chooseFromDistrib(distrib):
     sumSoFar = 0
@@ -311,7 +333,6 @@ def setupInternalPopulations(graph, listOfStates, ages):
     return dictOfInternalStates    
     
     
-    
  #  A bit of sample model operation.     
     
     
@@ -321,22 +342,31 @@ def setupInternalPopulations(graph, listOfStates, ages):
 # nx.draw_networkx_edges(baseGraph, pos, edgelist=strongEdges, edge_color = 'green', width=2.0)
 # nx.draw_networkx_edges(baseGraph, pos, edgelist=longDistance, edge_color = 'maroon', width=1.0)
 # plt.show()
-houseMembers = {}
-nearHouses = {}
-numGroups = 50
-sizeGroups = 6
-baseWeight = 0.1
-strongWeight = 0.8
-ages=['y', 'm', 'o']
+# houseMembers = {}
+# nearHouses = {}
+# numGroups = 50
+# sizeGroups = 6
+# baseWeight = 0.1
+# strongWeight = 0.8
+# ages=['y', 'm', 'o']
+# 
+# baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
+# 
+# for (u, v) in list(baseGraph.edges()):
+#     baseGraph[u][v]['weight'] = baseWeight
+#     
+# states = setupInternalPopulations(baseGraph, compNames, ages)
+# for node in states[0]:
+#     print(states[0][node])
 
-baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
+params = readParametersAgeStructured(sys.argv[1])
+for guy in params:
+    print (params[guy])
 
-for (u, v) in list(baseGraph.edges()):
-    baseGraph[u][v]['weight'] = baseWeight
-    
-states = setupInternalPopulations(baseGraph, compNames, ages)
-for node in states[0]:
-    print(states[0][node])
+ageToTrans = setUpParametersAges(params)
+for age in ageToTrans:
+    print (age)
+    print( ageToTrans[age])
 
 
 # pos = nx.get_node_attributes(baseGraph, 'pos')
