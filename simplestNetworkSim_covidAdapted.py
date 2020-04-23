@@ -14,6 +14,14 @@ def doSetup(G, dictOfStates):
     dictOfStates[0] = {}
     for guy in G.nodes():
         dictOfStates[0][guy] = 'S'
+        
+#  This needs amendment to have different node populations and age structure
+#  Right now it is a framework function, to allow ongoing dev
+#  WORKING HERE NOW
+def doSetupAgeStruct(G, dictOfStates, numInside):
+    dictOfStates[0] = {}
+    for guy in G.nodes():  
+        dictOfStates[0][guy] = 'S'
 
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
 # keeps them in a dictionary and returns that.  Keys are  
@@ -166,7 +174,28 @@ def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
         timeSeriesInfection.append(countInfections(dictOfStates, time))
 
     return timeSeriesInfection
+
+
+def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix):
+    ages = list(ageInfectinoMatrix.values())
     
+    timeSeriesInfection = []
+    # for now, we choose a random node and infect numInfected of the first ages antry
+    infected = random.choices(list(graph.nodes()), k=1)
+    print(infected)
+    
+    dictOfStates = {}
+#     need to write a new doSetup for age structure
+    doSetup(graph, dictOfStates)
+    for vertex in infected:
+        dictOfStates[0][vertex] = 'I'
+    
+    for time in range(timeHorizon):
+        doProgression(dictOfStates, time)
+        doInfection(graph, dictOfStates, time, genericInfection)
+        timeSeriesInfection.append(countInfections(dictOfStates, time))
+
+    return timeSeriesInfection
 
 def generateHouseholds(numHouseholds, radius, locations, householdMembership, withinNeighbourhood):
     # generate a random geometric graph for households in range:
@@ -283,11 +312,44 @@ def generateMeanPlot(listOfPlots):
 #   - change the basic simulation to use the right disease update infrastructure
 #   - alter the network infectious process to take the internal state into account
 
-# internalStateDict should have keys like (age, compartment) - for dev for now, we're just using one age.
+
+# Done make disease transmission internal update
+# rework overall simulation to use internal-compartment versions
+# write plotting function for node selection
+# run a single-node version and do plots
+# run a two-vertex version with plots
+# run a path version with plots, different population sizes 
+
+#  the parameter ageMixingInfectionMatrix should include mixing information that incorporates
+#  probability of infection as well - that is the entry at row age1 column age2
+#  is the rate of contact from age1 to age2 of *infectious contact* - e.g.
+#  if we expect half of contacts from young to mature to be infectious, and 0.25 of all possible young to mature contacts happen
+# (so the expected number of contacts from young to old is (number_young)*(number_old)*0.25), then the entry in this matrix
+# should be 0.125.  Note that it need not be symmetric.
+# concern: need to think carefully about this asymmetry.  For now, I'll be using a uniform infectiousness
+# by contact to generate that matrix 
+def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, ages):
+    newInfectedsByAge = {}
+    for age in ages:
+        numSuscept = (age, 'S')
+        numInfectiousContactsFromAges = {}
+        for ageInf in ages:
+            totalInfectious = (ageInf, 'I') + (ageInf, 'A')
+            numInfectiousContactsFromAges[ageInf] = totalInfectious*numSuscept*ageMixingInfectionMatrix[ageInf][age]
+        totalAvoid = 1.0
+        for numInf in list(numInfectiousContactsFromAges.values()):
+            totalAvoid = totalAvoid*(1-float(numInf)/float(numSuscept))
+        numNewInfected = (1-totalAvoid)*numSuscept
+        newInfectedsByAge[age] = numNewInfected
+    return newInfectedByAge
+        
+        
+
+
+# internalStateDict should have keys like (age, compartment) 
 #  The values are number of people in that node in that state
 #  diseaseProgressionProbs should have outward probabilities per timestep (rates)
 #  So we will need to do some accounting
-#  We probably should add the internal infection process here as well? 
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
     dictOfNewStates = {}
     for (age, state) in currentInternalStateDict:
