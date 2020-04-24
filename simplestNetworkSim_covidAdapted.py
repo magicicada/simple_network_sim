@@ -16,12 +16,16 @@ def doSetup(G, dictOfStates):
         dictOfStates[0][guy] = 'S'
         
 #  This needs amendment to have different node populations and age structure
-#  Right now it is a framework function, to allow ongoing dev
-#  WORKING HERE NOW
-def doSetupAgeStruct(G, dictOfStates, numInside):
+#  Right now it is a framework function, to allow ongoing dev - uniform age structure in each, 
+def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
     dictOfStates[0] = {}
     for guy in G.nodes():  
-        dictOfStates[0][guy] = 'S'
+        internalState = dictOfStates[0][guy]
+        for age in ages:
+            for state in states:
+                internalState[(age, state)] = 0
+            internalState[(age, 'S')] = numInside
+    return dictOfStates
 
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
 # keeps them in a dictionary and returns that.  Keys are  
@@ -176,7 +180,8 @@ def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
     return timeSeriesInfection
 
 
-def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix):
+def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs):
+    print('WARNING - FUNCTION NOT PROPERLY FINISHED YET - basicSimulationInternalAgeStructure')
     ages = list(ageInfectinoMatrix.values())
     
     timeSeriesInfection = []
@@ -185,14 +190,19 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
     print(infected)
     
     dictOfStates = {}
-#     need to write a new doSetup for age structure
-    doSetup(graph, dictOfStates)
+    numInside = 100
+    ages = ['y', 'm', 'o']
+    states = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
+    
+
+    doSetupAgeStruct(graph, dictOfStates, numInside, ages, states)
     for vertex in infected:
-        dictOfStates[0][vertex] = 'I'
+        dictOfStates[0][vertex][('m', 'I')] = numInfected
     
     for time in range(timeHorizon):
-        doProgression(dictOfStates, time)
-        doInfection(graph, dictOfStates, time, genericInfection)
+        doInternalProgressionAllNodes(dictOfStates, time, diseaseProgressionProbs)
+        doInternalInfectionProcess(dictOfStates[time], ageInfectionMatrix, ages)
+        doBetweenInfectionAgeStructred(graph, dictOfStates, time, genericInfectionProb)
         timeSeriesInfection.append(countInfections(dictOfStates, time))
 
     return timeSeriesInfection
@@ -318,7 +328,12 @@ def generateMeanPlot(listOfPlots):
 # write plotting function for node selection
 # run a single-node version and do plots
 # run a two-vertex version with plots
-# run a path version with plots, different population sizes 
+# run a path version with plots, different population sizes
+
+
+def doBetweenInfectionAgeStructred(graph, dictOfStates, currentTime, genericInfectionProb):
+    print('FUNCTION NOT YET IMPLEMENTED - doBetweenInfectionAgeStructred')
+    return None
 
 #  the parameter ageMixingInfectionMatrix should include mixing information that incorporates
 #  probability of infection as well - that is the entry at row age1 column age2
