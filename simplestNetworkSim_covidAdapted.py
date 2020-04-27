@@ -20,11 +20,12 @@ def doSetup(G, dictOfStates):
 def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
     dictOfStates[0] = {}
     for guy in G.nodes():  
-        internalState = dictOfStates[0][guy]
+        internalState = {}
         for age in ages:
             for state in states:
                 internalState[(age, state)] = 0
             internalState[(age, 'S')] = numInside
+        dictOfStates[0][guy] = internalState
     return dictOfStates
 
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
@@ -84,6 +85,8 @@ def setUpParametersVanilla(dictOfParams):
     fromStateTrans['I'] =  {'I':1-dictOfParams['i_escape'], 'D': dictOfParams['i_escape']*dictOfParams['i_to_d'], 'H':dictOfParams['i_escape']*(dictOfParams['i_to_h']),
                              'R':dictOfParams['i_escape']*(1-dictOfParams['i_to_h'] -dictOfParams['i_to_d']) }
     fromStateTrans['H'] = {'H':1-dictOfParams['h_escape'], 'D': dictOfParams['h_escape']*dictOfParams['h_to_d'], 'R':dictOfParams['h_escape']*(1- dictOfParams['h_to_d'])}
+    fromStateTrans['R'] = {'R':1.0}
+    fromStateTrans['D'] = {'D':1.0}
     return fromStateTrans
 
 def setUpParametersAges(dictByAge):
@@ -160,6 +163,13 @@ def countInfections(dictOfStates, time):
         sumBoth = sumBoth + counts['A']
     return sumBoth
 
+def countInfectionsAgeStructured(dictOfStates, time):
+    total = 0
+    for node in dictOfStates[time]:
+        for (age, state) in dictOfStates[time][node]:
+            if state == 'A' or state == 'I':
+                total = total + dictOfStates[time][node][(age, state)]
+    return total
 
 def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
     
@@ -179,32 +189,36 @@ def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
 
     return timeSeriesInfection
 
-
 def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs):
-    print('WARNING - FUNCTION NOT PROPERLY FINISHED YET - basicSimulationInternalAgeStructure')
-    ages = list(ageInfectinoMatrix.values())
-    
+    print('WARNING - FUNCTION NOT PROPERLY TESTED YET - basicSimulationInternalAgeStructure')
+    ages = list(ageInfectionMatrix.values())
     timeSeriesInfection = []
-    # for now, we choose a random node and infect numInfected of the first ages antry
-    infected = random.choices(list(graph.nodes()), k=1)
-    print(infected)
     
     dictOfStates = {}
     numInside = 100
     ages = ['y', 'm', 'o']
     states = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
     
-
     doSetupAgeStruct(graph, dictOfStates, numInside, ages, states)
-    for vertex in infected:
-        dictOfStates[0][vertex][('m', 'I')] = numInfected
+
+    # for now, we choose a random node and infect numInfected mature individuals - right now they are extra individuals, not removed from the susceptible class
+    infectedNode = random.choices(list(graph.nodes()), k=1)
+    for vertex in infectedNode:
+        dictOfStates[0][vertex][('m', 'I')] = numInfected 
     
     for time in range(timeHorizon):
         doInternalProgressionAllNodes(dictOfStates, time, diseaseProgressionProbs)
-        doInternalInfectionProcess(dictOfStates[time], ageInfectionMatrix, ages)
-        doBetweenInfectionAgeStructred(graph, dictOfStates, time, genericInfectionProb)
-        timeSeriesInfection.append(countInfections(dictOfStates, time))
-
+        for node in dictOfStates[time]:
+           doInternalInfectionProcess(dictOfStates[time][node], ageInfectionMatrix, ages, time)
+        doBetweenInfectionAgeStructured(graph, dictOfStates, time, genericInfection)
+        timeSeriesInfection.append(countInfectionsAgeStructured(dictOfStates, time))
+        
+        print('\n\n===== BEGIN update at time ' + str(time) + '=========')
+        for node in list(graph.nodes()):
+            print('Node ' + str(node))
+            print(dictOfStates[time][node])
+        print('===== END update at time ' + str(time) + '=========')
+        
     return timeSeriesInfection
 
 def generateHouseholds(numHouseholds, radius, locations, householdMembership, withinNeighbourhood):
@@ -236,13 +250,10 @@ def generateHouseholds(numHouseholds, radius, locations, householdMembership, wi
     householdMembership = householdToMem
     return wholeGraph
 
-
 def generateHouseholdsAggregateGraph(numHouseholds, radius):
     # generate a random geometric graph for households in range:
     randomGeometric = nx.random_geometric_graph(numHouseholds, radius)
     return randomGeometric
-
-
 
 def addIllicitEdges(existingGraph, numberEdges):
     for i in range(numberEdges):
@@ -257,10 +268,10 @@ def generateIllicitEdges(existingGraph, numberEdges):
         newEdges.append((listOfTwo[0], listOfTwo[1]))
     return newEdges
         
-
 # note function is not finished
 # will eventually generate edges between and within households 
 def generateChildcareEdges(numInEach, numGroups, graph, householdWithin, nearHouseholds):
+    print('WARNING - FUNCTION NOT PROPERLY FINISHED YET - generateChildcareEdges')
     inAGroup = []
     
     seeds = random.sample(list(graph.nodes()), numGroups)
@@ -298,10 +309,9 @@ def generateChildcareEdgesAggregate(graph, numGroups, sizeGroups):
 
     return strongEdges
     
-
 def generateMeanPlot(listOfPlots):
     meanForPlot = []
-    print(listOfPlots)
+    # print(listOfPlots)
     for i in range(len(listOfPlots[0])):
         sumTot = 0
         for j in range(len(listOfPlots)):
@@ -309,8 +319,6 @@ def generateMeanPlot(listOfPlots):
         meanForPlot.append(float(sumTot)/len(listOfPlots))
     return meanForPlot
         
-    
-    
  # Internal states for nodes -
 #   The plan is that each node can have an associated dictionary that gives internal compartments
 #   (in the disease compartment sense)
@@ -331,9 +339,78 @@ def generateMeanPlot(listOfPlots):
 # run a path version with plots, different population sizes
 
 
-def doBetweenInfectionAgeStructred(graph, dictOfStates, currentTime, genericInfectionProb):
-    print('FUNCTION NOT YET IMPLEMENTED - doBetweenInfectionAgeStructred')
-    return None
+def totalIndividuals(nodeState):
+    return sum(nodeState.values())
+
+def getTotalInfected(nodeState):
+    totalInfectedHere = 0
+    for (age, state) in nodeState:
+            if state == 'A' or state == 'I':
+                totalInfectedHere = totalInfectedHere + nodeState[(age, state)]
+    return totalInfectedHere
+
+def getTotalSuscept(nodeState):
+    totalSusHere = 0
+    for (age, state) in nodeState:
+                if state == 'S':
+                        totalSusHere = totalSusHere + nodeState[(age, state)]
+    return totalSusHere
+
+# fractional people will come out of this
+# right now this infects uniformly across age class by number of susceptibles in age class 
+def distributeInfections(nodeState, newInfections):
+    ageToSus = {}
+    newInfectionsByAge = {}
+    for (age, state) in nodeState:
+        if state == 'S':
+            ageToSus[age] = nodeState[(age, state)]
+    totalSus = sum(ageToSus.values())
+    if totalSus<newInfections:
+        print('ERROR: Too many infections to distribute amongst age classes - adjusting num infections')
+        newInfections = totalSus
+    for age in ageToSus:
+        if totalSus > 0:
+           newInfectionsByAge[age] = (float(ageToSus[age])/float(totalSus))*newInfections
+        else:
+            newInfectionsByAge[age] = 0
+    return newInfectionsByAge
+    
+
+#  This function will need improving from a a modelling standpoint.
+#  it will be some function of the number of I/A in nodeState1, S in nodeState2, and the weight
+# of the edge between the two.
+# should give a float between 0 and 1 that is the probability that a S in node2 is infected by a migrant from node1 
+def fractionInfectedByEdge(nodeState1, nodeState2, edgeWeight):
+    fractionInfectedSource = getTotalInfected(nodeState1)/totalIndividuals(nodeState1)
+    fractionSusceptibleDest = getTotalSuscept(nodeState2)/totalIndividuals(nodeState2) 
+    return fractionInfectedSource*fractionSusceptibleDest*edgeWeight
+
+def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInfectionProb):
+#   This dictionary should have nodes as keys, floats as values that are the probability of escaping infection from other nodes
+    avoidInfection = {}
+    for node in list(graph.nodes()):
+        avoidInfection[node] = 1.0
+
+    newInfectedPressures = {}
+    
+    for vertex in dictOfStates[currentTime]:
+        totalInfectedHere = getTotalInfected(dictOfStates[currentTime][vertex])
+        if totalInfectedHere >0:
+            neighbours = list(graph.neighbors(vertex))
+            for neigh in neighbours:
+                    totalSusHere = getTotalSuscept(dictOfStates[currentTime][vertex])
+                    if totalSusHere >0:
+                        if 'weight' not in graph[vertex][neigh]:
+                            probabilityOfInfection = genericInfectionProb
+                        else:
+                            probabilityOfInfection = graph[vertex][neigh]['weight']
+                        avoidInfection[neigh] = avoidInfection[neigh]*(1-fractionInfectedByEdge(dictOfStates[currentTime][vertex], dictOfStates[currentTime][neigh], probabilityOfInfection))
+    for vertex in avoidInfection:
+        total_delta = (1-avoidInfection[vertex])*getTotalSuscept(dictOfStates[currentTime][vertex])
+        deltaByAge = distributeInfections(dictOfStates[currentTime][vertex], total_delta)
+        for age in deltaByAge:
+           dictOfStates[currentTime+1][vertex][(age, 'S')] = dictOfStates[currentTime+1][vertex][(age, 'S')] - deltaByAge[age]
+           dictOfStates[currentTime+1][vertex][(age, 'A')] = dictOfStates[currentTime+1][vertex][(age, 'A')] + deltaByAge[age]
 
 #  the parameter ageMixingInfectionMatrix should include mixing information that incorporates
 #  probability of infection as well - that is the entry at row age1 column age2
@@ -343,20 +420,24 @@ def doBetweenInfectionAgeStructred(graph, dictOfStates, currentTime, genericInfe
 # should be 0.125.  Note that it need not be symmetric.
 # concern: need to think carefully about this asymmetry.  For now, I'll be using a uniform infectiousness
 # by contact to generate that matrix 
-def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, ages):
+def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, ages, time):
     newInfectedsByAge = {}
     for age in ages:
-        numSuscept = (age, 'S')
-        numInfectiousContactsFromAges = {}
-        for ageInf in ages:
-            totalInfectious = (ageInf, 'I') + (ageInf, 'A')
-            numInfectiousContactsFromAges[ageInf] = totalInfectious*numSuscept*ageMixingInfectionMatrix[ageInf][age]
-        totalAvoid = 1.0
-        for numInf in list(numInfectiousContactsFromAges.values()):
-            totalAvoid = totalAvoid*(1-float(numInf)/float(numSuscept))
-        numNewInfected = (1-totalAvoid)*numSuscept
-        newInfectedsByAge[age] = numNewInfected
-    return newInfectedByAge
+        newInfectedsByAge[age] = 0
+        # print('\n\n\n')
+        # print(currentInternalStateDict)
+        numSuscept = currentInternalStateDict[(age, 'S')]
+        if numSuscept>0:
+            numInfectiousContactsFromAges = {}
+            for ageInf in ages:
+                totalInfectious = currentInternalStateDict[(ageInf, 'I')] + currentInternalStateDict[(ageInf, 'A')]
+                numInfectiousContactsFromAges[ageInf] = totalInfectious*numSuscept*ageMixingInfectionMatrix[ageInf][age]
+            totalAvoid = 1.0
+            for numInf in list(numInfectiousContactsFromAges.values()):
+                totalAvoid = totalAvoid*(1-float(numInf)/float(numSuscept))
+            numNewInfected = (1-totalAvoid)*numSuscept
+            newInfectedsByAge[age] = numNewInfected
+    return newInfectedsByAge
         
         
 
@@ -371,14 +452,20 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
         if state =='R' or state == 'D':
             dictOfNewStates[(age, state)] = currentInternalStateDict[(age, state)]
         else:
-            dictOfNewStates[(age, compartment)] = 0
+            dictOfNewStates[(age, state)] = 0
     for (age, compartment) in currentInternalStateDict:
-        outTransitions = diseaseProgressionProbs[(age, compartment)]
-        numberInPrevState = currentInternalStateDict[(age, compartment)]
-#         we're going to have non-integer numbers of people for now
-        for nextState in outTransitions:
-            numberInNext = outTransitions[nextState]*currentInternalStateDict[(age, compartment)]
-            dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
+        if compartment == 'S':
+            dictOfNewStates[(age, 'S')] = currentInternalStateDict[(age, 'S')]
+        else:
+            # print("\n\n\n========diseaseProgressionProbs====")
+            # print(diseaseProgressionProbs['y'])
+            outTransitions = diseaseProgressionProbs[age][compartment]
+            numberInPrevState = currentInternalStateDict[(age, compartment)]
+    #         we're going to have non-integer numbers of people for now
+            for nextState in outTransitions:
+                numberInNext = outTransitions[nextState]*currentInternalStateDict[(age, compartment)]
+                dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
+        
     return dictOfNewStates
 
 def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, diseaseProgressionProbs):
@@ -423,16 +510,33 @@ def setupInternalPopulations(graph, listOfStates, ages):
 # nearHouses = {}
 # numGroups = 50
 # sizeGroups = 6
-# baseWeight = 0.1
+baseWeight = 0.5
 # strongWeight = 0.8
-# ages=['y', 'm', 'o']
+ages=['y', 'm', 'o']
+numInfected = 10
+genericInfection = 0.4
+ageInfectionMatrix = {}
+contactRate = 0.2
+for age in ages:
+    ageInfectionMatrix[age]  = {}
+ageInfectionMatrix['y']['y'] = contactRate
+ageInfectionMatrix['y']['m'] = contactRate
+ageInfectionMatrix['y']['o']= contactRate
+ageInfectionMatrix['m']['y']= contactRate
+ageInfectionMatrix['m']['m']= contactRate
+ageInfectionMatrix['m']['o']= contactRate
+ageInfectionMatrix['o']['y']= contactRate
+ageInfectionMatrix['o']['m']= contactRate
+ageInfectionMatrix['o']['o']= contactRate
+
 # 
 # baseGraph = generateHouseholdsAggregateGraph(10, 0.06)
-# 
-# for (u, v) in list(baseGraph.edges()):
-#     baseGraph[u][v]['weight'] = baseWeight
+#
+baseGraph = nx.path_graph(10)
+for (u, v) in list(baseGraph.edges()):
+     baseGraph[u][v]['weight'] = baseWeight
 #     
-# states = setupInternalPopulations(baseGraph, compNames, ages)
+states = setupInternalPopulations(baseGraph, compNames, ages)
 # for node in states[0]:
 #     print(states[0][node])
 
@@ -444,6 +548,7 @@ ageToTrans = setUpParametersAges(params)
 for age in ageToTrans:
     print (age)
     print( ageToTrans[age])
+
 
 
 # pos = nx.get_node_attributes(baseGraph, 'pos')
@@ -460,16 +565,16 @@ for age in ageToTrans:
 # fromStateTrans = setUpParametersVanilla(paraDict)
 # print(fromStateTrans)
 # 
-# basicPlots = []
+basicPlots = []
 # withGroups = []
 # withIllicit = []
-# time = 200
-# numTrials = 100
+time = 10
+numTrials = 1
 # for i in range(numTrials): 
 #     withGroups.append(basicSimulation(baseGraph, 4, time, 0.1))
 # print('Done withGroups')
-# # for i in range(numTrials):
-# #     basicPlots.append(basicSimulation(baseGraph, 4, time, 0.1))
+for i in range(numTrials):
+     basicPlots.append(basicSimulationInternalAgeStructure(baseGraph, numInfected, time, genericInfection, ageInfectionMatrix, ageToTrans))
 # # print('Done basic')
 # addIllicitEdges(baseGraph, sizeGroups^2*numGroups)
 # for i in range(numTrials):
@@ -478,8 +583,8 @@ for age in ageToTrans:
 # 
 # plt.plot(generateMeanPlot(withIllicit), color='maroon', label = 'with_illicit')
 # plt.plot(generateMeanPlot(withGroups), color='green', label = 'with_groups')
-# # plt.plot(generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
+plt.plot(generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
 # plt.legend()
 # # plt.ylim(top=200)
 # 
-# plt.savefig('allThree_fewerIllicit_lowerchilcarerisk_forSlides.pdf')
+plt.savefig('withAges.pdf')
