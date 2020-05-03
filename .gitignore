@@ -2,3 +2,4 @@
 *.dat
 *.xls
 data/
+.DS_Store
