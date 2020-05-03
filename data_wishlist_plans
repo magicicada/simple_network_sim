@@ -1,0 +1,9 @@
+This document is a list of datasets that might be useful for this model, but have not yet been processed or integrated.  Once these are dealt with, they'll be documented and mvoed to another file.
+
+
+These are focussed on non-disease-compartment parameters
+- Geographic areas in a Scotland/UK, populations, age structures, household makeups
+- Pre-lockdown flow census computer movements
+- Post-lockdown movement damping
+- Pre-and-post lockdown age-mixing (e.g. comix)
+
