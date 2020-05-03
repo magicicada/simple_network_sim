@@ -319,24 +319,6 @@ def generateMeanPlot(listOfPlots):
         meanForPlot.append(float(sumTot)/len(listOfPlots))
     return meanForPlot
         
- # Internal states for nodes -
-#   The plan is that each node can have an associated dictionary that gives internal compartments
-#   (in the disease compartment sense)
-#   changes we will need to make:
-#   - add internal disease progression function
-#   - add setup of internal states
-#   - add capacity to read populations
-#   - do we want age structure?
-#   - change the basic simulation to use the right disease update infrastructure
-#   - alter the network infectious process to take the internal state into account
-
-
-# Done make disease transmission internal update
-# rework overall simulation to use internal-compartment versions
-# write plotting function for node selection
-# run a single-node version and do plots
-# run a two-vertex version with plots
-# run a path version with plots, different population sizes
 
 
 def totalIndividuals(nodeState):
@@ -568,7 +550,7 @@ for age in ageToTrans:
 basicPlots = []
 # withGroups = []
 # withIllicit = []
-time = 10
+time = 20
 numTrials = 1
 # for i in range(numTrials): 
 #     withGroups.append(basicSimulation(baseGraph, 4, time, 0.1))
