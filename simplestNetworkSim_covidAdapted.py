@@ -51,6 +51,7 @@ def readParametersAgeStructured(filename):
             agesDictionary[age][paramName] = float(split[1].strip())
     except IndexError:
         raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
+    checkAgeParameters(agesDictionary)
     return agesDictionary
 
 
@@ -64,6 +65,22 @@ def readParameters(filename):
     except IndexError:
         raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
     return parametersDictionary
+
+def checkAgeParameters(agesDictionary):
+    # Required parameters per age group
+    required = ["e_escape", "a_escape", "a_to_i", "i_escape", "i_to_d",
+                "i_to_h", "h_escape", "h_to_d"]
+    # Track all missing parameters, so we can report all of them at once.
+    missing = []
+    for age, ageDict in agesDictionary.items():
+        # What's missing from this age group
+        missed = [param for param in required if param not in ageDict]
+        if missed:
+            missing.append([age, missed])
+    if missing:
+        for age, missed in missing:
+            print(f"Age group \"{age}\" missing \"{', '.join(missed)}\"")
+        raise Exception("Parameters missing")
 
 def checkForParameters(dictOfParams, ageStructured):
     ageStructParams = ['e_escape_young', 'a_escape_young', 'a_to_i_young', 'a_to_r_young', 'i_escape_young', 'i_to_d_young', 'i_to_h_young', 'h_escape_young', 'h_to_d_young',
