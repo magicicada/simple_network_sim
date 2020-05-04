@@ -39,24 +39,30 @@ def readNodeAttributesJSON(filename):
 # we're going to have a nested dictionary - age to dictionary of parameters
 def readParametersAgeStructured(filename):
     agesDictionary = {}
-    for line in open(filename, 'r'):
-        split = line.strip().split(":")
-        label = split[0].strip()
-        agePar = label.split(",")
-        age = agePar[0].strip()
-        paramName = agePar[1].strip()
-        if age not in agesDictionary:
-            agesDictionary[age] = {}
-        agesDictionary[age][paramName] = float(split[1].strip())
+    try:
+        for line in open(filename, 'r'):
+            split = line.strip().split(":")
+            label = split[0].strip()
+            agePar = label.split(",")
+            age = agePar[0].strip()
+            paramName = agePar[1].strip()
+            if age not in agesDictionary:
+                agesDictionary[age] = {}
+            agesDictionary[age][paramName] = float(split[1].strip())
+    except IndexError:
+        raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
     return agesDictionary
 
 
 # this could use some exception-catching (in fact, basically everything could)
 def readParameters(filename):
     parametersDictionary = {}
-    for line in open(filename, 'r'):
-        split = line.strip().split(":")
-        parametersDictionary[split[0].strip()] = float(split[1].strip())
+    try:
+        for line in open(filename, 'r'):
+            split = line.strip().split(":")
+            parametersDictionary[split[0].strip()] = float(split[1].strip())
+    except IndexError:
+        raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
     return parametersDictionary
 
 def checkForParameters(dictOfParams, ageStructured):
