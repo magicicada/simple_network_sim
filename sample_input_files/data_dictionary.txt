@@ -28,4 +28,5 @@ First column is the source location label
 Second column is the destination location label
 Third column is the number of individuals undertaking that journey as reported in wu01uk
 
-
+File sample_20200327_comix_social_contacts.sampleCSV
+This is a sample square matrix of mixing - each column and row header is an age category.  
