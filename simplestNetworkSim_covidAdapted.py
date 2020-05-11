@@ -9,12 +9,13 @@ import json
 compartments = {}
 compNames = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
 
-
+# NotCurrentlyInUseByCoreModel
 def doSetup(G, dictOfStates):
     dictOfStates[0] = {}
     for guy in G.nodes():
         dictOfStates[0][guy] = 'S'
         
+# CurrentlyInUse         
 #  This needs amendment to have different node populations and age structure
 #  Right now it is a framework function, to allow ongoing dev - uniform age structure in each, 
 def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
@@ -28,6 +29,7 @@ def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
         dictOfStates[0][guy] = internalState
     return dictOfStates
 
+# CurrentlyInUse 
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
 # keeps them in a dictionary and returns that.  Keys are  
 def readNodeAttributesJSON(filename):
@@ -35,6 +37,7 @@ def readNodeAttributesJSON(filename):
     node_data = json.load(f)
     return node_data
 
+# CurrentlyInUse 
 # this could use some exception-catching (in fact, basically everything could)
 # we're going to have a nested dictionary - age to dictionary of parameters
 def readParametersAgeStructured(filename):
@@ -54,6 +57,7 @@ def readParametersAgeStructured(filename):
     checkAgeParameters(agesDictionary)
     return agesDictionary
 
+# CurrentlyInUse
 # This needs exception-catching, and probably shouldn't have hard-coded column indices. 
 def readPopulationAgeStructured(filename):
     dictOfPops = {}
@@ -102,6 +106,8 @@ def readPopulationAgeStructured(filename):
                                      
     return dictOfPops
 
+
+# CurrentlyInUse
 # at the moment this uses vanilla networkx edge list reading - needs weights
 #  I've set it apart as its own function in case we want to do anything fancier with edge files
 # in future - e.g. sampling, generating movements, whatever
@@ -111,7 +117,7 @@ def genGraphFromContactFile(filename):
     G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight',float),))
     return G
     
-
+# NotCurrentlyInUseByCoreModel
 def readParameters(filename):
     parametersDictionary = {}
     try:
@@ -122,6 +128,8 @@ def readParameters(filename):
         raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
     return parametersDictionary
 
+
+# CurrentlyInUse
 def checkAgeParameters(agesDictionary):
     # Required parameters per age group
     required = ["e_escape", "a_escape", "a_to_i", "i_escape", "i_to_d",
@@ -138,6 +146,7 @@ def checkAgeParameters(agesDictionary):
             print(f"Age group \"{age}\" missing \"{', '.join(missed)}\"")
         raise Exception("Parameters missing")
 
+# NotCurrentlyInUseByCoreModel
 def checkForParameters(dictOfParams, ageStructured):
     ageStructParams = ['e_escape_young', 'a_escape_young', 'a_to_i_young', 'a_to_r_young', 'i_escape_young', 'i_to_d_young', 'i_to_h_young', 'h_escape_young', 'h_to_d_young',
                        'e_escape_mature', 'a_escape_mature', 'a_to_i_mature', 'a_to_r_mature', 'i_escape_mature', 'i_to_d_mature', 'i_to_h_mature', 'h_escape_mature', 'h_to_d_mature',
@@ -157,6 +166,7 @@ def checkForParameters(dictOfParams, ageStructured):
     return True    
 
 
+# CurrentlyInUse
 def setUpParametersVanilla(dictOfParams):
     fromStateTrans = {}
     fromStateTrans['E'] ={'E':1-dictOfParams['e_escape'], 'A': dictOfParams['e_escape']}
@@ -168,6 +178,8 @@ def setUpParametersVanilla(dictOfParams):
     fromStateTrans['D'] = {'D':1.0}
     return fromStateTrans
 
+
+# CurrentlyInUse
 def setUpParametersAges(dictByAge):
     ageToStateTrans = {}
     for age in dictByAge:
@@ -176,6 +188,7 @@ def setUpParametersAges(dictByAge):
     return ageToStateTrans
     
 
+# CurrentlyInUse
 def chooseFromDistrib(distrib):
     sumSoFar = 0
     thisLuck = random.random()
@@ -186,6 +199,8 @@ def chooseFromDistrib(distrib):
     print('Something has gone wrong - no next state was returned.  Choosing arbitrarily')
     return min(distrib.keys())
 
+
+# NotCurrentlyInUseByCoreModel
 # Simplest sensible model: no age classes, uniform transitions between states
 # each vertex will have a state at each timestep 
 def doProgression(dictOfStates, currentTime):
@@ -204,6 +219,7 @@ def doProgression(dictOfStates, currentTime):
        else:
            dictOfStates[nextTime][vertex] = dictOfStates[currentTime][vertex]
 
+# NotCurrentlyInUseByCoreModel
 def doInfection(graph, dictOfStates, currentTime, genericInfectionProb):
     newInfected = []
     for vertex in dictOfStates[currentTime]:
@@ -222,6 +238,7 @@ def doInfection(graph, dictOfStates, currentTime, genericInfectionProb):
     for fella in newInfected:
         dictOfStates[currentTime+1][fella] = 'E'
     
+# NotCurrentlyInUseByCoreModel
 def prettyPrint(dictOfStates, time):
     states = ['S']
     stateString = 'S,'
@@ -233,6 +250,7 @@ def prettyPrint(dictOfStates, time):
     counts = Counter(dictOfStates[time].values())
     print(counts)
     
+# NotCurrentlyInUseByCoreModel
 def countInfections(dictOfStates, time):
     counts = Counter(dictOfStates[time].values())
     sumBoth = 0
@@ -242,6 +260,7 @@ def countInfections(dictOfStates, time):
         sumBoth = sumBoth + counts['A']
     return sumBoth
 
+# CurrentlyInUse
 def countInfectionsAgeStructured(dictOfStates, time):
     total = 0
     for node in dictOfStates[time]:
@@ -250,6 +269,7 @@ def countInfectionsAgeStructured(dictOfStates, time):
                 total = total + dictOfStates[time][node][(age, state)]
     return total
 
+# NotCurrentlyInUseByCoreModel
 def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
     
     timeSeriesInfection = []
@@ -268,6 +288,8 @@ def basicSimulation(graph, numInfected, timeHorizon, genericInfection):
 
     return timeSeriesInfection
 
+
+# CurrentlyInUse
 # amending this so that file I/O happens outside it 
 def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
     
@@ -307,12 +329,14 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
         
     return timeSeriesInfection
 
+# CurrentlyInUse
 def nodeUpdate(graph, dictOfStates, time, headString):
         print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
         for node in list(graph.nodes()):
              print('Node ' + str(node)+ " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
         print('===== END update 1 at time ' + str(time) + '=========')
 
+# NotCurrentlyInUseByCoreModel
 def generateHouseholds(numHouseholds, radius, locations, householdMembership, withinNeighbourhood):
     # generate a random geometric graph for households in range:
     randomGeometric = nx.random_geometric_graph(numHouseholds, radius)
@@ -342,16 +366,19 @@ def generateHouseholds(numHouseholds, radius, locations, householdMembership, wi
     householdMembership = householdToMem
     return wholeGraph
 
+# NotCurrentlyInUseByCoreModel
 def generateHouseholdsAggregateGraph(numHouseholds, radius):
     # generate a random geometric graph for households in range:
     randomGeometric = nx.random_geometric_graph(numHouseholds, radius)
     return randomGeometric
 
+# NotCurrentlyInUseByCoreModel
 def addIllicitEdges(existingGraph, numberEdges):
     for i in range(numberEdges):
         listOfTwo = list(random.sample(list(existingGraph.nodes()), 2))
         existingGraph.add_edge(listOfTwo[0], listOfTwo[1])
-        
+
+# NotCurrentlyInUseByCoreModel
 def generateIllicitEdges(existingGraph, numberEdges):
     newEdges = []
     for i in range(numberEdges):
@@ -360,6 +387,7 @@ def generateIllicitEdges(existingGraph, numberEdges):
         newEdges.append((listOfTwo[0], listOfTwo[1]))
     return newEdges
         
+# NotCurrentlyInUseByCoreModel
 # note function is not finished
 # will eventually generate edges between and within households 
 def generateChildcareEdges(numInEach, numGroups, graph, householdWithin, nearHouseholds):
@@ -377,6 +405,7 @@ def generateChildcareEdges(numInEach, numGroups, graph, householdWithin, nearHou
         adds = random.sample(remainingChoice, numInEach -1)
         inAGroup.append(adds)
 
+# NotCurrentlyInUseByCoreModel
 # for now all edges get the same weight
 # The graph here is the geometric graph 
 def generateChildcareEdgesAggregate(graph, numGroups, sizeGroups):
@@ -401,6 +430,8 @@ def generateChildcareEdgesAggregate(graph, numGroups, sizeGroups):
 
     return strongEdges
     
+
+# CurrentlyInUse
 def generateMeanPlot(listOfPlots):
     meanForPlot = []
     # print(listOfPlots)
@@ -412,10 +443,12 @@ def generateMeanPlot(listOfPlots):
     return meanForPlot
         
 
-
+# CurrentlyInUse
 def totalIndividuals(nodeState):
     return sum(nodeState.values())
 
+
+# CurrentlyInUse
 def getTotalInAge(nodeState, ageTest):
     total= 0
     for (age, state) in nodeState:
@@ -423,6 +456,8 @@ def getTotalInAge(nodeState, ageTest):
                 total = total + nodeState[(age, state)]
     return total
 
+
+# CurrentlyInUse
 def getTotalInfected(nodeState):
     totalInfectedHere = 0
     for (age, state) in nodeState:
@@ -430,6 +465,8 @@ def getTotalInfected(nodeState):
                 totalInfectedHere = totalInfectedHere + nodeState[(age, state)]
     return totalInfectedHere
 
+
+# CurrentlyInUse
 def getTotalSuscept(nodeState):
     totalSusHere = 0
     for (age, state) in nodeState:
@@ -437,6 +474,7 @@ def getTotalSuscept(nodeState):
                         totalSusHere = totalSusHere + nodeState[(age, state)]
     return totalSusHere
 
+# CurrentlyInUse
 # fractional people will come out of this
 # right now this infects uniformly across age class by number of susceptibles in age class 
 def distributeInfections(nodeState, newInfections):
@@ -457,6 +495,7 @@ def distributeInfections(nodeState, newInfections):
     return newInfectionsByAge
 
 
+# CurrentlyInUse
 # To bring this in line with the within-node infection updates (and fix a few bugs), I'm going to rework
 # it so that we calculate an *expected number* of infectious contacts more directly. Then we'll distribute and
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
@@ -494,6 +533,8 @@ def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInf
            dictOfStates[currentTime+1][vertex][(age, 'E')] = dictOfStates[currentTime+1][vertex][(age, 'E')] + deltaByAge[age]
 
 
+
+# CurrentlyInUse
 #  (JE, 10 May 2020) I'm realigning this to be more using with a POLYMOD-style matrix (inlcuding the within-lockdown COMIX matrix)
 # I expect the matrix entry at [age1][age2] to be the expected number of contacts in a day between age1 and age2
 #  *that would infect if only one end of the contact were infectious*
@@ -522,7 +563,9 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
             numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge)
             newInfectedsByAge[age] = numNewInfected
     return newInfectedsByAge
-        
+
+
+# CurrentlyInUse        
 def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, ages, time):
     nextTime = time+1
     for node in dictOfStates[time]:
@@ -532,6 +575,7 @@ def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, ag
                 dictOfStates[nextTime][node][(age, 'S')] = dictOfStates[nextTime][node][(age, 'S')] - newInfected[age]
 
 
+# CurrentlyInUse
 # internalStateDict should have keys like (age, compartment) 
 #  The values are number of people in that node in that state
 #  diseaseProgressionProbs should have outward probabilities per timestep (rates)
@@ -552,6 +596,7 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
                 dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
     return dictOfNewStates
 
+# CurrentlyInUse
 def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, diseaseProgressionProbs):
     nextTime = currentTime +1
     currStates = dictOfNodeInternalStates[currentTime]
@@ -561,8 +606,8 @@ def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, disease
         nextProgressionState = internalStateDiseaseUpdate(currStates[vertex], diseaseProgressionProbs)
         dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
         
-        
 
+# CurrentlyInUse
 # now amending this to use data read from file on internal populations.
 # the parameter dictOfPopulations  should be like the one returned by readPopulationAgeStructured
 # need to add error-checking here for graceful behaviour when missing population info for a node
