@@ -42,7 +42,7 @@ dictOfPops = ss.readPopulationAgeStructured(sys.argv[2])
 
 graph = ss.genGraphFromContactFile(sys.argv[3])
 
-states = ss.setupInternalPopulations(graph, compNames, ages, ss.readPopulationAgeStructured(sys.argv[2]))
+states = ss.setupInternalPopulations(graph, compNames, ages, dictOfPops)
 
 basicPlots = []
 
@@ -54,7 +54,7 @@ for i in range(numTrials):
 
 plt.plot(ss.generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
 
-plt.savefig('withAges.pdf')
+plt.savefig(sys.argv[4])
 
 # 
 # 
