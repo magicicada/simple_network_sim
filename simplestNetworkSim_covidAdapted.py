@@ -281,8 +281,7 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
     states = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
 
     # for now, we choose a random node and infect numInfected mature individuals - right now they are extra individuals, not removed from the susceptible class
-    infectedNode = ["S08000015"]
-    # random.choices(list(graph.nodes()), k=1)
+    infectedNode = random.choices(list(graph.nodes()), k=1)
     for vertex in infectedNode:
         dictOfStates[0][vertex][('m', 'E')] = numInfected 
 
@@ -298,43 +297,13 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
                         dictOfStates[nextTime][node][(age, state)] = 0
         
         doInternalProgressionAllNodes(dictOfStates, time, diseaseProgressionProbs)
-        nodeUpdate(graph, dictOfStates, time, "\n After internal progression")
-        # print("node 16 " + str(dictOfStates[time]['S08000016']))
-        # print("node 16 " + str(dictOfStates[time +1]['S08000016']))
-        # print("node 15 " + str(dictOfStates[time]['S08000015']))
-        # print("node 15 " + str(dictOfStates[time +1]['S08000015']))
-        print("total population at node S08000016 is " + str(totalIndividuals(dictOfStates[time]['S08000016'])) )
-        print("total population at node S08000015 is " + str(totalIndividuals(dictOfStates[time]['S08000015'])) )
         
         doInteralInfectionProcessAllNodes(dictOfStates, ageInfectionMatrix, ages, time)
-        nodeUpdate(graph, dictOfStates, time, "\n After internal infection")
-        # print("node 16 " + str(dictOfStates[time]['S08000016']))
-        # print("node 16 " + str(dictOfStates[time +1]['S08000016']))
-        # print("node 15 " + str(dictOfStates[time]['S08000015']))
-        # print("node 15 " + str(dictOfStates[time +1]['S08000015']))
-        print("total population at node S08000016 is " + str(totalIndividuals(dictOfStates[time]['S08000016'])) )
-        print("total population at node S08000015 is " + str(totalIndividuals(dictOfStates[time]['S08000015'])) )
-        
+ 
         doBetweenInfectionAgeStructured(graph, dictOfStates, time, genericInfection)
-        
-        nodeUpdate(graph, dictOfStates, time, "\n After between-infection")
-        # print("node 16 " + str(dictOfStates[time]['S08000016']))
-        # print("node 16 " + str(dictOfStates[time +1]['S08000016']))
-        # print("node 15 " + str(dictOfStates[time]['S08000015']))
-        # print("node 15 " + str(dictOfStates[time +1]['S08000015']))
-        print("total population at node S08000016 is " + str(totalIndividuals(dictOfStates[time]['S08000016'])) )
-        print("total population at node S08000015 is " + str(totalIndividuals(dictOfStates[time]['S08000015'])) )
-        
+
         timeSeriesInfection.append(countInfectionsAgeStructured(dictOfStates, time))
-        
-        
-        nodeUpdate(graph, dictOfStates, time, "\n After whole process")
-        # print("node 16 " + str(dictOfStates[time]['S08000016']))
-        # print("node 16 " + str(dictOfStates[time +1]['S08000016']))
-        # print("node 15 " + str(dictOfStates[time]['S08000015']))
-        # print("node 15 " + str(dictOfStates[time +1]['S08000015']))
-        print("total population at node S08000016 is " + str(totalIndividuals(dictOfStates[time]['S08000016'])) )
-        print("total population at node S08000015 is " + str(totalIndividuals(dictOfStates[time]['S08000015'])) )
+
         
     return timeSeriesInfection
 
@@ -515,8 +484,6 @@ def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInf
                     if givingVertex == receivingVertex:
                         continue
                     totalInfectedGiving = getTotalInfected(dictOfStates[currentTime][givingVertex])
-                    # print("Total infected giving from vertex " + str(givingVertex) + " is " + str(totalInfectedGiving))
-                    # print("Total sus receiving at vertex " + str(receivingVertex) + " is " + str(totalSusceptHere))
                     if totalInfectedGiving >0:
                         weight = 1.0
                         if 'weight' not in graph[givingVertex][receivingVertex]:
@@ -527,14 +494,11 @@ def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInf
                         fractionGivingInfected = totalInfectedGiving/totalIndividuals(dictOfStates[currentTime][givingVertex])
                         fractionReceivingSus = totalSusceptHere/totalIndividuals(dictOfStates[currentTime][receivingVertex])
                         totalIncomingInfectionsByNode[receivingVertex] = totalIncomingInfectionsByNode[receivingVertex] + weight*fractionGivingInfected*fractionReceivingSus
-                        # print("frac giving infected " + str(fractionGivingInfected))
-                        # print("frac receiving sus " + str(fractionReceivingSus))
-                        # print("total incoming infections " + str(totalIncomingInfectionsByNode[receivingVertex]))
+
                         
 #   This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue                      
     for vertex in totalIncomingInfectionsByNode:
         totalDelta = totalIncomingInfectionsByNode[vertex]
-        print("total incoming infections for vertex " + str(vertex) + " is " + str(totalDelta))
         deltaByAge = distributeInfections(dictOfStates[currentTime][vertex], totalDelta)
         for age in deltaByAge:
            dictOfStates[currentTime+1][vertex][(age, 'S')] = dictOfStates[currentTime+1][vertex][(age, 'S')] - deltaByAge[age]
@@ -558,7 +522,6 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
             totalNewInfectionContacts = 0
             for ageInf in ages:
                 totalInfectious = currentInternalStateDict[(ageInf, 'I')] + currentInternalStateDict[(ageInf, 'A')]
-#                 THERE IS A PROBLEM ON THE NEXT LINE _ total avoid is coming out with crazy values.  
                 numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
                 totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
 #      Now, given that we expect totalNewInfectionContacts infectious contacts into our age category, how much overlap do we expect?
@@ -592,15 +555,12 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
         if state == 'S':
             dictOfNewStates[(age, state)] = currentInternalStateDict[(age, state)]
         else:
-            # print("\n\n\n========diseaseProgressionProbs====")
-            # print(diseaseProgressionProbs['y'])
             outTransitions = diseaseProgressionProbs[age][state]
             numberInPrevState = currentInternalStateDict[(age, state)]
     #         we're going to have non-integer numbers of people for now
             for nextState in outTransitions:
                 numberInNext = outTransitions[nextState]*currentInternalStateDict[(age, state)]
                 dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
-#         TODO URGENT PROBLEM IN THIS FUNCTION IS LOSING PEOPLE SOMEWHERE  - it's losing them in failing to update the number of recovered/dead
     return dictOfNewStates
 
 def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, diseaseProgressionProbs):
@@ -613,7 +573,7 @@ def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, disease
         dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
         
         
-# This is a strawman version of this function for testing
+
 # now amending this to use data read from file on internal populations.
 # the parameter dictOfPopulations  should be like the one returned by readPopulationAgeStructured
 # need to add error-checking here for graceful behaviour when missing population info for a node
