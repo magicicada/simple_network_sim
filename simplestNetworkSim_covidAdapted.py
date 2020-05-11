@@ -455,18 +455,7 @@ def distributeInfections(nodeState, newInfections):
         else:
             newInfectionsByAge[age] = 0
     return newInfectionsByAge
-    
-#  This function will need improving from a a modelling standpoint.
-#  it will be some function of the number of I/A in nodeState1, S in nodeState2, and the weight
-# of the edge between the two.
-# Edgeweight is expected to be the approx number of contacts from source to destination per time step 
-# should give a float between 0 and 1 that is the probability that a S in node2 is infected by a migrant from node1 
-def fractionInfectedByEdge(nodeState1, nodeState2, edgeWeight, infectiousnessParam):
-    fractionInfectedSource = getTotalInfected(nodeState1)/totalIndividuals(nodeState1)
-    fractionSusceptDest = getTotalSuscept(nodeState2)/totalIndividuals(nodeState2)
-    valReturn = 1-((1-infectiousnessParam)**(fractionInfectedSource*fractionSusceptDest*edgeWeight))
-    print("returning an infectious risk of " + str(valReturn) )
-    return valReturn
+
 
 # To bring this in line with the within-node infection updates (and fix a few bugs), I'm going to rework
 # it so that we calculate an *expected number* of infectious contacts more directly. Then we'll distribute and
