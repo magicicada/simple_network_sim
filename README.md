@@ -22,7 +22,7 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 This software requires Python (*version?*) which can be installed using (Anaconda)[https://www.anaconda.com/products/individual] or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using (pypi)[https://pypi.org/].
 
 ## Usage
-To run a test case, enter the following at the command prompt:
+To run a example case, enter the following at the command prompt:
 
 ```{shell}
 python sampleUseOfModel.py sample_input_files/paramsAgeStructured sample_input_files/sample_hb2019_pop_est_2018.sampleCSV sample_input_files/sample_scotHB_commute_moves_wu01.sampleCSV afilename.pdf
