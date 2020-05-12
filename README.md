@@ -4,11 +4,22 @@ Adaptation of a simple network simulation model to COVID-19 (forked from https:/
 
 ## Features
 
-![](assets/network.png)
+simple_network_sim represents a geographical area (e.g. Scotland) as a series of connected nodes in a network. These could be counties, health board areas, hospitals or even, in a special case, individuals. Each node is generally of the same type in a given network (e.g. all counties). Some nodes have more movement between them than others.
 
-![](assets/compartments.png)
+!["Network"](assets/network.png)
 
-*TODO: What does the software do? How does it compare with other similar software? May want to refer to a seperate concept of operations document.*
+**Network representing a geographical area, thicker lines indicate more movement**
+
+Within each node is a population, stratified by age group into **y**oung, **m**ature and **o**ld. The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node.
+
+!["Compartments"](assets/compartments.png)
+
+**Disease state compartments within each network node**
+
+As simulated time incrementally moves forward, the model predicts the number of people in each disease state in each node taking into account:
+
+- Movement of people between nodes
+- Progression through disease state compartments within each node (affected by mixing between age stratified sub-populations)
 
 ## Contributing
 
