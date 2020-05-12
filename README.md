@@ -1,16 +1,18 @@
 # simple_network_sim
 
-Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19.
+Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this, the SCRC owned repository is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19.
 
 ## Features
 
-simple_network_sim represents a geographical area (e.g. Scotland) as a series of connected nodes in a network. These could be counties, health board areas, hospitals or even, in a special case, individuals. Each node is generally of the same type in a given network (e.g. all counties). Some nodes have more movement between them than others.
+simple_network_sim represents a geographical area (e.g. Scotland) as a series of connected nodes in a network. These could be counties, health board areas, hospitals or even, in a special case, individuals. Each node is of the same type in a given network (e.g. all counties). Some nodes have more movement between them than others.
 
 !["Network"](assets/network.png)
 
 **Network representing a geographical area, thicker lines indicate more movement**
 
-Within each node is a population, stratified by age group into **y**oung, **m**ature and **o**ld. The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node.
+Within each node is a population, stratified by age group into **y**oung, **m**ature and **o**ld. 
+
+The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node.
 
 !["Compartments"](assets/compartments.png)
 
@@ -39,7 +41,7 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 
 ## Installation
 
-This software requires Python (*version?*) which can be installed using (Anaconda)[https://www.anaconda.com/products/individual] or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using (pypi)[https://pypi.org/].
+This software requires Python (3.7.3) which can be installed using (Anaconda)[https://www.anaconda.com/products/individual] or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using (pypi)[https://pypi.org/].
 
 ## Usage
 
@@ -53,4 +55,4 @@ Descriptions of the data files used can be found in the [data dictionary](sample
 
 ## License
 
-The 2-Clause BSD License
+The 2-Clause BSD License.
