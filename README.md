@@ -1,6 +1,9 @@
 # simple_network_sim
-Adaptation of a simple network simulation model to COVID-19
-*TODO: Expand this section.*
+Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19.
+
+## Features
+*TODO: What does the software do? How does it compare with other similar software? May want to refer to a seperate concept of operations document.*
+
 ## Contributing
 > **Rule 0:** Be polite, respectful and supportive.
 
@@ -15,8 +18,6 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 
 **For the time being, all pull requests must be reviewed by @magicicada or @bobturneruk.**
 - The assignee (or reviewer) merges the pull request into the `master` branch
-## Features
-*TODO: What does the software do? How does it compare with other similar software? May want to refer to a seperate concept of operations document.*
 
 ## Installation
 This software requires Python (*version?*) which can be installed using (Anaconda)[https://www.anaconda.com/products/individual] or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using (pypi)[https://pypi.org/].
