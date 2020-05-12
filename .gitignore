@@ -1,5 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Source / output data
 *.csv
 *.dat
 *.xls
+*.pdf
 data/
 .DS_Store
+
+# Do not ignore sample inputs
+!sample_input_files/*
