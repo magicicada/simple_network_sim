@@ -310,7 +310,7 @@ def basicReportingFunction(dictOfStates):
             for state in numByState:
                dictOfStringsByNodeAndState[node][state].append(numByState[state])
            
-    print(dictOfStringsByNodeAndState)
+    # print(dictOfStringsByNodeAndState)
     
     for node in dictOfStringsByNodeAndState:
         for state in dictOfStringsByNodeAndState[node]:
@@ -358,7 +358,6 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
 
         timeSeriesInfection.append(countInfectionsAgeStructured(dictOfStates, time))
 
-        
     return timeSeriesInfection
 
 # CurrentlyInUse
