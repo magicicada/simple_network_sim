@@ -1,0 +1,17 @@
+digraph network {
+
+
+node[shape="ellipse" style="rounded,filled" fontname="Arial"]
+edge [color="#006699" len=2.5 dir="both"]
+
+A->B [penwidth=1.5]
+B->C [penwidth=6]
+C->D
+D->B [penwidth=4]
+
+A [label="Population grouped by age"]
+B [label="Population grouped by age"]
+C [label="Population grouped by age"]
+D [label="Population grouped by age"]
+
+}
