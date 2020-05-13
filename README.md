@@ -41,7 +41,7 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 
 ## Installation
 
-This software requires Python (3.7.3) which can be installed using (Anaconda)[https://www.anaconda.com/products/individual] or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using (pypi)[https://pypi.org/].
+This software requires Python (3.7.3) which can be installed using [Anaconda](https://www.anaconda.com/products/individual) or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using [pypi](https://pypi.org/).
 
 ## Usage
 
