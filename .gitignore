@@ -12,3 +12,6 @@ data/
 
 # Do not ignore sample inputs
 !sample_input_files/*
+
+# IDE
+.idea
