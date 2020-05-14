@@ -6,13 +6,13 @@ import simplestNetworkSim_covidAdapted as ss
 
 
 def test_basic_simulation(age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix):
-    random.seed(1)
     age_to_trans = ss.setUpParametersAges(ss.readParametersAgeStructured(age_transitions))
     population = ss.readPopulationAgeStructured(demographics)
     graph = ss.genGraphFromContactFile(commute_moves)
     states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
     result = ss.basicSimulationInternalAgeStructure(
+        rand=random.Random(1),
         graph=graph,
         numInfected=10,
         timeHorizon=200,
@@ -231,16 +231,17 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
 def test_basic_simulation_100_runs(
     age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix
 ):
-    random.seed(1)
     age_to_trans = ss.setUpParametersAges(ss.readParametersAgeStructured(age_transitions))
     population = ss.readPopulationAgeStructured(demographics)
     graph = ss.genGraphFromContactFile(commute_moves)
     states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
     runs = []
+    rand = random.Random(1)
     for _ in range(100):
         runs.append(
             ss.basicSimulationInternalAgeStructure(
+                rand=rand,
                 graph=graph,
                 numInfected=10,
                 timeHorizon=200,

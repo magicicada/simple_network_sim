@@ -323,7 +323,7 @@ def basicReportingFunction(dictOfStates):
 
 # CurrentlyInUse
 # amending this so that file I/O happens outside it 
-def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
+def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
     
     print('WARNING - FUNCTION NOT PROPERLY TESTED YET - basicSimulationInternalAgeStructure')
     ages = list(ageInfectionMatrix.values())
@@ -335,7 +335,7 @@ def basicSimulationInternalAgeStructure(graph, numInfected, timeHorizon, generic
     states = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
 
     # for now, we choose a random node and infect numInfected mature individuals - right now they are extra individuals, not removed from the susceptible class
-    infectedNode = random.choices(list(graph.nodes()), k=1)
+    infectedNode = rand.choices(list(graph.nodes()), k=1)
     for vertex in infectedNode:
         dictOfStates[0][vertex][('m', 'E')] = numInfected 
 

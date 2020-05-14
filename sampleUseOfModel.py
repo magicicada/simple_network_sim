@@ -50,7 +50,7 @@ time = 200
 numTrials = 100
 
 for i in range(numTrials):
-     basicPlots.append(ss.basicSimulationInternalAgeStructure(graph, numInfected, time, genericInfection, ageInfectionMatrix, ageToTrans, states))
+     basicPlots.append(ss.basicSimulationInternalAgeStructure(random.Random(), graph, numInfected, time, genericInfection, ageInfectionMatrix, ageToTrans, states))
 
 plt.plot(ss.generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
 
