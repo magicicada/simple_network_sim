@@ -63,6 +63,13 @@ The file can be created with the following command:
 conda list --explicit > spec-file.txt
 ```
 
+## Tests
+
+After activating your conda environment, execute the following command:
+
+```{shell}
+pytest tests
+```
 
 ## Usage
 
