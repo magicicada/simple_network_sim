@@ -6,6 +6,7 @@ import networkx as nx
 # CurrentlyInUse
 def checkAgeParameters(agesDictionary):
     # Required parameters per age group
+    # TODO(rafael): if we decide to take the compartments graph as an input, we will need to revisit this list
     required = ["e_escape", "a_escape", "a_to_i", "i_escape", "i_to_d",
                 "i_to_h", "h_escape", "h_to_d"]
     # Track all missing parameters, so we can report all of them at once.
@@ -54,7 +55,9 @@ def readPopulationAgeStructured(filename):
     oldInd = 5
     with open(filename, 'r') as f:
         first_line = f.readline()
-        for line in f:
+        if first_line.strip() != "Health_Board,Sex,Total_across_age,Young,Medium,Old":
+            raise ValueError("The first line must be the header")
+        for n, line in enumerate(f):
             split = line.strip().split(",")
             board = split[boardInd]
             if board not in dictOfPops:
@@ -70,6 +73,8 @@ def readPopulationAgeStructured(filename):
             dictOfPops[board][sex]['m'] = numMature
             dictOfPops[board][sex]['o'] = numOld
             dictOfPops[board][sex]['All_Ages'] = numTotal
+            if numYoung + numMature + numOld != numTotal:
+                raise ValueError(f"Line {n + 1} all ages doesn't add up")
 
     #     a traversal to add in the totals
     #     this is not great code, could be improved and made much more general - more robust against future age range changes
