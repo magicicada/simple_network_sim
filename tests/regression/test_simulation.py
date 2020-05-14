@@ -2,13 +2,14 @@ import random
 
 import pytest
 
-import simplestNetworkSim_covidAdapted as ss
+from simple_network_sim import covidAdapted as ss
+from simple_network_sim import loaders
 
 
 def test_basic_simulation(age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix):
-    age_to_trans = ss.setUpParametersAges(ss.readParametersAgeStructured(age_transitions))
-    population = ss.readPopulationAgeStructured(demographics)
-    graph = ss.genGraphFromContactFile(commute_moves)
+    age_to_trans = ss.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    population = loaders.readPopulationAgeStructured(demographics)
+    graph = loaders.genGraphFromContactFile(commute_moves)
     states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
     result = ss.basicSimulationInternalAgeStructure(
@@ -231,9 +232,9 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
 def test_basic_simulation_100_runs(
     age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix
 ):
-    age_to_trans = ss.setUpParametersAges(ss.readParametersAgeStructured(age_transitions))
-    population = ss.readPopulationAgeStructured(demographics)
-    graph = ss.genGraphFromContactFile(commute_moves)
+    age_to_trans = ss.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    population = loaders.readPopulationAgeStructured(demographics)
+    graph = loaders.genGraphFromContactFile(commute_moves)
     states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
     runs = []

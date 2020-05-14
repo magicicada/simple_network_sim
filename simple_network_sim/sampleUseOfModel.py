@@ -4,7 +4,8 @@ import sys
 from collections import Counter
 import matplotlib.pyplot as plt
 import json
-import simplestNetworkSim_covidAdapted as ss
+from . import covidAdapted as ss
+from . import loaders
     
  #  A bit of sample model operation.     
 
@@ -33,14 +34,14 @@ baseGraph = nx.path_graph(10)
 for (u, v) in list(baseGraph.edges()):
      baseGraph[u][v]['weight'] = baseWeight
 
-params = ss.readParametersAgeStructured(sys.argv[1])
+params = loaders.readParametersAgeStructured(sys.argv[1])
 
 ageToTrans = ss.setUpParametersAges(params)
 
 
-dictOfPops = ss.readPopulationAgeStructured(sys.argv[2])
+dictOfPops = loaders.readPopulationAgeStructured(sys.argv[2])
 
-graph = ss.genGraphFromContactFile(sys.argv[3])
+graph = loaders.genGraphFromContactFile(sys.argv[3])
 
 states = ss.setupInternalPopulations(graph, compNames, ages, dictOfPops)
 
