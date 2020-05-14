@@ -41,7 +41,28 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 
 ## Installation
 
-This software requires Python (3.7.3) which can be installed using [Anaconda](https://www.anaconda.com/products/individual) or another distribution. It also needs the `networkx` and `matplotlib` packages which can be installed via Anaconda or using [pypi](https://pypi.org/).
+Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) (it also works with [anaconda](https://docs.anaconda.com/anaconda/install/), but we do not need the extra packages). With conda installed, run the following commands to create the virtual environment and activate it:
+
+```
+conda env create -f environment.yml
+conda activate simple_network_sim
+```
+
+## Reproducible builds
+
+In order to ensure reproducibility, we export a [spec-file.txt](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments) whenever we change dependencies for this project. The file pins the version for every dependency and subdependencies of the project.  Since the CI use that file to set up the environment, it is linux specific. A conda environment can be created with it by running:
+
+```
+conda create --name simple_network_sim --file spec-file.txt
+conda activate simple_network_sim
+```
+
+The file can be created with the following command:
+
+```
+conda list --explicit > spec-file.txt
+```
+
 
 ## Usage
 
