@@ -76,7 +76,7 @@ pytest tests
 To run a example case, enter the following at the command prompt:
 
 ```{shell}
-python sampleUseOfModel.py sample_input_files/paramsAgeStructured sample_input_files/sample_hb2019_pop_est_2018.sampleCSV sample_input_files/sample_scotHB_commute_moves_wu01.sampleCSV afilename.pdf
+python -m simple_network_sim.sampleUseOfModel sample_input_files/paramsAgeStructured sample_input_files/sample_hb2019_pop_est_2018.sampleCSV sample_input_files/sample_scotHB_commute_moves_wu01.sampleCSV afilename.pdf
 ```
 
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/data_dictionary.md).
