@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+# test output
+.coverage
+
 # Source / output data
 *.csv
 *.dat
@@ -15,3 +18,4 @@ data/
 
 # IDE
 .idea
+*.sw[po]

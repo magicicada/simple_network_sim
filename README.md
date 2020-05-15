@@ -68,7 +68,7 @@ conda list --explicit > spec-file.txt
 After activating your conda environment, execute the following command:
 
 ```{shell}
-pytest tests
+pytest --cov=simple_network_sim tests
 ```
 
 ## Usage
