@@ -4,8 +4,9 @@ import sys
 from collections import Counter
 import matplotlib.pyplot as plt
 import json
-from . import covidAdapted as ss
-from . import loaders
+
+from . import common, network_of_populations as ss, loaders
+
     
  #  A bit of sample model operation.     
 
@@ -53,7 +54,7 @@ numTrials = 100
 for i in range(numTrials):
      basicPlots.append(ss.basicSimulationInternalAgeStructure(random.Random(), graph, numInfected, time, genericInfection, ageInfectionMatrix, ageToTrans, states))
 
-plt.plot(ss.generateMeanPlot(basicPlots), color = 'dodgerblue', label='basic')
+plt.plot(common.generateMeanPlot(basicPlots), color ='dodgerblue', label='basic')
 
 plt.savefig(sys.argv[4])
 

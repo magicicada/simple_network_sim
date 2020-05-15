@@ -2,17 +2,16 @@ import random
 
 import pytest
 
-from simple_network_sim import covidAdapted as ss
-from simple_network_sim import loaders
+from simple_network_sim import common, network_of_populations as np, loaders
 
 
 def test_basic_simulation(age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix):
-    age_to_trans = ss.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
     population = loaders.readPopulationAgeStructured(demographics)
     graph = loaders.genGraphFromContactFile(commute_moves)
-    states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
+    states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
-    result = ss.basicSimulationInternalAgeStructure(
+    result = np.basicSimulationInternalAgeStructure(
         rand=random.Random(1),
         graph=graph,
         numInfected=10,
@@ -232,16 +231,16 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
 def test_basic_simulation_100_runs(
     age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix
 ):
-    age_to_trans = ss.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
     population = loaders.readPopulationAgeStructured(demographics)
     graph = loaders.genGraphFromContactFile(commute_moves)
-    states = ss.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
+    states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
     runs = []
     rand = random.Random(1)
     for _ in range(100):
         runs.append(
-            ss.basicSimulationInternalAgeStructure(
+            np.basicSimulationInternalAgeStructure(
                 rand=rand,
                 graph=graph,
                 numInfected=10,
@@ -252,7 +251,7 @@ def test_basic_simulation_100_runs(
                 dictOfStates=states,
             )
         )
-    result = ss.generateMeanPlot(runs)
+    result = common.generateMeanPlot(runs)
 
     expected = [
         0.0,
