@@ -95,7 +95,8 @@ def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, g
     # for now, we choose a random node and infect numInfected mature individuals - right now they are extra individuals, not removed from the susceptible class
     infectedNode = rand.choices(list(graph.nodes()), k=1)
     for vertex in infectedNode:
-        dictOfStates[0][vertex][('m', 'E')] = numInfected 
+        dictOfStates[0][vertex][('m', 'E')] = numInfected
+        assert dictOfStates[0][vertex][('m', 'S')] >= numInfected, "cannot infect more than number of susceptible"
 
     for time in range(timeHorizon):
 #         make sure the next time exists, so that we can add exposed individuals to it
@@ -180,6 +181,35 @@ def distributeInfections(nodeState, newInfections):
     return newInfectionsByAge
 
 
+def doIncomingInfectionsByNode(graph, currentState):
+    totalIncomingInfectionsByNode = {}
+    for receivingVertex in currentState:
+        totalSusceptHere = getTotalSuscept(currentState[receivingVertex])
+        totalIncomingInfectionsByNode[receivingVertex] = 0
+        if totalSusceptHere > 0:
+            neighbours = list(graph.predecessors(receivingVertex))
+            for givingVertex in neighbours:
+                if givingVertex == receivingVertex:
+                    continue
+                totalInfectedGiving = getTotalInfected(currentState[givingVertex])
+                if totalInfectedGiving > 0:
+                    weight = 1.0
+                    if 'weight' not in graph[givingVertex][receivingVertex]:
+                        print("ERROR: No weight available for edge " + str(givingVertex) + "," + str(
+                            receivingVertex) + " assigning weight 1.0")
+                    else:
+                        weight = graph[givingVertex][receivingVertex]['weight']
+
+                    fractionGivingInfected = totalInfectedGiving / totalIndividuals(
+                        currentState[givingVertex])
+                    fractionReceivingSus = totalSusceptHere / totalIndividuals(
+                        currentState[receivingVertex])
+                    totalIncomingInfectionsByNode[receivingVertex] = totalIncomingInfectionsByNode[
+                                                                         receivingVertex] + weight * fractionGivingInfected * fractionReceivingSus
+
+    return totalIncomingInfectionsByNode
+
+
 # CurrentlyInUse
 # To bring this in line with the within-node infection updates (and fix a few bugs), I'm going to rework
 # it so that we calculate an *expected number* of infectious contacts more directly. Then we'll distribute and
@@ -187,33 +217,14 @@ def distributeInfections(nodeState, newInfections):
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
 def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInfectionProb):
-    totalIncomingInfectionsByNode = {}
-    for receivingVertex in dictOfStates[currentTime]:
-        totalSusceptHere = getTotalSuscept(dictOfStates[currentTime][receivingVertex])
-        totalIncomingInfectionsByNode[receivingVertex] = 0
-        if totalSusceptHere >0:
-            neighbours = list(graph.predecessors(receivingVertex))
-            for givingVertex in neighbours:
-                    if givingVertex == receivingVertex:
-                        continue
-                    totalInfectedGiving = getTotalInfected(dictOfStates[currentTime][givingVertex])
-                    if totalInfectedGiving >0:
-                        weight = 1.0
-                        if 'weight' not in graph[givingVertex][receivingVertex]:
-                            print("ERROR: No weight available for edge " + str(givingVertex) + "," + str(receivingVertex) + " assigning weight 1.0")
-                        else:
-                            weight = graph[givingVertex][receivingVertex]['weight']
+    totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime])
                         
-                        fractionGivingInfected = totalInfectedGiving/totalIndividuals(dictOfStates[currentTime][givingVertex])
-                        fractionReceivingSus = totalSusceptHere/totalIndividuals(dictOfStates[currentTime][receivingVertex])
-                        totalIncomingInfectionsByNode[receivingVertex] = totalIncomingInfectionsByNode[receivingVertex] + weight*fractionGivingInfected*fractionReceivingSus
-
-                        
-#   This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue                      
+    # This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue
     for vertex in totalIncomingInfectionsByNode:
         totalDelta = totalIncomingInfectionsByNode[vertex]
         deltaByAge = distributeInfections(dictOfStates[currentTime][vertex], totalDelta)
         for age in deltaByAge:
+           assert dictOfStates[currentTime+1][vertex][(age, 'S')] >= deltaByAge[age], "number of infected cannot be greater than susceptible"
            dictOfStates[currentTime+1][vertex][(age, 'S')] = dictOfStates[currentTime+1][vertex][(age, 'S')] - deltaByAge[age]
            dictOfStates[currentTime+1][vertex][(age, 'E')] = dictOfStates[currentTime+1][vertex][(age, 'E')] + deltaByAge[age]
 
@@ -245,7 +256,10 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 #       Now when we draw totalNewInfectionContacts from totalInAge with replacement, how many do we expect?
 #       For now, a simplifying assumption that there are *many more* individuals in totalInAge than there are   totalNewInfectionContacts
 #       So we don't have to deal with multiple infections for the same individual.  TODO - address in future code update, raise issue for this
-            numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge)
+            if totalInAge > 0.0:
+                numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge)
+            else:
+                numNewInfected = 0.0
             newInfectedsByAge[age] = numNewInfected
     return newInfectedsByAge
 
@@ -256,6 +270,7 @@ def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, ag
     for node in dictOfStates[time]:
             newInfected = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix, ages, time)
             for age in newInfected:
+                assert newInfected[age] <= dictOfStates[nextTime][node][(age, 'S')], f"More infected people than susceptible ({age}, {time}, {dictOfStates[nextTime][node][(age, 'S')]}, {newInfected[age]})"
                 dictOfStates[nextTime][node][(age, 'E')] = dictOfStates[nextTime][node][(age, 'E')] + newInfected[age]
                 dictOfStates[nextTime][node][(age, 'S')] = dictOfStates[nextTime][node][(age, 'S')] - newInfected[age]
 
