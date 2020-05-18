@@ -30,7 +30,7 @@ We use a compartmental model including the states:
 
 Movement between **S** and **E** is mediated by the infectious process model, all other transitions are determined by an input transition matrix that encodes the rates along the arrows in the following diagram:
 
-![](https://i.imgur.com/2rrJ6Qm.png)
+!["Compartments"](assets/colourfulCompartments.png)
 
 Different rates by age class are possible. 
 
@@ -73,7 +73,7 @@ There is some infrastructure for generating edges between nodes rather than read
 
 An example network structure with uniformly randomly distributed nodes (households or individuals), local transmission edges in grey, strong local edges in green, and uniformly randomly chosen long-distance edges in red.  
 
-![](https://i.imgur.com/Ni1L33S.png)
+!["Network"](assets/sampleNetwork.png)
 
 
 **Outputs and logging**
