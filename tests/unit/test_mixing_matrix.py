@@ -1,3 +1,4 @@
+import tempfile
 import pytest
 
 from simple_network_sim.mixing_matrix import AgeRange, MixingMatrix, _check_overlap
@@ -43,6 +44,53 @@ def test_AgeRange():
         b = AgeRange("[65,75)")
         _check_overlap(a, b)
     assert e_info.value.args[0] == f"Overlap in age ranges with {a} and {b}"
+
+
+def test_invalidMixingMatrixFiles():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,15)","[0,15)"',
+            '"[0,15)",0.1, 0.05',
+            '"[15,30)",0.2, 0.2',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        with pytest.raises(Exception) as e_info:
+            MixingMatrix(fp.name)
+        assert e_info.value.args[0] == "Duplicate column header found in mixing matrix"
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,15)","[15,30)"',
+            '"[0,15)",0.1, 0.05',
+            '"[0,15)",0.2, 0.2',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        with pytest.raises(Exception) as e_info:
+            MixingMatrix(fp.name)
+        assert e_info.value.args[0] == "Duplicate row header found in mixing matrix"
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,20)","[15,30)"',
+            '"[0,15)",0.1, 0.05',
+            '"[15,30)",0.2, 0.2',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        with pytest.raises(Exception) as e_info:
+            MixingMatrix(fp.name)
+        assert e_info.value.args[0] == "Overlap in age ranges with [0,20) and [15,30)"
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,15)","[15,30)"',
+            '"[0,15)",0.1, 0.05',
+            '"[10,30)",0.2, 0.2',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        with pytest.raises(Exception) as e_info:
+            MixingMatrix(fp.name)
+        assert e_info.value.args[0] == "Overlap in age ranges with [0,15) and [10,30)"
 
 
 def test_sampleMixingMatrix(mixing_matrix):

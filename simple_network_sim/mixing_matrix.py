@@ -131,14 +131,24 @@ class MixingMatrix:
             reader = csv.reader(inp)
             headers = [AgeRange(text) for text in next(reader)[1:]]
             if len(headers) != len(set(headers)):
-                raise Exception("Duplicate header found in mixing matrix")
-            # Check for any overlap in the age ranges
-            for one, two in zip(headers, headers):
+                raise Exception("Duplicate column header found in mixing matrix")
+            # Check for any overlap in the column headers
+            for one in headers:
+                for two in headers:
+                    if one == two:
+                        continue
+                    _check_overlap(one, two)
+            for row in reader:
+                row_header = AgeRange(row[0])
+                if row_header in self._matrix:
+                    raise Exception("Duplicate row header found in mixing matrix")
+                self._matrix[row_header] = MixingRow(headers, row[1:])
+        # Check for any overlap in the column headers
+        for one in self._matrix.keys():
+            for two in self._matrix.keys():
                 if one == two:
                     continue
                 _check_overlap(one, two)
-            for row in reader:
-                self._matrix[AgeRange(row[0])] = MixingRow(headers, row[1:])
 
 
     def __getitem__(self, age):
