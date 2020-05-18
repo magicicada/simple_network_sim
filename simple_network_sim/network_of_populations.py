@@ -82,8 +82,6 @@ def basicReportingFunction(dictOfStates):
 # CurrentlyInUse
 # amending this so that file I/O happens outside it 
 def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
-    
-    print('WARNING - FUNCTION NOT PROPERLY TESTED YET - basicSimulationInternalAgeStructure')
     ages = list(ageInfectionMatrix.values())
     timeSeriesInfection = []
     
