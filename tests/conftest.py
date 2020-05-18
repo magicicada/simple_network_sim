@@ -13,6 +13,9 @@ def age_transitions():
 def demographics():
     yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "sample_hb2019_pop_est_2018.sampleCSV")
 
+@pytest.fixture
+def mixing_matrix():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "sample_20200327_comix_social_contacts.sampleCSV")
 
 @pytest.fixture
 def commute_moves():
