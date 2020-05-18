@@ -31,7 +31,7 @@ def test_basicSimulationInternalAgeStructure_invariants(
     states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
     old_graph = copy.deepcopy(graph)
     old_age_to_trans = copy.deepcopy(age_to_trans)
-    initial_population = sum(_count_people_per_region(states[0])) + num_infected
+    initial_population = sum(_count_people_per_region(states[0]))
 
     np.basicSimulationInternalAgeStructure(
         rand=random.Random(seed),

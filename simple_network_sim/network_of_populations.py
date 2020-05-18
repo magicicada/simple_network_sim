@@ -97,6 +97,7 @@ def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, g
     for vertex in infectedNode:
         dictOfStates[0][vertex][('m', 'E')] = numInfected
         assert dictOfStates[0][vertex][('m', 'S')] >= numInfected, "cannot infect more than number of susceptible"
+        dictOfStates[0][vertex][('m', 'S')] -= numInfected
 
     for time in range(timeHorizon):
 #         make sure the next time exists, so that we can add exposed individuals to it
