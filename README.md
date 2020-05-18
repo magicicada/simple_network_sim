@@ -14,7 +14,7 @@ Within each node is a population, stratified by age group into **y**oung, **m**a
 
 The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node.
 
-!["Compartments"](assets/compartments.png)
+!["Compartments"](assets/colourfulCompartments.png)
 
 **Disease state compartments within each network node**
 
@@ -22,6 +22,8 @@ As simulated time incrementally moves forward, the model predicts the number of 
 
 - Movement of people between nodes
 - Progression through disease state compartments within each node (affected by mixing between age stratified sub-populations)
+
+A more detailed model overview [here](model_overview_simple_network_sim.md)
 
 ## Contributing
 
