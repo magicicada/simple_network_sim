@@ -249,12 +249,10 @@ class MixingMatrix:
         with open(infile, "r") as inp:
             reader = csv.reader(inp)
             headers = [AgeRange(text) for text in next(reader)[1:]]
-            if len(headers) != len(set(headers)):
-                raise Exception("Duplicate column header found in mixing matrix")
             # Check for any overlap in the column headers
-            for one in headers:
-                for two in headers:
-                    if one == two:
+            for i, one in enumerate(headers):
+                for j, two in enumerate(headers):
+                    if i == j:
                         continue
                     _check_overlap(one, two)
             for row in reader:
