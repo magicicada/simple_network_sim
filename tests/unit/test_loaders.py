@@ -292,7 +292,7 @@ def test_AgeRange():
     assert e_info.value.args[0] == f"Overlap in age ranges with {a} and {b}"
 
 
-def test_invalidMixingMatrixFiles():
+def test_invalidMixingMatrixFilesDuplicateHeaders():
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
         rows = [
             ',"[0,15)","[0,15)"',
@@ -315,6 +315,9 @@ def test_invalidMixingMatrixFiles():
         with pytest.raises(Exception) as e_info:
             loaders.MixingMatrix(fp.name)
         assert e_info.value.args[0] == "Duplicate row header found in mixing matrix"
+
+
+def test_invalidMixingMatrixFilesOverlappingRanges():
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
         rows = [
             ',"[0,20)","[15,30)"',
