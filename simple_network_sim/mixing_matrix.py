@@ -6,6 +6,21 @@ import re
 
 AGE_RE = re.compile(r'\[(\d+),\s*(\d+)\)')
 
+
+def _check_overlap(one, two):
+    """Check two AgeRange objects to see if they overlap. If they do, raise an
+    Exception
+    """
+    if one._lower == two._lower:
+        raise Exception(f"Overlap in age ranges with {one} and {two}")
+    if one._lower < two._lower:
+        if one._upper > two._lower:
+            raise Exception(f"Overlap in age ranges with {one} and {two}")
+    else:
+        if two._upper > one._lower:
+            raise Exception(f"Overlap in age ranges with {one} and {two}")
+
+
 class AgeRange:
     """A helper class for an age range."""
     def __init__(self, a, b=None):
@@ -26,11 +41,16 @@ class AgeRange:
                     self._upper = -1  # A marker for no upper limit
                 else:
                     raise Exception(f'Invalid age range specified: "{a}"')
+            if self._upper != -1 and self._lower > self._upper:
+                raise Exception(f'Invalid age range specified: {a}')
         else:
             self._lower = int(a)
             self._upper = int(b)
+            if self._upper != -1 and self._lower > self._upper:
+                raise Exception(f'Invalid age range specified: [{a},{b})')
 
-    def contains(self, age):
+
+    def __contains__(self, age):
         """Returns true if age is inside this age range."""
         if age < self._lower:
             return False
@@ -50,7 +70,7 @@ class AgeRange:
         return not self == other
 
     def __hash__(self):
-        return 1000*self._lower + self._upper  # We just need any hashing method
+        return hash((self._lower, self._upper))
 
 
 class MixingRow:
@@ -74,7 +94,7 @@ class MixingRow:
         if isinstance(age, str) or isinstance(age, tuple):
             return self._entries[AgeRange(age)]
         for key, value in self._entries.items():
-            if key.contains(age):
+            if age in key:
                 return value
         raise Exception(f'Could not find {age} in MixingRow')
 
@@ -109,7 +129,14 @@ class MixingMatrix:
         self._matrix = {}
         with open(infile, "r") as inp:
             reader = csv.reader(inp)
-            headers = [AgeRange(text) for text in next(reader, None)[1:]]
+            headers = [AgeRange(text) for text in next(reader)[1:]]
+            if len(headers) != len(set(headers)):
+                raise Exception("Duplicate header found in mixing matrix")
+            # Check for any overlap in the age ranges
+            for one, two in zip(headers, headers):
+                if one == two:
+                    continue
+                _check_overlap(one, two)
             for row in reader:
                 self._matrix[AgeRange(row[0])] = MixingRow(headers, row[1:])
 
@@ -124,7 +151,7 @@ class MixingMatrix:
         if isinstance(age, str) or isinstance(age, tuple):
             return self._matrix[AgeRange(age)]
         for key, value in self._matrix.items():
-            if key.contains(age):
+            if age in key:
                 return value
         raise Exception(f'Could not find {age} in MixingMatrix')
 
