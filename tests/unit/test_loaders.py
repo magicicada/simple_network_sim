@@ -303,7 +303,7 @@ def test_invalidMixingMatrixFilesDuplicateHeaders():
         fp.flush()
         with pytest.raises(Exception) as e_info:
             loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Duplicate column header found in mixing matrix"
+        assert e_info.value.args[0] == "Duplicate column header found in mixing matrix: [0,15)"
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
         rows = [
             ',"[0,15)","[15,30)"',
@@ -314,7 +314,7 @@ def test_invalidMixingMatrixFilesDuplicateHeaders():
         fp.flush()
         with pytest.raises(Exception) as e_info:
             loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Duplicate row header found in mixing matrix"
+        assert e_info.value.args[0] == "Duplicate row header found in mixing matrix: [0,15)"
 
 
 def test_invalidMixingMatrixFilesOverlappingRanges():

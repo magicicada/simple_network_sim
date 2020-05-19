@@ -127,6 +127,8 @@ def _check_overlap(one, two):
     Exception
     """
     if one._lower == two._lower:
+        if one._upper == two._upper:
+            raise Exception(f"Duplicate column header found in mixing matrix: {one}")
         raise Exception(f"Overlap in age ranges with {one} and {two}")
     if one._lower < two._lower:
         if one._upper > two._lower:
@@ -258,7 +260,7 @@ class MixingMatrix:
             for row in reader:
                 row_header = AgeRange(row[0])
                 if row_header in self._matrix:
-                    raise Exception("Duplicate row header found in mixing matrix")
+                    raise Exception(f"Duplicate row header found in mixing matrix: {row_header}")
                 self._matrix[row_header] = MixingRow(headers, row[1:])
         # Check for any overlap in the column headers
         for one in self._matrix.keys():
