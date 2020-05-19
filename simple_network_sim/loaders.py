@@ -126,14 +126,8 @@ def _check_overlap(one, two):
     """Check two AgeRange objects to see if they overlap. If they do, raise an
     Exception
     """
-    if one._lower == two._lower:
-        raise Exception(f"Overlap in age ranges with {one} and {two}")
-    if one._lower < two._lower:
-        if one._upper > two._lower:
-            raise Exception(f"Overlap in age ranges with {one} and {two}")
-    else:
-        if two._upper > one._lower:
-            raise Exception(f"Overlap in age ranges with {one} and {two}")
+    assert one._upper <= two._lower or two._upper <= one._lower, \
+            (f"Overlap in age ranges with {one} and {two}")
 
 
 # We use this to match an age range in the AgeRange class
@@ -142,6 +136,12 @@ AGE_RE = re.compile(r'\[(\d+),\s*(\d+)\)')
 
 class AgeRange:
     """A helper class for an age range."""
+
+
+    # A marker for no upper limit
+    NO_UPPER = 999999
+
+
     def __init__(self, a, b=None):
         """Initialiser. If b is None, it is assumed that a is a string to be
         parsed. Otherwise, the age range is assumed to be [a, b).
@@ -157,15 +157,15 @@ class AgeRange:
                     self._upper = int(match.group(2))
                 elif a[-1] == "+":
                     self._lower = int(a[:-1])
-                    self._upper = -1  # A marker for no upper limit
+                    self._upper = AgeRange.NO_UPPER
                 else:
                     raise Exception(f'Invalid age range specified: "{a}"')
-            if self._upper != -1 and self._lower > self._upper:
+            if self._lower >= self._upper:
                 raise Exception(f'Invalid age range specified: {a}')
         else:
             self._lower = int(a)
             self._upper = int(b)
-            if self._upper != -1 and self._lower > self._upper:
+            if self._lower >= self._upper:
                 raise Exception(f'Invalid age range specified: [{a},{b})')
 
 
@@ -173,12 +173,10 @@ class AgeRange:
         """Returns true if age is inside this age range."""
         if age < self._lower:
             return False
-        if self._upper == -1:
-            return True
         return age < self._upper
 
     def __str__(self):
-        if self._upper == -1:
+        if self._upper == AgeRange.NO_UPPER:
             return f"{self._lower}+"
         return f"[{self._lower},{self._upper})"
 
@@ -254,16 +252,18 @@ class MixingMatrix:
                 for j, two in enumerate(headers):
                     if i == j:
                         continue
+                    if one == two:
+                        raise Exception(f"Duplicate column header found in mixing matrix: {one}")
                     _check_overlap(one, two)
             for row in reader:
                 row_header = AgeRange(row[0])
                 if row_header in self._matrix:
-                    raise Exception("Duplicate row header found in mixing matrix")
+                    raise Exception(f"Duplicate row header found in mixing matrix: {row_header}")
                 self._matrix[row_header] = MixingRow(headers, row[1:])
         # Check for any overlap in the column headers
-        for one in self._matrix.keys():
-            for two in self._matrix.keys():
-                if one == two:
+        for i, one in enumerate(self._matrix.keys()):
+            for j, two in enumerate(self._matrix.keys()):
+                if i == j:
                     continue
                 _check_overlap(one, two)
 
