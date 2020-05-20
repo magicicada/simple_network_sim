@@ -1,6 +1,6 @@
 # simple_network_sim
 
-> :information: The code and data in this repository are currently for testing and development purposes only.
+> :warning: **The code and data in this repository are currently for testing and development purposes only.**
 
 [![Build Status](https://travis-ci.org/ScottishCovidResponse/simple_network_sim.svg?branch=master)](https://travis-ci.org/ScottishCovidResponse/simple_network_sim)
 [![Code Coverage](https://codecov.io/github/ScottishCovidResponse/simple_network_sim/coverage.svg?branch=master&token=)](https://codecov.io/gh/ScottishCovidResponse/simple_network_sim)
