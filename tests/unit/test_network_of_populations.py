@@ -16,7 +16,7 @@ def _count_people_per_region(state):
 @pytest.mark.parametrize("num_infected", [0, 10])
 @pytest.mark.parametrize("generic_infection", [0.1, 1.0, 1.5])
 def test_basicSimulationInternalAgeStructure_invariants(
-    age_transitions,
+    compartmentTransitionsByAge,
     demographics,
     commute_moves,
     compartment_names,
@@ -25,7 +25,7 @@ def test_basicSimulationInternalAgeStructure_invariants(
     generic_infection,
     seed,
 ):
-    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    age_to_trans = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
     population = loaders.readPopulationAgeStructured(demographics)
     graph = loaders.genGraphFromContactFile(commute_moves)
     states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
@@ -211,7 +211,12 @@ def test_doInteralInfectionProcessAllNodes_single_compartment():
     np.doInteralInfectionProcessAllNodes(states, age_matrix, 0)
 
     new_infected = (300.0 / 400.0) * (0.2 * 100.0)  # 15.0
-    assert states[1]["region1"] == {("m", "S"): 300.0 - new_infected, ("m", "E"): new_infected, ("m", "A"): 100.0, ("m", "I"): 0.0}
+    assert states[1]["region1"] == {
+        ("m", "S"): 300.0 - new_infected,
+        ("m", "E"): new_infected,
+        ("m", "A"): 100.0,
+        ("m", "I"): 0.0,
+    }
 
 
 def test_doInteralInfectionProcessAllNodes_large_num_infected_raises_exception():
@@ -309,7 +314,12 @@ def test_doBetweenInfectionAgeStructured():
     np.doBetweenInfectionAgeStructured(graph, states, 0)
 
     new_infected = 0.5 * 0.1 * 0.8
-    assert states[1]["r2"] == {("m", "S"): 80.0 - new_infected, ("m", "E"): new_infected, ("m", "A"): 10.0, ("m", "I"): 10.0}
+    assert states[1]["r2"] == {
+        ("m", "S"): 80.0 - new_infected,
+        ("m", "E"): new_infected,
+        ("m", "A"): 10.0,
+        ("m", "I"): 10.0,
+    }
     assert states[1]["r1"] == original_states[1]["r1"]
 
 

@@ -35,16 +35,14 @@ baseGraph = nx.path_graph(10)
 for (u, v) in list(baseGraph.edges()):
      baseGraph[u][v]['weight'] = baseWeight
 
-params = loaders.readParametersAgeStructured(sys.argv[1])
-
-ageToTrans = ss.setUpParametersAges(params)
-
+with open(sys.argv[1]) as fp:
+    ageToTrans = loaders.readCompartmentRatesByAge(fp)
 
 dictOfPops = loaders.readPopulationAgeStructured(sys.argv[2])
 
 graph = loaders.genGraphFromContactFile(sys.argv[3])
 
-states = ss.setupInternalPopulations(graph, compNames, ages, dictOfPops)
+states = ss.setupInternalPopulations(graph, compNames, ageToTrans, dictOfPops)
 
 basicPlots = []
 

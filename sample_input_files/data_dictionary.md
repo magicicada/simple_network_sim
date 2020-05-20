@@ -9,8 +9,8 @@ compartment_escape entries are the rate at which individual `s` leave that compa
 Explicit compartment transfer rates rates from the first compartment in the name to the second - e.g: `i_to_h:0.15` says the rate of movement from `I` to `H` is 0.15
 *TODO* for the future - amend the format of this file to make chaining compartmental structure even easier - that is, e.g., `i_to_h:0.15` might become `(I,H):0.15` - not doing for now because of likely change to HDF5
 
-## paramsAgeStructured
-This contains epidemiological rates as for [paramsFile](#paramsFile), but for young (lines starting with `y`), mature (lines starting with `m`), and old (lines starting `o`) individuals.
+## compartmentTransitionByAge.csv
+This contains epidemiological rate parameters for movement within the compartmental model split by ages. Each row represents a transition between two compartmens within a specific age.
 
 ## sample_hb2019_pop_est_2018.sampleCSV
 This file contains age-and-sex-stratified population numbers by geographic unit (here Scottish health board areas, but same format is available for other geographic units).  Columns are:

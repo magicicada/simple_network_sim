@@ -17,28 +17,6 @@ def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
 
 
 # CurrentlyInUse
-def setUpParametersVanilla(dictOfParams):
-    fromStateTrans = {}
-    fromStateTrans['E'] ={'E':1-dictOfParams['e_escape'], 'A': dictOfParams['e_escape']}
-    fromStateTrans['A'] = {'A':1-dictOfParams['a_escape'], 'I': dictOfParams['a_escape']*dictOfParams['a_to_i'], 'R':dictOfParams['a_escape']*(1-dictOfParams['a_to_i'])}
-    fromStateTrans['I'] =  {'I':1-dictOfParams['i_escape'], 'D': dictOfParams['i_escape']*dictOfParams['i_to_d'], 'H':dictOfParams['i_escape']*(dictOfParams['i_to_h']),
-                             'R':dictOfParams['i_escape']*(1-dictOfParams['i_to_h'] -dictOfParams['i_to_d']) }
-    fromStateTrans['H'] = {'H':1-dictOfParams['h_escape'], 'D': dictOfParams['h_escape']*dictOfParams['h_to_d'], 'R':dictOfParams['h_escape']*(1- dictOfParams['h_to_d'])}
-    fromStateTrans['R'] = {'R':1.0}
-    fromStateTrans['D'] = {'D':1.0}
-    return fromStateTrans
-
-
-# CurrentlyInUse
-def setUpParametersAges(dictByAge):
-    ageToStateTrans = {}
-    for age in dictByAge:
-        ageToStateTrans[age] = {}
-        ageToStateTrans[age] = setUpParametersVanilla(dictByAge[age])
-    return ageToStateTrans
-
-
-# CurrentlyInUse
 def countInfectionsAgeStructured(dictOfStates, time):
     total = 0
     for node in dictOfStates[time]:

@@ -6,43 +6,45 @@ import networkx as nx
 
 
 # CurrentlyInUse
-def checkAgeParameters(agesDictionary):
-    # Required parameters per age group
-    # TODO(rafael): if we decide to take the compartments graph as an input, we will need to revisit this list
-    required = ["e_escape", "a_escape", "a_to_i", "i_escape", "i_to_d",
-                "i_to_h", "h_escape", "h_to_d"]
-    # Track all missing parameters, so we can report all of them at once.
-    missing = []
-    for age, ageDict in agesDictionary.items():
-        # What's missing from this age group
-        missed = [param for param in required if param not in ageDict]
-        if missed:
-            missing.append([age, missed])
-    if missing:
-        for age, missed in missing:
-            print(f"Age group \"{age}\" missing \"{', '.join(missed)}\"")
-        raise Exception("Parameters missing")
+def _checkAgeParameters(agesDictionary):
+    """
+    :param agesDictionary:
+    :return:
+
+    Checks the consistency of data within the ages dictionary
+    """
+    all_compartments = None
+    for age, compartments in agesDictionary.items():
+        if all_compartments is None:
+            all_compartments = list(compartments.keys())
+        else:
+            assert all_compartments == list(compartments.keys()), f"compartments mismatch in {age}"
+        for compartment, transitions in compartments.items():
+            assert compartment in transitions.keys(), f"{age},{compartment} does not have self referencing key"
+            assert sum(transitions.values()) == 1.0, f"{age},{compartment} transitions do not add up to 1.0"
+            for new_name, prob in transitions.items():
+                assert 0.0 <= prob <= 1.0, f"{age},{compartment},{new_name},{prob} not a valid probability"
+
+    return agesDictionary
 
 
 # CurrentlyInUse
-# this could use some exception-catching (in fact, basically everything could)
-# we're going to have a nested dictionary - age to dictionary of parameters
-def readParametersAgeStructured(filename):
+def readCompartmentRatesByAge(fp):
+    """
+    :param fp: file-like object that contains the age transition data
+    :return: A dictionary of in the format {age: {src: {dest: prob}}}
+    """
     agesDictionary = {}
-    try:
-        for line in open(filename, 'r'):
-            split = line.strip().split(":")
-            label = split[0].strip()
-            agePar = label.split(",")
-            age = agePar[0].strip()
-            paramName = agePar[1].strip()
-            if age not in agesDictionary:
-                agesDictionary[age] = {}
-            agesDictionary[age][paramName] = float(split[1].strip())
-    except IndexError:
-        raise Exception(f"Error: Malformed input \"{line.rstrip()}\" in {filename}") from None
-    checkAgeParameters(agesDictionary)
-    return agesDictionary
+
+    fieldnames = ["age", "src", "dst", "rate"]
+    header = fp.readline().strip()
+    assert header == ",".join(fieldnames), f"bad header: {header}"
+    for row in csv.DictReader(fp, fieldnames=fieldnames):
+        compartments = agesDictionary.setdefault(row["age"], {})
+        transitions = compartments.setdefault(row["src"], {})
+        transitions[row["dst"]] = float(row["rate"])
+
+    return _checkAgeParameters(agesDictionary)
 
 
 # CurrentlyInUse

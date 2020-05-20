@@ -5,8 +5,8 @@ import pytest
 from simple_network_sim import common, network_of_populations as np, loaders
 
 
-def test_basic_simulation(age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix):
-    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+def test_basic_simulation(demographics, commute_moves, compartment_names, age_infection_matrix, compartmentTransitionsByAge):
+    age_to_trans = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
     population = loaders.readPopulationAgeStructured(demographics)
     graph = loaders.genGraphFromContactFile(commute_moves)
     states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
@@ -222,9 +222,9 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
 
 
 def test_basic_simulation_100_runs(
-    age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix
+    compartmentTransitionsByAge, demographics, commute_moves, compartment_names, age_infection_matrix
 ):
-    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
+    age_to_trans = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
     population = loaders.readPopulationAgeStructured(demographics)
     graph = loaders.genGraphFromContactFile(commute_moves)
     states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
