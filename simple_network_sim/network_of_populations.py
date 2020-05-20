@@ -1,3 +1,6 @@
+import copy
+
+
 # NotCurrentlyInUse
 # This needs amendment to have different node populations and age structure
 # Right now it is a framework function, to allow ongoing dev - uniform age structure in each,
@@ -81,16 +84,10 @@ def basicReportingFunction(dictOfStates):
 
 # CurrentlyInUse
 # amending this so that file I/O happens outside it 
-def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, genericInfection, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
-    ages = list(ageInfectionMatrix.values())
+def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
     timeSeriesInfection = []
-    
-    # dictOfStates = {}
-    numInside = 100
-    ages = ['y', 'm', 'o']
-    states = ['S', 'E', 'A', 'I', 'H', 'R', 'D']
 
-    # for now, we choose a random node and infect numInfected mature individuals - right now they are extra individuals, not removed from the susceptible class
+    # for now, we choose a random node and infect numInfected mature individuals
     infectedNode = rand.choices(list(graph.nodes()), k=1)
     for vertex in infectedNode:
         dictOfStates[0][vertex][('m', 'E')] = numInfected
@@ -98,21 +95,19 @@ def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, g
         dictOfStates[0][vertex][('m', 'S')] -= numInfected
 
     for time in range(timeHorizon):
-#         make sure the next time exists, so that we can add exposed individuals to it
-        nextTime = time+1
+        # make sure the next time exists, so that we can add exposed individuals to it
+        nextTime = time + 1
         if nextTime not in dictOfStates:
-            dictOfStates[nextTime] = {}
-            for node in graph.nodes():
-                dictOfStates[nextTime][node] = {}
-                for age in ages:
-                    for state in states:
-                        dictOfStates[nextTime][node][(age, state)] = 0
-        
+            dictOfStates[nextTime] = copy.deepcopy(dictOfStates[time])
+            for region in dictOfStates[nextTime].values():
+                for state in region.keys():
+                    region[state] = 0.0
+
         doInternalProgressionAllNodes(dictOfStates, time, diseaseProgressionProbs)
-        
-        doInteralInfectionProcessAllNodes(dictOfStates, ageInfectionMatrix, ages, time)
- 
-        doBetweenInfectionAgeStructured(graph, dictOfStates, time, genericInfection)
+
+        doInteralInfectionProcessAllNodes(dictOfStates, ageInfectionMatrix, time)
+
+        doBetweenInfectionAgeStructured(graph, dictOfStates, time)
 
         timeSeriesInfection.append(countInfectionsAgeStructured(dictOfStates, time))
 
@@ -215,7 +210,7 @@ def doIncomingInfectionsByNode(graph, currentState):
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
-def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInfectionProb):
+def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime):
     totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime])
                         
     # This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue
@@ -236,16 +231,16 @@ def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime, genericInf
 #  that is, if a usual POLYMOD entry tells us that each individual of age1 is expected to have 1.2 contacts in category age2,
 #  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
 # function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
-def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, ages, time):
+def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix):
     newInfectedsByAge = {}
-    for age in ages:
+    for age in ageMixingInfectionMatrix:
         newInfectedsByAge[age] = 0
 
         numSuscept = currentInternalStateDict[(age, 'S')]
         if numSuscept>0:
             numInfectiousContactsFromAges = {}
             totalNewInfectionContacts = 0
-            for ageInf in ages:
+            for ageInf in ageMixingInfectionMatrix[age]:
                 totalInfectious = currentInternalStateDict[(ageInf, 'I')] + currentInternalStateDict[(ageInf, 'A')]
                 numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
                 totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
@@ -264,10 +259,10 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 
 
 # CurrentlyInUse        
-def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, ages, time):
+def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, time):
     nextTime = time+1
     for node in dictOfStates[time]:
-            newInfected = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix, ages, time)
+            newInfected = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix)
             for age in newInfected:
                 assert newInfected[age] <= dictOfStates[nextTime][node][(age, 'S')], f"More infected people than susceptible ({age}, {time}, {dictOfStates[nextTime][node][(age, 'S')]}, {newInfected[age]})"
                 dictOfStates[nextTime][node][(age, 'E')] = dictOfStates[nextTime][node][(age, 'E')] + newInfected[age]
