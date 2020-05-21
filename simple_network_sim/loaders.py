@@ -49,54 +49,23 @@ def readCompartmentRatesByAge(fp):
 
 # CurrentlyInUse
 # This needs exception-catching, and probably shouldn't have hard-coded column indices.
-def readPopulationAgeStructured(filename):
+def readPopulationAgeStructured(fp):
     dictOfPops = {}
-    boardInd = 0
-    sexInd = 1
-    totalAgeInd = 2
-    youngInd = 3
-    matureInd = 4
-    oldInd = 5
-    with open(filename, 'r') as f:
-        first_line = f.readline()
-        if first_line.strip() != "Health_Board,Sex,Total_across_age,Young,Medium,Old":
-            raise ValueError("The first line must be the header")
-        for n, line in enumerate(f):
-            split = line.strip().split(",")
-            board = split[boardInd]
-            if board not in dictOfPops:
-                dictOfPops[board] = {}
-            sex = split[sexInd]
-            if sex not in dictOfPops[board]:
-                dictOfPops[board][sex] = {}
-            numYoung = int(split[youngInd])
-            numMature = int(split[matureInd])
-            numOld = int(split[oldInd])
-            numTotal = int(split[totalAgeInd])
-            dictOfPops[board][sex]['y'] = numYoung
-            dictOfPops[board][sex]['m'] = numMature
-            dictOfPops[board][sex]['o'] = numOld
-            dictOfPops[board][sex]['All_Ages'] = numTotal
-            if numYoung + numMature + numOld != numTotal:
-                raise ValueError(f"Line {n + 1} all ages doesn't add up")
 
-    #     a traversal to add in the totals
-    #     this is not great code, could be improved and made much more general - more robust against future age range changes
-    for board in dictOfPops:
-        numAllSex = 0
-        numAllSexY = 0
-        numAllSexM = 0
-        numAllSexO = 0
-        for sex in dictOfPops[board]:
-            numAllSex = numAllSex + dictOfPops[board][sex]['All_Ages']
-            numAllSexY = numAllSexY + dictOfPops[board][sex]['y']
-            numAllSexM = numAllSexM + dictOfPops[board][sex]['m']
-            numAllSexO = numAllSexO + dictOfPops[board][sex]['o']
-        dictOfPops[board]['All_Sex'] = {}
-        dictOfPops[board]['All_Sex']['y'] = numAllSexY
-        dictOfPops[board]['All_Sex']['m'] = numAllSexM
-        dictOfPops[board]['All_Sex']['o'] = numAllSexO
-        dictOfPops[board]['All_Sex']['All_Ages'] = numAllSex
+    fieldnames = ["Health_Board", "Sex", "Age", "Total"]
+    header = fp.readline().strip()
+    assert header == ",".join(fieldnames), f"bad header: {header}"
+    for row in csv.DictReader(fp, fieldnames=fieldnames):
+        for fieldname in fieldnames:
+            assert row[fieldname], f"Invalid {fieldname}: {row[fieldname]}"
+        board = dictOfPops.setdefault(row["Health_Board"], {})
+        total = int(row["Total"])
+        if total < 0:
+            raise ValueError(f"invalid total {total}")
+        # We are ignoring the Sex column here. The same age group will appear multiple times (once per age) and we will
+        # end up just grouping them all together
+        board.setdefault(row["Age"], 0)
+        board[row["Age"]] += total
 
     return dictOfPops
 

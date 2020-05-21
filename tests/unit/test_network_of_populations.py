@@ -14,8 +14,8 @@ def _count_people_per_region(state):
 @pytest.mark.parametrize("region", ["S08000024", "S08000030"])
 @pytest.mark.parametrize("seed", [2, 3])
 @pytest.mark.parametrize("num_infected", [0, 10])
-def test_basicSimulationInternalAgeStructure_invariants(demographics, commute_moves, compartmentTransitionsByAgeFilename, region, seed, num_infected):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, region, seed, num_infected):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
     np.exposeRegions([region], 10, {"m": 1.0}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
@@ -407,8 +407,8 @@ def test_exposeRegion_only_desired_region():
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
 
-def test_createNetworkOfPopulation(demographics, commute_moves, compartmentTransitionsByAgeFilename):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
 
     assert network.graph
     assert network.infectionMatrix

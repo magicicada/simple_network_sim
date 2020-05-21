@@ -5,8 +5,8 @@ import pytest
 from simple_network_sim import common, network_of_populations as np, loaders
 
 
-def test_basic_simulation(demographics, commute_moves, compartmentTransitionsByAgeFilename):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+def test_basic_simulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
     np.exposeRegions(["S08000016"], 10, {"m": 1.0}, network.states[0])
 
     result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
@@ -217,8 +217,8 @@ def test_basic_simulation(demographics, commute_moves, compartmentTransitionsByA
     assert result == pytest.approx(expected)
 
 
-def test_basic_simulation_100_runs(demographics, commute_moves, compartmentTransitionsByAgeFilename):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+def test_basic_simulation_100_runs(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
 
     runs = []
     rand = random.Random(1)
