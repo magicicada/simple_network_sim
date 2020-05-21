@@ -11,16 +11,9 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
     graph = loaders.genGraphFromContactFile(commute_moves)
     states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
 
-    result = np.basicSimulationInternalAgeStructure(
-        rand=random.Random(1),
-        graph=graph,
-        numInfected=10,
-        timeHorizon=200,
-        genericInfection=0.1,
-        ageInfectionMatrix=age_infection_matrix,
-        diseaseProgressionProbs=age_to_trans,
-        dictOfStates=states,
-    )
+    result = np.basicSimulationInternalAgeStructure(rand=random.Random(1), graph=graph, numInfected=10, timeHorizon=200,
+                                                    ageInfectionMatrix=age_infection_matrix,
+                                                    diseaseProgressionProbs=age_to_trans, dictOfStates=states)
 
     expected = [
         0,
@@ -240,16 +233,9 @@ def test_basic_simulation_100_runs(
     rand = random.Random(1)
     for _ in range(100):
         runs.append(
-            np.basicSimulationInternalAgeStructure(
-                rand=rand,
-                graph=graph,
-                numInfected=10,
-                timeHorizon=200,
-                genericInfection=0.1,
-                ageInfectionMatrix=age_infection_matrix,
-                diseaseProgressionProbs=age_to_trans,
-                dictOfStates=states,
-            )
+            np.basicSimulationInternalAgeStructure(rand=rand, graph=graph, numInfected=10, timeHorizon=200,
+                                                   ageInfectionMatrix=age_infection_matrix,
+                                                   diseaseProgressionProbs=age_to_trans, dictOfStates=states)
         )
     result = common.generateMeanPlot(runs)
 

@@ -33,16 +33,9 @@ def test_basicSimulationInternalAgeStructure_invariants(
     old_age_to_trans = copy.deepcopy(age_to_trans)
     initial_population = sum(_count_people_per_region(states[0]))
 
-    np.basicSimulationInternalAgeStructure(
-        rand=random.Random(seed),
-        graph=graph,
-        numInfected=num_infected,
-        timeHorizon=50,
-        genericInfection=generic_infection,
-        ageInfectionMatrix=age_infection_matrix,
-        diseaseProgressionProbs=age_to_trans,
-        dictOfStates=states,
-    )
+    np.basicSimulationInternalAgeStructure(rand=random.Random(seed), graph=graph, numInfected=num_infected,
+                                           timeHorizon=50, ageInfectionMatrix=age_infection_matrix,
+                                           diseaseProgressionProbs=age_to_trans, dictOfStates=states)
 
     # population remains constant
     assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in states.values()])
@@ -59,16 +52,10 @@ def test_basicSimulationInternalAgeStructure_infect_more_than_susceptible():
     graph.add_node("region1")
 
     with pytest.raises(AssertionError):
-        np.basicSimulationInternalAgeStructure(
-            rand=random.Random(1),
-            graph=graph,
-            numInfected=11.0,
-            timeHorizon=100,
-            genericInfection=0.1,
-            ageInfectionMatrix={"m": {"m": 0.2}},
-            diseaseProgressionProbs={"S": {"S": 1.0}},
-            dictOfStates={0: {"region1": {("m", "S"): 10.0}}},
-        )
+        np.basicSimulationInternalAgeStructure(rand=random.Random(1), graph=graph, numInfected=11.0, timeHorizon=100,
+                                               ageInfectionMatrix={"m": {"m": 0.2}},
+                                               diseaseProgressionProbs={"S": {"S": 1.0}},
+                                               dictOfStates={0: {"region1": {("m", "S"): 10.0}}})
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -137,7 +124,7 @@ def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic
     current_state = {("m", "S"): susceptible, ("m", "A"): asymptomatic, ("m", "I"): infectious}
     age_matrix = {"m": {"m": contact_rate}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     probability_of_susceptible = susceptible / (susceptible + infectious + asymptomatic)
     contacts = contact_rate * (asymptomatic + infectious)
@@ -148,7 +135,7 @@ def test_doInternalInfectionProcess_empty_age_group():
     current_state = {("m", "S"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == 0.0
 
@@ -157,7 +144,7 @@ def test_doInternalInfectionProcess_no_contact():
     current_state = {("m", "S"): 500.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == 0.0
 
@@ -166,7 +153,7 @@ def test_doInternalInfectionProcess_no_susceptibles():
     current_state = {("m", "S"): 0.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == 0.0
 
@@ -175,7 +162,7 @@ def test_doInternalInfectionProcess_no_infectious():
     current_state = {("m", "S"): 300.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == 0.0
 
@@ -192,7 +179,7 @@ def test_doInternalInfectionProcess_only_A_and_I_count_as_infectious():
     }
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == 0.0
 
@@ -208,7 +195,7 @@ def test_doInternalInfectionProcess_between_ages():
     }
     age_matrix = {"m": {"m": 0.2, "o": 0.5}, "o": {"o": 0.3, "m": 0.5}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, ["m", "o"], 0)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
 
     assert new_infected["m"] == (20.0 / 470.0) * ((450.0 * 0.2) + (300.0 * 0.5))
     assert new_infected["o"] == (15.0 / 315.0) * ((300.0 * 0.3) + (450.0 * 0.5))
@@ -221,7 +208,7 @@ def test_doInteralInfectionProcessAllNodes_single_compartment():
     }
     age_matrix = {"m": {"m": 0.2}}
 
-    np.doInteralInfectionProcessAllNodes(states, age_matrix, ["m"], 0)
+    np.doInteralInfectionProcessAllNodes(states, age_matrix, 0)
 
     new_infected = (300.0 / 400.0) * (0.2 * 100.0)  # 15.0
     assert states[1]["region1"] == {("m", "S"): 300.0 - new_infected, ("m", "E"): new_infected, ("m", "A"): 100.0, ("m", "I"): 0.0}
@@ -235,7 +222,7 @@ def test_doInteralInfectionProcessAllNodes_large_num_infected_raises_exception()
     age_matrix = {"m": {"m": 5.0}}
 
     with pytest.raises(AssertionError):
-        np.doInteralInfectionProcessAllNodes(states, age_matrix, ["m"], 0)
+        np.doInteralInfectionProcessAllNodes(states, age_matrix, 0)
 
 
 def test_doIncomingInfectionsByNode_no_susceptibles():
@@ -319,7 +306,7 @@ def test_doBetweenInfectionAgeStructured():
     }
     original_states = copy.deepcopy(states)
 
-    np.doBetweenInfectionAgeStructured(graph, states, 0, 0.1)
+    np.doBetweenInfectionAgeStructured(graph, states, 0)
 
     new_infected = 0.5 * 0.1 * 0.8
     assert states[1]["r2"] == {("m", "S"): 80.0 - new_infected, ("m", "E"): new_infected, ("m", "A"): 10.0, ("m", "I"): 10.0}
@@ -344,7 +331,7 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
     }
     original_states = copy.deepcopy(states)
 
-    np.doBetweenInfectionAgeStructured(graph, states, 0, 0.1)
+    np.doBetweenInfectionAgeStructured(graph, states, 0)
 
     assert states[1]["r2"] == {("m", "S"): 0.0, ("m", "E"): 30.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     assert states[1]["r1"] == original_states[1]["r1"]
