@@ -88,4 +88,4 @@ Descriptions of the data files used can be found in the [data dictionary](sample
 
 ## License
 
-The 2-Clause BSD License.
+[The 2-Clause BSD License](LICENSE.txt).
