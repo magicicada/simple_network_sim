@@ -5,15 +5,11 @@ import pytest
 from simple_network_sim import common, network_of_populations as np, loaders
 
 
-def test_basic_simulation(age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix):
-    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
-    population = loaders.readPopulationAgeStructured(demographics)
-    graph = loaders.genGraphFromContactFile(commute_moves)
-    states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
+def test_basic_simulation(demographics, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+    np.exposeRegions(["S08000016"], 10, {"m": 1.0}, network.states[0])
 
-    result = np.basicSimulationInternalAgeStructure(rand=random.Random(1), graph=graph, numInfected=10, timeHorizon=200,
-                                                    ageInfectionMatrix=age_infection_matrix,
-                                                    diseaseProgressionProbs=age_to_trans, dictOfStates=states)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
 
     expected = [
         0,
@@ -221,22 +217,19 @@ def test_basic_simulation(age_transitions, demographics, commute_moves, compartm
     assert result == pytest.approx(expected)
 
 
-def test_basic_simulation_100_runs(
-    age_transitions, demographics, commute_moves, compartment_names, age_infection_matrix
-):
-    age_to_trans = np.setUpParametersAges(loaders.readParametersAgeStructured(age_transitions))
-    population = loaders.readPopulationAgeStructured(demographics)
-    graph = loaders.genGraphFromContactFile(commute_moves)
-    states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
+def test_basic_simulation_100_runs(demographics, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
 
     runs = []
     rand = random.Random(1)
     for _ in range(100):
-        runs.append(
-            np.basicSimulationInternalAgeStructure(rand=rand, graph=graph, numInfected=10, timeHorizon=200,
-                                                   ageInfectionMatrix=age_infection_matrix,
-                                                   diseaseProgressionProbs=age_to_trans, dictOfStates=states)
-        )
+        regions = rand.choices(list(network.graph.nodes()), k=1)
+        # This was added for backwards compatibility. Notice that ("m", "S") diminishes at each run.
+        # TODO: make sure the states[0] is always reset after each run or that a new state is created before running
+        #       exposeRegions
+        network.states[0][regions[0]][("m","E")] = 0
+        np.exposeRegions(regions, 10, {"m": 1.0}, network.states[0])
+        runs.append(np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200))
     result = common.generateMeanPlot(runs)
 
     expected = [

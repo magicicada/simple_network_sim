@@ -1,5 +1,9 @@
 import copy
 
+from collections import namedtuple
+
+from simple_network_sim import loaders
+
 
 # NotCurrentlyInUse
 # This needs amendment to have different node populations and age structure
@@ -14,28 +18,6 @@ def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
             internalState[(age, 'S')] = numInside
         dictOfStates[0][guy] = internalState
     return dictOfStates
-
-
-# CurrentlyInUse
-def setUpParametersVanilla(dictOfParams):
-    fromStateTrans = {}
-    fromStateTrans['E'] ={'E':1-dictOfParams['e_escape'], 'A': dictOfParams['e_escape']}
-    fromStateTrans['A'] = {'A':1-dictOfParams['a_escape'], 'I': dictOfParams['a_escape']*dictOfParams['a_to_i'], 'R':dictOfParams['a_escape']*(1-dictOfParams['a_to_i'])}
-    fromStateTrans['I'] =  {'I':1-dictOfParams['i_escape'], 'D': dictOfParams['i_escape']*dictOfParams['i_to_d'], 'H':dictOfParams['i_escape']*(dictOfParams['i_to_h']),
-                             'R':dictOfParams['i_escape']*(1-dictOfParams['i_to_h'] -dictOfParams['i_to_d']) }
-    fromStateTrans['H'] = {'H':1-dictOfParams['h_escape'], 'D': dictOfParams['h_escape']*dictOfParams['h_to_d'], 'R':dictOfParams['h_escape']*(1- dictOfParams['h_to_d'])}
-    fromStateTrans['R'] = {'R':1.0}
-    fromStateTrans['D'] = {'D':1.0}
-    return fromStateTrans
-
-
-# CurrentlyInUse
-def setUpParametersAges(dictByAge):
-    ageToStateTrans = {}
-    for age in dictByAge:
-        ageToStateTrans[age] = {}
-        ageToStateTrans[age] = setUpParametersVanilla(dictByAge[age])
-    return ageToStateTrans
 
 
 # CurrentlyInUse
@@ -83,33 +65,30 @@ def basicReportingFunction(dictOfStates):
 
 
 # CurrentlyInUse
-# amending this so that file I/O happens outside it 
-def basicSimulationInternalAgeStructure(rand, graph, numInfected, timeHorizon, ageInfectionMatrix, diseaseProgressionProbs, dictOfStates):
+def basicSimulationInternalAgeStructure(network, timeHorizon):
+    """
+    :param network: this is a NetworkOfPopulation instance which will have the states field modified by this function
+    :param timeHorizon: how many times to run the simulation. Each new time means a new entry to the network.states dict
+    :return: a list with the number of infectious people at each given time
+    """
     timeSeriesInfection = []
-
-    # for now, we choose a random node and infect numInfected mature individuals
-    infectedNode = rand.choices(list(graph.nodes()), k=1)
-    for vertex in infectedNode:
-        dictOfStates[0][vertex][('m', 'E')] = numInfected
-        assert dictOfStates[0][vertex][('m', 'S')] >= numInfected, "cannot infect more than number of susceptible"
-        dictOfStates[0][vertex][('m', 'S')] -= numInfected
 
     for time in range(timeHorizon):
         # make sure the next time exists, so that we can add exposed individuals to it
         nextTime = time + 1
-        if nextTime not in dictOfStates:
-            dictOfStates[nextTime] = copy.deepcopy(dictOfStates[time])
-            for region in dictOfStates[nextTime].values():
+        if nextTime not in network.states:
+            network.states[nextTime] = copy.deepcopy(network.states[time])
+            for region in network.states[nextTime].values():
                 for state in region.keys():
                     region[state] = 0.0
 
-        doInternalProgressionAllNodes(dictOfStates, time, diseaseProgressionProbs)
+        doInternalProgressionAllNodes(network.states, time, network.progression)
 
-        doInteralInfectionProcessAllNodes(dictOfStates, ageInfectionMatrix, time)
+        doInteralInfectionProcessAllNodes(network.states, network.infectionMatrix, time)
 
-        doBetweenInfectionAgeStructured(graph, dictOfStates, time)
+        doBetweenInfectionAgeStructured(network.graph, network.states, time)
 
-        timeSeriesInfection.append(countInfectionsAgeStructured(dictOfStates, time))
+        timeSeriesInfection.append(countInfectionsAgeStructured(network.states, time))
 
     return timeSeriesInfection
 
@@ -300,23 +279,56 @@ def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, disease
     for vertex in currStates:
         nextProgressionState = internalStateDiseaseUpdate(currStates[vertex], diseaseProgressionProbs)
         dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
-        
 
-# CurrentlyInUse
-# now amending this to use data read from file on internal populations.
-# the parameter dictOfPopulations  should be like the one returned by readPopulationAgeStructured
-# need to add error-checking here for graceful behaviour when missing population info for a node
-def setupInternalPopulations(graph, listOfStates, ages, dictOfPopulations):
-    dictOfInternalStates = {}
-    dictOfInternalStates[0] = {}
-    currentTime = 0
+
+NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix"])
+
+def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn):
+    with open(disasesProgressionFn) as fp:
+        progression = loaders.readCompartmentRatesByAge(fp)
+    population = loaders.readPopulationAgeStructured(populationFn)
+    graph = loaders.genGraphFromContactFile(graphFn)
+
+    # TODO: read this from a file
+    infectionMatrix = {}
+    for ageA in progression.keys():
+        for ageB in progression.keys():
+            infectionMatrix.setdefault(ageA, {})[ageB] = 0.2
+
+    state0 = {}
     for node in list(graph.nodes()):
-        dictOfInternalStates[0][node] = {}
-        for state in listOfStates:
-            for age in ages:
-                dictOfInternalStates[0][node][(age, state)] = 0
-        for age in ages:
-            dictOfInternalStates[0][node][(age, 'S')] = dictOfPopulations[node]["All_Sex"][age]
-        
-    
-    return dictOfInternalStates    
+        region = state0.setdefault(node, {})
+        for age, compartments in progression.items():
+            region[(age, "S")] = population[node]["All_Sex"][age]
+            for compartment in compartments:
+                region[(age, compartment)] = 0
+
+    return NetworkOfPopulation(progression=progression, graph=graph, states={0: state0}, infectionMatrix=infectionMatrix)
+
+
+def exposeRegions(regions, exposed, ageDistribution, state):
+    """
+    :param regions: a list with all regions to be infected
+    :param exposed: number (float) of people that will be exposed
+    :param ageDistribution: a dict of type {age: float} with the probabilities for exposition in each age
+    :param state: dict representing the slice of time we want to alter
+
+    This function modifies the state parameter.
+    """
+    assert sum(ageDistribution.values()) == 1.0, "the age distribution must add up to 1.0"
+    for region in regions:
+        for age, prob in ageDistribution.items():
+            expose(age, exposed * prob, state[region])
+
+
+def expose(age, exposed, region):
+    """
+    :param age: age group that will be exposed
+    :param exposed: number (float) of exposed individuals
+    :param region: dict representing a region, with all the (age, state) tuples
+
+    This function modifies the region in-place, removing people from susceptible and adding them to exposed
+    """
+    assert region[(age, "S")] >= exposed, "cannot expose more than number of susceptible"
+    region[(age, "E")] += exposed
+    region[(age, "S")] -= exposed

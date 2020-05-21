@@ -1,3 +1,4 @@
+import io
 import json
 import tempfile
 
@@ -7,85 +8,61 @@ import pytest
 from simple_network_sim import loaders
 
 
-def test_readParametersAgeStructured(age_transitions):
-    age_structured = loaders.readParametersAgeStructured(age_transitions)
+def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
+    result = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
 
-    expected = {
+    assert result == {
         "o": {
-            "e_escape": 0.427,
-            "a_escape": 0.197,
-            "a_to_i": 0.1,
-            "i_escape": 0.33,
-            "i_to_d": 0.05,
-            "i_to_h": 0.15,
-            "h_escape": 0.1,
-            "h_to_d": 0.42,
+            "E": {"E": 0.573, "A": 0.427},
+            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
+            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
+            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
+            "R": {"R": 1.0},
+            "D": {"D": 1.0},
         },
         "m": {
-            "e_escape": 0.427,
-            "a_escape": 0.197,
-            "a_to_i": 0.1,
-            "i_escape": 0.33,
-            "i_to_d": 0.05,
-            "i_to_h": 0.15,
-            "h_escape": 0.1,
-            "h_to_d": 0.42,
+            "E": {"E": 0.573, "A": 0.427},
+            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
+            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
+            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
+            "R": {"R": 1.0},
+            "D": {"D": 1.0},
         },
         "y": {
-            "e_escape": 0.427,
-            "a_escape": 0.197,
-            "a_to_i": 0.1,
-            "i_escape": 0.33,
-            "i_to_d": 0.05,
-            "i_to_h": 0.15,
-            "h_escape": 0.1,
-            "h_to_d": 0.42,
+            "E": {"E": 0.573, "A": 0.427},
+            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
+            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
+            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
+            "R": {"R": 1.0},
+            "D": {"D": 1.0},
         },
     }
 
-    assert age_structured == expected
+
+@pytest.mark.parametrize("contents", ["o,A,A", "o,A,0.4", "o,A,A,0.4\no,A,0.6", "A,A,1.0"])
+def test_readParametersAgeStructured_missing_column(contents):
+    with pytest.raises(Exception):
+        contents = "age,src,dst,rate\n" + contents
+        loaders.readCompartmentRatesByAge(io.StringIO(contents))
 
 
-@pytest.mark.parametrize(
-    "missing_param", ["e_escape", "a_escape", "a_to_i", "i_escape", "i_to_d", "i_to_h", "h_escape", "h_to_d"]
-)
-def test_readParametersAgeStructured_missing_parameters(missing_param):
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            "o,e_escape:0.5",
-            "o,a_to_i:0.5",
-            "o,i_escape:0.5",
-            "o,i_to_d:0.5",
-            "o,i_to_h:0.5",
-            "o,h_escape:0.5",
-            "o,h_to_d:0.5",
-        ]
-        fp.write("\n".join([row for row in rows if missing_param not in row]))
-        fp.flush()
-        with pytest.raises(Exception):
-            loaders.readParametersAgeStructured(fp.name)
+@pytest.mark.parametrize("contents", ["o,A,A,", "o,A,A,wrong"])
+def test_readParametersAgeStructured_bad_value(contents):
+    with pytest.raises(ValueError):
+        contents = "age,src,dst,rate\n" + contents
+        loaders.readCompartmentRatesByAge(io.StringIO(contents))
 
 
-@pytest.mark.parametrize("missing_column", ["o", "o,e_escape", "o:0.5", "e_escape:0.5"])
-def test_readParametersAgeStructured_missing_column(missing_column):
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        fp.write(missing_column)
-        fp.flush()
-        with pytest.raises(Exception):
-            loaders.readParametersAgeStructured(fp.name)
+def test_readParametersAgeStructured_invalid_float():
+    with pytest.raises(AssertionError):
+        contents = "age,src,dst,rate\no,A,A,1.5\no,A,I,-0.5"
+        loaders.readCompartmentRatesByAge(io.StringIO(contents))
 
 
-def test_readParametersAgeStructured_bad_value():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        fp.write("o,e_escape:wrong")
-        fp.flush()
-        with pytest.raises(ValueError):
-            loaders.readParametersAgeStructured(fp.name)
-
-
-def test_readParametersAgeStructured_empty_file():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        assert loaders.readParametersAgeStructured(fp.name) == {}
+@pytest.mark.parametrize("contents", ["o,A,A,1.0\nm,A,A,1.0", "", "age,source,destination,rate"])
+def test_readParametersAgeStructured_requires_header(contents):
+    with pytest.raises(AssertionError):
+        assert loaders.readCompartmentRatesByAge(io.StringIO(contents))
 
 
 def test_readPopulationAgeStructured(demographics):
