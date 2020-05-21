@@ -11,51 +11,26 @@ from simple_network_sim import network_of_populations as np, loaders
 def _count_people_per_region(state):
     return [sum(region.values()) for region in state.values()]
 
-
+@pytest.mark.parametrize("region", ["S08000024", "S08000030"])
 @pytest.mark.parametrize("seed", [2, 3])
 @pytest.mark.parametrize("num_infected", [0, 10])
-@pytest.mark.parametrize("generic_infection", [0.1, 1.0, 1.5])
-def test_basicSimulationInternalAgeStructure_invariants(
-    compartmentTransitionsByAge,
-    demographics,
-    commute_moves,
-    compartment_names,
-    age_infection_matrix,
-    num_infected,
-    generic_infection,
-    seed,
-):
-    age_to_trans = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
-    population = loaders.readPopulationAgeStructured(demographics)
-    graph = loaders.genGraphFromContactFile(commute_moves)
-    states = np.setupInternalPopulations(graph, compartment_names, list(age_to_trans.keys()), population)
-    old_graph = copy.deepcopy(graph)
-    old_age_to_trans = copy.deepcopy(age_to_trans)
-    initial_population = sum(_count_people_per_region(states[0]))
+def test_basicSimulationInternalAgeStructure_invariants(demographics, commute_moves, compartmentTransitionsByAgeFilename, region, seed, num_infected):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+    np.exposeRegions([region], 10, {"m": 1.0}, network.states[0])
 
-    np.basicSimulationInternalAgeStructure(rand=random.Random(seed), graph=graph, numInfected=num_infected,
-                                           timeHorizon=50, ageInfectionMatrix=age_infection_matrix,
-                                           diseaseProgressionProbs=age_to_trans, dictOfStates=states)
+    initial_population = sum(_count_people_per_region(network.states[0]))
+    old_network = copy.deepcopy(network)
+
+    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in states.values()])
+    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
 
     # the graph is unchanged
-    assert nx.is_isomorphic(old_graph, graph)
+    assert nx.is_isomorphic(old_network.graph, network.graph)
 
     # infection matrix is unchanged
-    assert age_to_trans == old_age_to_trans
-
-
-def test_basicSimulationInternalAgeStructure_infect_more_than_susceptible():
-    graph = nx.DiGraph()
-    graph.add_node("region1")
-
-    with pytest.raises(AssertionError):
-        np.basicSimulationInternalAgeStructure(rand=random.Random(1), graph=graph, numInfected=11.0, timeHorizon=100,
-                                               ageInfectionMatrix={"m": {"m": 0.2}},
-                                               diseaseProgressionProbs={"S": {"S": 1.0}},
-                                               dictOfStates={0: {"region1": {("m", "S"): 10.0}}})
+    assert network.infectionMatrix == old_network.infectionMatrix
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -369,3 +344,73 @@ def test_distributeInfections_infect_proportional_to_susceptibles_in_age_group()
     infections = np.distributeInfections(state, 60)
 
     assert infections == {"m": (20.0 / 90.0) * 60, "o": (30.0 / 90.0) * 60, "y": (40.0 / 90.0) * 60}
+
+
+def test_expose_infect_more_than_susceptible():
+    region = {("m", "S"): 5.0, ("m", "E"): 0.0}
+
+    with pytest.raises(AssertionError):
+        np.expose("m", 10.0, region)
+
+
+def test_expose():
+    region = {("m", "S"): 15.0, ("m", "E"): 2.0}
+
+    np.expose("m", 10.0, region)
+
+    assert region == {("m", "S"): 5.0, ("m", "E"): 12.0}
+
+
+def test_expose_change_only_desired_age():
+    region = {("m", "S"): 15.0, ("m", "E"): 2.0, ("o", "S"): 10.0, ("o", "E"): 0.0}
+
+    np.expose("m", 10.0, region)
+
+    assert region == {("m", "S"): 5.0, ("m", "E"): 12.0, ("o", "S"): 10.0, ("o", "E"): 0.0}
+
+
+def test_exposeRegion_distributes_by_age():
+    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0, ("o", "S"): 10.0, ("o", "E"): 0.0}}
+
+    np.exposeRegions(["region1"], 10.0, {"m": 0.5, "o": 0.5}, state)
+
+    assert state == {"region1": {("m", "S"): 10.0, ("m", "E"): 5.0, ("o", "S"): 5.0, ("o", "E"): 5.0}}
+
+
+def test_exposeRegion_requires_probabilities_to_add_up():
+    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+
+    with pytest.raises(AssertionError):
+        np.exposeRegions(["region1"], 10.0, {"m": 0.7}, state)
+
+
+def test_exposeRegion_requires_probabilities_fails_if_age_group_does_not_exist():
+    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+
+    with pytest.raises(KeyError):
+        np.exposeRegions(["region1"], 10.0, {"m": 1.0, "o": 0.0}, state)
+
+
+def test_exposeRegion_multiple_regions():
+    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+
+    np.exposeRegions(["region1", "region2"], 10.0, {"m": 1.0}, state)
+
+    assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 5.0, ("m", "E"): 10.0}}
+
+
+def test_exposeRegion_only_desired_region():
+    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+
+    np.exposeRegions(["region1"], 10.0, {"m": 1.0}, state)
+
+    assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+
+
+def test_createNetworkOfPopulation(demographics, commute_moves, compartmentTransitionsByAgeFilename):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographics, commute_moves)
+
+    assert network.graph
+    assert network.infectionMatrix
+    assert network.states
+    assert network.progression

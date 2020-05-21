@@ -5,8 +5,13 @@ import pytest
 
 
 @pytest.fixture
-def compartmentTransitionsByAge():
-    yield open(os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "compartmentTransitionByAge.csv"))
+def compartmentTransitionsByAge(compartmentTransitionsByAgeFilename):
+    yield open(compartmentTransitionsByAgeFilename)
+
+
+@pytest.fixture
+def compartmentTransitionsByAgeFilename():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "compartmentTransitionByAge.csv")
 
 
 @pytest.fixture
