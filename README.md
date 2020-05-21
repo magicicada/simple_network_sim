@@ -30,7 +30,7 @@ As simulated time incrementally moves forward, the model predicts the number of 
 - Movement of people between nodes
 - Progression through disease state compartments within each node (affected by mixing between age stratified sub-populations)
 
-A more detailed model overview [here](model_overview_simple_network_sim.md)
+A more detailed model overview [here](model_overview_simple_network_sim.md).
 
 ## Contributing
 
@@ -75,6 +75,13 @@ To run a example case, enter the following at the command prompt:
 ```{shell}
 python -m simple_network_sim.sampleUseOfModel sample_input_files/paramsAgeStructured sample_input_files/sample_hb2019_pop_est_2018.sampleCSV sample_input_files/sample_scotHB_commute_moves_wu01.sampleCSV afilename.pdf
 ```
+
+Arguments are:
+
+1. Epidemiological rate parameters.
+2. Age and sex stratified population numbers by geographic unit.
+3. Origin-destination flow data.
+4. Output `.pdf` file.
 
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/data_dictionary.md).
 
