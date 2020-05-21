@@ -11,5 +11,5 @@ At present, contributions are limited to members of Scottish COVID-19 Response C
 - The assignee makes a **pull request**, requesting a **review** (a review is required to merge, and a request lets the team member know to do a review)
 > *How to do a good pull request:* Tie it to usually one or sometimes more issues - e.g. write 'resolves ScottishCovidResponse/SCRCIssueTracking#1'. This will automatically mark the issue as closed when the pull request is merged. Summarise what you've done to resolve the issue(s).
 
-**For the time being, all pull requests must be reviewed by @magicicada or @bobturneruk.**
+**For the time being, all pull requests should be reviewed by a repository admin.**
 - The assignee (or reviewer) merges the pull request into the `master` branch
