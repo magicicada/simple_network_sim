@@ -135,34 +135,22 @@ def test_genGraphFromContactFile(commute_moves):
 
 
 def test_AgeRange():
-    with pytest.raises(Exception) as e_info:
-        a = loaders.AgeRange("[10,20)")
-        assert 10 in a
-        assert 15 in a
-        assert 20 not in a
+    a = loaders.AgeRange("[10,20)")
+    assert 10 in a
+    assert 15 in a
+    assert 20 not in a
 
-        b = loaders.AgeRange(10, 20)
-        assert a == b
-        assert 10 in b
-        assert 20 not in b
+    b = loaders.AgeRange(10, 20)
+    assert a == b
+    assert 10 in b
+    assert 20 not in b
 
-        c = loaders.AgeRange((10,20))
-        assert b == c
+    c = loaders.AgeRange((10,20))
+    assert b == c
 
-        d = loaders.AgeRange("70+")
-        assert 99 in d
-        assert 69 not in d
-
-        e = loaders.AgeRange("invalid")
-    assert e_info.value.args[0] == f'Invalid age range specified: "invalid"'
-
-    with pytest.raises(Exception) as e_info:
-        a = loaders.AgeRange("[10,5)")
-    assert e_info.value.args[0] == f'Invalid age range specified: [10,5)'
-
-    with pytest.raises(Exception) as e_info:
-        a = loaders.AgeRange(10, 5)
-    assert e_info.value.args[0] == f'Invalid age range specified: [10,5)'
+    d = loaders.AgeRange("70+")
+    assert 99 in d
+    assert 69 not in d
 
     with pytest.raises(Exception) as e_info:
         a = loaders.AgeRange(20,30)
@@ -174,6 +162,64 @@ def test_AgeRange():
         b = loaders.AgeRange("[65,75)")
         loaders._check_overlap(a, b)
     assert e_info.value.args[0] == f"Overlap in age ranges with {a} and {b}"
+
+
+@pytest.mark.parametrize("invalid_range", ["[10,300)", "200+", "[10,10)", "[10,5)"])
+def test_AgeRange_invalid_range_str(invalid_range):
+    with pytest.raises(AssertionError):
+        loaders.AgeRange(invalid_range)
+
+
+@pytest.mark.parametrize("invalid_range", [(10, 300), (10, 10), (10, 5), (-10, 20)])
+def test_AgeRange_invalid_range_tuple(invalid_range):
+    with pytest.raises(AssertionError):
+        loaders.AgeRange(invalid_range)
+    with pytest.raises(AssertionError):
+        loaders.AgeRange(*invalid_range)
+
+
+@pytest.mark.parametrize("wrong_value", ["invalid", "(0,10)", "[0,10]", "[a,b)", "[-10,20)"])
+def test_AgeRange_wrong_format_str(wrong_value):
+    with pytest.raises(Exception) as e_info:
+        loaders.AgeRange(wrong_value)
+    assert e_info.value.args[0] == f'Invalid age range specified: "{wrong_value}"'
+
+
+@pytest.mark.parametrize("wrong_value", [10, (20,)])
+def test_AgeRange_wrong_format_other(wrong_value):
+    with pytest.raises(Exception) as e_info:
+        loaders.AgeRange(wrong_value)
+
+
+@pytest.mark.parametrize("range_a,range_b", [((0, 10), "[0,10)"), ("[0,10)", "[0,10)"), ("70+", "70+"), ("70+", "[70,200)"), ("70+", (70, 200))])
+def test_AgeRange_equivalent_ranges(range_a, range_b):
+    a = loaders.AgeRange(range_a)
+    b = loaders.AgeRange(range_b)
+
+    assert hash(a) == hash(b)
+    assert a == b
+    assert not (a != b)
+
+
+def test_AgeRange_equivalent_ranges_params():
+    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange(0, 10)) and loaders.AgeRange(0, 10) == loaders.AgeRange(0, 10)
+    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange((0, 10))) and loaders.AgeRange(0, 10) == loaders.AgeRange((0, 10))
+    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange("[0,10)")) and loaders.AgeRange(0, 10) == loaders.AgeRange("[0, 10)")
+
+
+@pytest.mark.parametrize("range_a,range_b", [((0, 10), "[0,11)"), ("[1,10)", "[0,10)"), ("71+", "70+"), ("70+", "[70,199)"), ("70+", (70, 199))])
+def test_AgeRange_different_ranges(range_a, range_b):
+    a = loaders.AgeRange(range_a)
+    b = loaders.AgeRange(range_b)
+
+    assert hash(a) != hash(b)
+    assert a != b
+    assert not (a == b)
+
+
+@pytest.mark.parametrize("range,expected", [((0, 10), "[0,10)"), ("[0,10)", "[0,10)"), ("70+", "70+"), ((70, 200), "70+")])
+def test_AgeRange_to_str(range, expected):
+    assert str(loaders.AgeRange(range)) == expected
 
 
 def test_invalidMixingMatrixFilesDuplicateHeaders():
