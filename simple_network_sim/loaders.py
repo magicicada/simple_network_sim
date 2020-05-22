@@ -188,6 +188,13 @@ class MixingRow:
         return "[" + ", ".join(f"{str(key)}: {str(val)}"
                                for key, val in self._entries.items()) + "]"
 
+    def __iter__(self):
+        """
+        Iterator that iterates over the matrix keys (a key points to a row). The values returned by the iterator will
+        all be strings, since that's how the public interface when indexing the matrix.
+        """
+        return iter(str(age_range) for age_range in self._entries)
+
 
 class MixingMatrix:
     """Can give the expected number of interactions per day a given person will
@@ -236,7 +243,6 @@ class MixingMatrix:
                     continue
                 _check_overlap(one, two)
 
-
     def __getitem__(self, age):
         """Gets a MixingRow for the given age, which in turn can give the
         expected number of interactions. Most often, you will probably want to
@@ -253,3 +259,10 @@ class MixingMatrix:
 
     def __str__(self):
         return "\n".join(f"{str(key)}: {str(row)}" for key, row in self._matrix.items())
+
+    def __iter__(self):
+        """
+        Iterator that iterates over the matrix keys (a key points to a row). The values returned by the iterator will
+        all be strings, since that's how the public interface when indexing the matrix.
+        """
+        return iter(str(age_range) for age_range in self._matrix)

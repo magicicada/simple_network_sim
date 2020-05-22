@@ -1,6 +1,7 @@
 import copy
 import itertools
 import random
+import tempfile
 
 import networkx as nx
 import pytest
@@ -14,9 +15,9 @@ def _count_people_per_region(state):
 @pytest.mark.parametrize("region", ["S08000024", "S08000030"])
 @pytest.mark.parametrize("seed", [2, 3])
 @pytest.mark.parametrize("num_infected", [0, 10])
-def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, region, seed, num_infected):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
-    np.exposeRegions([region], 10, {"m": 1.0}, network.states[0])
+def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, seed, num_infected):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
+    np.exposeRegions([region], 10, {"[0,17)": 1.0}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
     old_network = copy.deepcopy(network)
@@ -30,7 +31,11 @@ def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, co
     assert nx.is_isomorphic(old_network.graph, network.graph)
 
     # infection matrix is unchanged
-    assert network.infectionMatrix == old_network.infectionMatrix
+    assert list(network.infectionMatrix) == list(old_network.infectionMatrix)
+    for a in network.infectionMatrix:
+        assert list(network.infectionMatrix[a]) == list(old_network.infectionMatrix[a])
+        for b in network.infectionMatrix[a]:
+            assert network.infectionMatrix[a][b] == old_network.infectionMatrix[a][b]
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -407,10 +412,124 @@ def test_exposeRegion_only_desired_region():
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
 
-def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves)
+def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
 
     assert network.graph
     assert network.infectionMatrix
     assert network.states
     assert network.progression
+
+
+def test_createNetworkOfPopulation_age_mismatch_matrix():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write("age,src,dst,rate\n70+,E,E,1.0")
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000015,S08000015,100777")
+        commutes.flush()
+        infectionMatrix.write(",71+\n71+,1.0")
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_createNetworkOfPopulation_age_mismatch_matrix_internal():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write("age,src,dst,rate\n70+,E,E,1.0")
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000015,S08000015,100777")
+        commutes.flush()
+        infectionMatrix.write(",71+\n70+,1.0")
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_createNetworkOfPopulation_age_mismatch_population():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write("age,src,dst,rate\n70+,E,E,1.0")
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,71+,31950')
+        population.flush()
+        commutes.write("S08000015,S08000015,100777")
+        commutes.flush()
+        infectionMatrix.write(",70+\n70+,1.0")
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_createNetworkOfPopulation_age_mismatch_progression():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write("age,src,dst,rate\n71+,E,E,1.0")
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000015,S08000015,100777")
+        commutes.flush()
+        infectionMatrix.write(",70+\n70+,1.0")
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_createNetworkOfPopulation_region_mismatch():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write("age,src,dst,rate\n70+,E,E,1.0")
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000015,S08000015,100777")
+        commutes.flush()
+        infectionMatrix.write(",70+\n70+,1.0")
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_createNetworkOfPopulation_infection_matrix_internal_mismatch():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write('age,src,dst,rate\n70+,E,E,1.0\n"[10,30)",E,E,1.0')
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950\nS08000016,Female,"[10,30)",31950')
+        population.flush()
+        commutes.write("S08000016,S08000016,100777")
+        commutes.flush()
+        infectionMatrix.write(',70+\n70+,1.0\n"[10,30),1.0')
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)

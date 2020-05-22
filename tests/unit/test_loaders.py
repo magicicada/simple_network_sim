@@ -12,7 +12,7 @@ def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
     result = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
 
     assert result == {
-        "o": {
+        "70+": {
             "E": {"E": 0.573, "A": 0.427},
             "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
             "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
@@ -20,7 +20,7 @@ def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
             "R": {"R": 1.0},
             "D": {"D": 1.0},
         },
-        "m": {
+        "[17,70)": {
             "E": {"E": 0.573, "A": 0.427},
             "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
             "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
@@ -28,7 +28,7 @@ def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
             "R": {"R": 1.0},
             "D": {"D": 1.0},
         },
-        "y": {
+        "[0,17)": {
             "E": {"E": 0.573, "A": 0.427},
             "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
             "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
@@ -69,20 +69,20 @@ def test_readPopulationAgeStructured(demographics):
     population = loaders.readPopulationAgeStructured(demographics)
 
     expected = {
-        "S08000015": {"y": 65307, "m": 245680, "o": 58683},
-        "S08000016": {"y": 20237, "m": 75008, "o": 20025},
-        "S08000017": {"y": 24842, "m": 96899, "o": 27049},
-        "S08000019": {"y": 55873, "m": 209221, "o": 40976},
-        "S08000020": {"y": 105607, "m": 404810, "o": 74133},
-        "S08000022": {"y": 55711, "m": 214008, "o": 52081},
-        "S08000024": {"y": 159238, "m": 635249, "o": 103283},
-        "S08000025": {"y": 3773, "m": 14707, "o": 3710},
-        "S08000026": {"y": 4448, "m": 15374, "o": 3168},
-        "S08000028": {"y": 4586, "m": 17367, "o": 4877},
-        "S08000029": {"y": 68150, "m": 250133, "o": 53627},
-        "S08000030": {"y": 71822, "m": 280547, "o": 63711},
-        "S08000031": {"y": 208091, "m": 829574, "o": 137315},
-        "S08000032": {"y": 125287, "m": 450850, "o": 83063},
+        "S08000015": {"[0,17)": 65307, "[17,70)": 245680, "70+": 58683},
+        "S08000016": {"[0,17)": 20237, "[17,70)": 75008, "70+": 20025},
+        "S08000017": {"[0,17)": 24842, "[17,70)": 96899, "70+": 27049},
+        "S08000019": {"[0,17)": 55873, "[17,70)": 209221, "70+": 40976},
+        "S08000020": {"[0,17)": 105607, "[17,70)": 404810, "70+": 74133},
+        "S08000022": {"[0,17)": 55711, "[17,70)": 214008, "70+": 52081},
+        "S08000024": {"[0,17)": 159238, "[17,70)": 635249, "70+": 103283},
+        "S08000025": {"[0,17)": 3773, "[17,70)": 14707, "70+": 3710},
+        "S08000026": {"[0,17)": 4448, "[17,70)": 15374, "70+": 3168},
+        "S08000028": {"[0,17)": 4586, "[17,70)": 17367, "70+": 4877},
+        "S08000029": {"[0,17)": 68150, "[17,70)": 250133, "70+": 53627},
+        "S08000030": {"[0,17)": 71822, "[17,70)": 280547, "70+": 63711},
+        "S08000031": {"[0,17)": 208091, "[17,70)": 829574, "70+": 137315},
+        "S08000032": {"[0,17)": 125287, "[17,70)": 450850, "70+": 83063},
     }
 
     assert population == expected
@@ -278,3 +278,54 @@ def test_sampleMixingMatrix(mixing_matrix):
     assert mm["[30,40)"][75] == 0.026352071
     assert mm[(30,40)][75] == 0.026352071
     assert mm[(30,40)][(18,30)] == 0.144896108
+
+
+def test_sampleMixingMatrix_iterate_keys():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,15)","[15,30)",30+',
+            '"[0,15)",0.1,0.05,0.3',
+            '"[15,30)",0.2,0.2,0.1',
+            '30+,0.01,0.02,0.2',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        matrix = loaders.MixingMatrix(fp.name)
+        assert list(matrix) == ["[0,15)", "[15,30)", "30+"]
+        for key in matrix:
+            assert matrix[key]
+
+
+def test_sampleMixingMatrix_iterate_keys_one_element():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        rows = [
+            ',"[0,15)"',
+            '"[0,15)",0.1',
+        ]
+        fp.write("\n".join(rows))
+        fp.flush()
+        matrix = loaders.MixingMatrix(fp.name)
+        assert list(matrix) == ["[0,15)"]
+        for key in matrix:
+            assert matrix[key]
+
+
+def test_MixingRow_iterate_over_keys():
+    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+    assert list(row) == ["[0,17)", "[17,70)", "70+"]
+    for key in row:
+        assert row[key] in [0.2, 0.03, 0.1]
+
+
+def test_MixingRow_iterate_access_key():
+    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+
+    assert row["[0,17)"] == 0.2
+    assert row["[17,70)"] == 0.03
+    assert row["70+"] == 0.1
+
+
+def test_MixingRow_str():
+    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+
+    assert str(row) == "[[0,17): 0.2, [17,70): 0.03, 70+: 0.1]"

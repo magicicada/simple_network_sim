@@ -32,6 +32,11 @@ def mixing_matrix():
 
 
 @pytest.fixture
+def simplified_mixing_matrix():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "simplified_age_infection_matrix.csv")
+
+
+@pytest.fixture
 def commute_moves():
     yield os.path.join(
         os.path.dirname(__file__), "..", "sample_input_files", "sample_scotHB_commute_moves_wu01.sampleCSV"
