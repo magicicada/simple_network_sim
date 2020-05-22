@@ -286,7 +286,8 @@ NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states"
 def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn):
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
-    population = loaders.readPopulationAgeStructured(populationFn)
+    with open(populationFn) as fp:
+        population = loaders.readPopulationAgeStructured(fp)
     graph = loaders.genGraphFromContactFile(graphFn)
 
     # TODO: read this from a file
@@ -299,7 +300,7 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn):
     for node in list(graph.nodes()):
         region = state0.setdefault(node, {})
         for age, compartments in progression.items():
-            region[(age, "S")] = population[node]["All_Sex"][age]
+            region[(age, "S")] = population[node][age]
             for compartment in compartments:
                 region[(age, compartment)] = 0
 

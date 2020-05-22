@@ -6,7 +6,8 @@ import pytest
 
 @pytest.fixture
 def compartmentTransitionsByAge(compartmentTransitionsByAgeFilename):
-    yield open(compartmentTransitionsByAgeFilename)
+    with open(compartmentTransitionsByAgeFilename) as fp:
+        yield fp
 
 
 @pytest.fixture
@@ -15,8 +16,14 @@ def compartmentTransitionsByAgeFilename():
 
 
 @pytest.fixture
-def demographics():
-    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "sample_hb2019_pop_est_2018.sampleCSV")
+def demographics(demographicsFilename):
+    with open(demographicsFilename) as fp:
+        yield fp
+
+
+@pytest.fixture
+def demographicsFilename():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "sample_hb2019_pop_est_2018_row_based.csv")
 
 
 @pytest.fixture
