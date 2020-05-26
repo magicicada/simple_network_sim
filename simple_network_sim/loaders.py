@@ -90,9 +90,6 @@ def genGraphFromContactFile(filename):
     return G
 
 
-
-
-
 def _check_overlap(one, two):
     """Check two AgeRange objects to see if they overlap. If they do, raise an
     Exception
@@ -108,14 +105,16 @@ AGE_RE = re.compile(r'\[(\d+),\s*(\d+)\)')
 class AgeRange:
     """A helper class for an age range."""
 
-
     # A marker for no upper limit
-    NO_UPPER = 999999
-
+    MAX_AGE = 200
 
     def __init__(self, a, b=None):
         """Initialiser. If b is None, it is assumed that a is a string to be
         parsed. Otherwise, the age range is assumed to be [a, b).
+
+        The string can be one of the two formats:
+        [a,b) - that's an age range from a to b (not including b)
+        a+    - that means any age greater than a, equivalent to [a,MAX_AGE)
         """
         if b is None:
             if isinstance(a, tuple) and len(a) == 2:
@@ -128,17 +127,16 @@ class AgeRange:
                     self._upper = int(match.group(2))
                 elif a[-1] == "+":
                     self._lower = int(a[:-1])
-                    self._upper = AgeRange.NO_UPPER
+                    self._upper = AgeRange.MAX_AGE
                 else:
                     raise Exception(f'Invalid age range specified: "{a}"')
-            if self._lower >= self._upper:
-                raise Exception(f'Invalid age range specified: {a}')
         else:
             self._lower = int(a)
             self._upper = int(b)
-            if self._lower >= self._upper:
-                raise Exception(f'Invalid age range specified: [{a},{b})')
 
+        assert self._lower < self._upper, f'Invalid age range specified: [{self._lower},{self._upper})'
+        assert self._upper <= AgeRange.MAX_AGE, f"No one is {self._upper} years old"
+        assert self._lower >= 0, f"No one is {self._lower} years old"
 
     def __contains__(self, age):
         """Returns true if age is inside this age range."""
@@ -147,7 +145,7 @@ class AgeRange:
         return age < self._upper
 
     def __str__(self):
-        if self._upper == AgeRange.NO_UPPER:
+        if self._upper == AgeRange.MAX_AGE:
             return f"{self._lower}+"
         return f"[{self._lower},{self._upper})"
 
@@ -189,6 +187,13 @@ class MixingRow:
     def __str__(self):
         return "[" + ", ".join(f"{str(key)}: {str(val)}"
                                for key, val in self._entries.items()) + "]"
+
+    def __iter__(self):
+        """
+        Iterator that iterates over the matrix keys (a key points to a row). The values returned by the iterator will
+        all be strings, since that's how the public interface when indexing the matrix.
+        """
+        return iter(str(age_range) for age_range in self._entries)
 
 
 class MixingMatrix:
@@ -238,7 +243,6 @@ class MixingMatrix:
                     continue
                 _check_overlap(one, two)
 
-
     def __getitem__(self, age):
         """Gets a MixingRow for the given age, which in turn can give the
         expected number of interactions. Most often, you will probably want to
@@ -255,3 +259,10 @@ class MixingMatrix:
 
     def __str__(self):
         return "\n".join(f"{str(key)}: {str(row)}" for key, row in self._matrix.items())
+
+    def __iter__(self):
+        """
+        Iterator that iterates over the matrix keys (a key points to a row). The values returned by the iterator will
+        all be strings, since that's how the public interface when indexing the matrix.
+        """
+        return iter(str(age_range) for age_range in self._matrix)

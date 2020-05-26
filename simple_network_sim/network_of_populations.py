@@ -221,6 +221,7 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
             totalNewInfectionContacts = 0
             for ageInf in ageMixingInfectionMatrix[age]:
                 totalInfectious = currentInternalStateDict[(ageInf, 'I')] + currentInternalStateDict[(ageInf, 'A')]
+                # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
                 numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
                 totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
 #      Now, given that we expect totalNewInfectionContacts infectious contacts into our age category, how much overlap do we expect?
@@ -283,18 +284,22 @@ def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, disease
 
 NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix"])
 
-def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn):
+def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn):
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
     with open(populationFn) as fp:
         population = loaders.readPopulationAgeStructured(fp)
     graph = loaders.genGraphFromContactFile(graphFn)
 
-    # TODO: read this from a file
-    infectionMatrix = {}
-    for ageA in progression.keys():
-        for ageB in progression.keys():
-            infectionMatrix.setdefault(ageA, {})[ageB] = 0.2
+    infectionMatrix = loaders.MixingMatrix(ageInfectionMatrixFn)
+
+    agesInInfectionMatrix = set(infectionMatrix)
+    for age in infectionMatrix:
+        assert agesInInfectionMatrix == set(infectionMatrix[age]), "infection matrix columns/rows mismatch"
+
+    assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"
+    assert agesInInfectionMatrix == {age for region in population.values() for age in region}, "infection matrix and population ages mismatch"
+    assert set(graph.nodes()) == set(population.keys()), "regions mismatch between graph and population"
 
     state0 = {}
     for node in list(graph.nodes()):
