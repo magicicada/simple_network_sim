@@ -73,16 +73,93 @@ pytest --cov=simple_network_sim tests
 To run a example case, enter the following at the command prompt:
 
 ```{shell}
-python -m simple_network_sim.sampleUseOfModel sample_input_files/compartmentTransitionByAge.csv sample_input_files/sample_hb2019_pop_est_2018_row_based.csv sample_input_files/sample_scotHB_commute_moves_wu01.sampleCSV sample_input_files/simplified_age_infection_matrix.csv afilename.pdf
+python -m simple_network_sim.sampleUseOfModel random afilename.pdf
 ```
 
-Arguments are:
+that will pick random nodes to infect at each iteration. If you prefer to pass a seed file, you can do the following:
 
-1. Epidemiological rate parameters.
-2. Age and sex stratified population numbers by geographic unit.
-3. Origin-destination flow data.
-4. Output `.pdf` file.
+```{shell}
+python -m simple_network_sim.sampleUseOfModel seeded sample_input_files/initial_infection.csv afilename.pdf
+```
 
+Use the help command to see a description of all the parameters
+
+```{shell}
+pyhon -m simple_network_sim.sampleUseOfModel -h
+usage: sampleUseOfModel.py [-h]
+                           [--compartment-transition COMPARTMENT_TRANSITION]
+                           [--population POPULATION] [--commutes COMMUTES]
+                           [--mixing-matrix MIXING_MATRIX] [--time TIME]
+                           {random,seeded} ...
+
+Uses the deterministic network of populations model to simulation the disease
+progression
+
+positional arguments:
+  {random,seeded}
+    random              Randomly pick regions to infect
+    seeded              Use a seed file with infected regions
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --compartment-transition COMPARTMENT_TRANSITION
+                        Epidemiological rate parameters for movement within
+                        the compartmental model. (default: /home/rafael/Pychar
+                        mProjects/simple_network_sim/sample_input_files/compar
+                        tmentTransitionByAge.csv)
+  --population POPULATION
+                        This file contains age-and-sex-stratified population
+                        numbers by geographic unit. (default: /home/rafael/Pyc
+                        harmProjects/simple_network_sim/sample_input_files/sam
+                        ple_hb2019_pop_est_2018_row_based.csv)
+  --commutes COMMUTES   This contains origin-destination flow data during
+                        peacetime for health boards (default: /home/rafael/Pyc
+                        harmProjects/simple_network_sim/sample_input_files/sam
+                        ple_scotHB_commute_moves_wu01.sampleCSV)
+  --mixing-matrix MIXING_MATRIX
+                        This is a sample square matrix of mixing - each column
+                        and row header is an age category. (default: /home/raf
+                        ael/PycharmProjects/simple_network_sim/sample_input_fi
+                        les/simplified_age_infection_matrix.csv)
+  --time TIME           The number of time steps to take for each simulation
+                        (default: 200)
+```
+
+Each command has its own set of specific parameters
+
+```{shell}
+python -m simple_network_sim.sampleUseOfModel seeded -h
+usage: sampleUseOfModel.py seeded [-h] [--trials TRIALS] input output
+
+positional arguments:
+  input            File name with the seed region seeds
+  output           Name of the PDF file that will be created with the
+                   visualisation
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --trials TRIALS  Number of experiments to run (default: 1)
+```
+```{shell}
+usage: sampleUseOfModel.py random [-h] [--regions REGIONS]
+                                  [--age-groups AGE_GROUPS [AGE_GROUPS ...]]
+                                  [--trials TRIALS] [--infected INFECTED]
+                                  output
+
+positional arguments:
+  output                Name of the PDF file that will be created with the
+                        visualisation
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --regions REGIONS     Number of regions to infect (default: 1)
+  --age-groups AGE_GROUPS [AGE_GROUPS ...]
+                        Age groups to infect (default: ['[17,70)'])
+  --trials TRIALS       Number of experiments to run (default: 100)
+  --infected INFECTED   Number of infected people in each region/age group
+                        (default: 100)
+```
+ 
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/data_dictionary.md).
 
 ## License

@@ -7,7 +7,7 @@ from simple_network_sim import common, network_of_populations as np, loaders
 
 def test_basic_simulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
     network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
-    np.exposeRegions(["S08000016"], 10, {"[17,70)": 1.0}, network.states[0])
+    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
 
     result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
 
@@ -228,7 +228,7 @@ def test_basic_simulation_100_runs(demographicsFilename, commute_moves, compartm
         # TODO: make sure the states[0] is always reset after each run or that a new state is created before running
         #       exposeRegions
         network.states[0][regions[0]][("[17,70)","E")] = 0
-        np.exposeRegions(regions, 10, {"[17,70)": 1.0}, network.states[0])
+        np.exposeRegions({regions[0]: {"[17,70)": 10.0}}, network.states[0])
         runs.append(np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200))
     result = common.generateMeanPlot(runs)
 

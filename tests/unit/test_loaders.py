@@ -123,6 +123,24 @@ def test_readPopulationAgeStructured_aggregate_ages():
     assert population == {"S08000015": {"o": 200}}
 
 
+@pytest.mark.parametrize("header", ["Health_Board,Age,Total", "Health_Board,Infected"])
+def test_readPopulationAgeStructured_bad_header(header):
+    with pytest.raises(AssertionError):
+        loaders.readInitialInfections(io.StringIO(f"{header}\nS08000015,[17,70),10"))
+
+
+@pytest.mark.parametrize("invalid_infected", ["", "asdf", "NaN", "-1", "inf"])
+def test_readPopulationAgeStructured_invalid_total(invalid_infected):
+    with pytest.raises(ValueError):
+        loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",{invalid_infected}'))
+
+
+def test_readPopulationAgeStructured():
+    infected = loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",10\nS08000015,"70+",5\nS08000016,"70+",5'))
+
+    assert infected == {"S08000015": {"[17,70)": 10.0, "70+": 5.0}, "S08000016": {"70+": 5.0}}
+
+
 def test_readNodeAttributesJSON(locations):
     with open(locations) as fp:
         assert loaders.readNodeAttributesJSON(locations) == json.load(fp)
