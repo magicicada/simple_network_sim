@@ -60,9 +60,9 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
     for time in range(timeHorizon):
         progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
-        internalInfetions = getInternalInfection(network.states, network.infectionMatrix, time)
+        internalInfections = getInternalInfection(network.states, network.infectionMatrix, time)
         externalInfections = getExternalInfections(network.graph, network.states, time)
-        exposed = mergeExposed(internalInfetions, externalInfections)
+        exposed = mergeExposed(internalInfections, externalInfections)
 
         network.states[time + 1] = createNextStep(progression, exposed, network.states[time])
 
@@ -287,10 +287,11 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
 
-    assert SUSCEPTIBLE_STATE not in progression.keys(), "progression from susceptible state is not allowed"
-    for state, nextStates in progression.items():
-        for nextState in nextStates:
-            assert state == nextState or state != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
+    for states in progression.values():
+        assert SUSCEPTIBLE_STATE not in states, "progression from susceptible state is not allowed"
+        for state, nextStates in states.items():
+            for nextState in nextStates:
+                assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
 
     with open(populationFn) as fp:
         population = loaders.readPopulationAgeStructured(fp)
@@ -330,8 +331,10 @@ def createNextStep(progression, exposed, currState):
                 region[(age, state)] = 0.0
 
     for regionID, region in progression.items():
-        for key, value in region.items():
-            nextStep[regionID][key] = value
+        for (age, state), value in region.items():
+            # Note that the progression is responsible for populating every other state
+            assert state != SUSCEPTIBLE_STATE, "Susceptibles can't be part of progression states"
+            nextStep[regionID][(age, state)] = value
 
     for regionID, region in exposed.items():
         for age, exposed in region.items():
