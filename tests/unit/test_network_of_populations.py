@@ -56,44 +56,14 @@ def test_internalStateDiseaseUpdate_no_transitions():
     assert new_state == {("o", "E"): 100.0, ("o", "A"): 0.0}
 
 
-def test_internalStateDiseaseUpdate_does_not_affect_S_and_E():
-    current_state = {("o", "S"): 100.0, ("o", "E"): 0.0}
-    probs = {"o": {"S": {"E": 0.4, "S": 0.6}, "E": {"E": 1.0}}}
-
-    new_state = np.internalStateDiseaseUpdate(current_state, probs)
-
-    assert new_state == {("o", "S"): 100.0, ("o", "E"): 0.0}
-
-
-def test_doInternalProgressionAllNodes_create_new_state():
-    states = {0: {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}}
+def test_doInternalProgressionAllNodes_e_to_a_progession():
+    states = {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}
     probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
 
-    np.doInternalProgressionAllNodes(states, 0, probs)
+    progression = np.getInternalProgressionAllNodes(states, probs)
 
-    expected = {
-        0: {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}},
-        1: {"region1": {("o", "E"): 60.0, ("o", "A"): 40.0}},
-    }
-
-    assert states == expected
-
-
-def test_doInternalProgressionAllNodes_overwrite_state():
-    states = {
-        0: {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}},
-        1: {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}},
-    }
-    probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
-
-    np.doInternalProgressionAllNodes(states, 0, probs)
-
-    expected = {
-        0: {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}},
-        1: {"region1": {("o", "E"): 60.0, ("o", "A"): 40.0}},
-    }
-
-    assert states == expected
+    assert progression == {"region1": {("o", "E"): 60.0, ("o", "A"): 40.0}}
+    assert states == {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}  # unchanged
 
 
 @pytest.mark.parametrize("susceptible", [0.5, 100.0, 300.0])
@@ -182,32 +152,22 @@ def test_doInternalInfectionProcess_between_ages():
 
 
 def test_doInteralInfectionProcessAllNodes_single_compartment():
-    states = {
-        0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}},
-        1: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}},
-    }
+    states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 0.2}}
 
-    np.doInteralInfectionProcessAllNodes(states, age_matrix, 0)
+    infections = np.getInternalInfection(states, age_matrix, 0)
 
-    new_infected = (300.0 / 400.0) * (0.2 * 100.0)  # 15.0
-    assert states[1]["region1"] == {
-        ("m", "S"): 300.0 - new_infected,
-        ("m", "E"): new_infected,
-        ("m", "A"): 100.0,
-        ("m", "I"): 0.0,
-    }
+    assert infections == {"region1": {"m": (300.0 / 400.0) * (0.2 * 100.0)}}
+    assert states == {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}  # unchanged
 
 
-def test_doInteralInfectionProcessAllNodes_large_num_infected_raises_exception():
-    states = {
-        0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}},
-        1: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}},
-    }
+def test_doInteralInfectionProcessAllNodes_large_num_infected_ignored():
+    states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 5.0}}
 
-    with pytest.raises(AssertionError):
-        np.doInteralInfectionProcessAllNodes(states, age_matrix, 0)
+    new_infected = np.getInternalInfection(states, age_matrix, 0)
+
+    assert new_infected == {"region1": {"m": (300.0 / 400.0) * (100.0 * 5.0)}}
 
 
 def test_doIncomingInfectionsByNode_no_susceptibles():
@@ -283,24 +243,14 @@ def test_doBetweenInfectionAgeStructured():
         0: {
             "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
             "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
-        },
-        1: {
-            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
-            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
-        },
+        }
     }
     original_states = copy.deepcopy(states)
 
-    np.doBetweenInfectionAgeStructured(graph, states, 0)
+    num_infections = np.getExternalInfections(graph, states, 0)
 
-    new_infected = 0.5 * 0.1 * 0.8
-    assert states[1]["r2"] == {
-        ("m", "S"): 80.0 - new_infected,
-        ("m", "E"): new_infected,
-        ("m", "A"): 10.0,
-        ("m", "I"): 10.0,
-    }
-    assert states[1]["r1"] == original_states[1]["r1"]
+    assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 0.5 * 0.1 * 0.8}}
+    assert states == original_states
 
 
 def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
@@ -313,18 +263,14 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
         0: {
             "r1": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0},
             "r2": {("m", "S"): 30.0, ("m", "E"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0},
-        },
-        1: {
-            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
-            "r2": {("m", "S"): 30.0, ("m", "E"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0},
-        },
+        }
     }
     original_states = copy.deepcopy(states)
 
-    np.doBetweenInfectionAgeStructured(graph, states, 0)
+    new_infections = np.getExternalInfections(graph, states, 0)
 
-    assert states[1]["r2"] == {("m", "S"): 0.0, ("m", "E"): 30.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
-    assert states[1]["r1"] == original_states[1]["r1"]
+    assert new_infections == {"r1": {"m": 0.0}, "r2": {"m": 30.0}}
+    assert states == original_states
 
 
 def test_distributeInfections_cap_infections():
@@ -533,3 +479,25 @@ def test_createNetworkOfPopulation_infection_matrix_internal_mismatch():
 
         with pytest.raises(AssertionError):
             np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+def test_getAges_multiple_ages():
+    assert np.getAges({("[0,17)", "S"): 10, ("70+", "S"): 10}) == {"[0,17)", "70+"}
+
+
+def test_getAges_repeated_ages():
+    assert np.getAges({("[0,17)", "S"): 10, ("[0,17)", "S"): 10}) == {"[0,17)"}
+
+
+def test_getAges_empty():
+    assert np.getAges({}) == set()
+
+
+@pytest.mark.parametrize("progression,exposed,currentState", [
+    ({}, {"region1": {}}, {"region1": {}}),
+    ({"region1": {}}, {}, {"region1": {}}),
+    ({"region1": {}}, {"region1": {}}, {}),
+])
+def test_createNextStep_region_mismatch_raises_assert_error(progression, exposed, currentState):
+    with pytest.raises(AssertionError):
+        np.createNextStep(progression, exposed, currentState)

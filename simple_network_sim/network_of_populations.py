@@ -5,28 +5,12 @@ from collections import namedtuple
 from simple_network_sim import loaders
 
 
-# NotCurrentlyInUse
-# This needs amendment to have different node populations and age structure
-# Right now it is a framework function, to allow ongoing dev - uniform age structure in each,
-def doSetupAgeStruct(G, dictOfStates, numInside, ages, states):
-    dictOfStates[0] = {}
-    for guy in G.nodes():  
-        internalState = {}
-        for age in ages:
-            for state in states:
-                internalState[(age, state)] = 0
-            internalState[(age, 'S')] = numInside
-        dictOfStates[0][guy] = internalState
-    return dictOfStates
-
-
 # CurrentlyInUse
-def countInfectionsAgeStructured(dictOfStates, time):
+def countInfectiousAgeStructured(dictOfStates, time):
     total = 0
     for node in dictOfStates[time]:
-        for (age, state) in dictOfStates[time][node]:
-            if state == 'A' or state == 'I':
-                total = total + dictOfStates[time][node][(age, state)]
+        for age in getAges(dictOfStates[time][node]):
+            total += getInfectious(age, dictOfStates[time][node])
     return total
 
 
@@ -74,36 +58,29 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
     timeSeriesInfection = []
 
     for time in range(timeHorizon):
-        # make sure the next time exists, so that we can add exposed individuals to it
-        nextTime = time + 1
-        if nextTime not in network.states:
-            network.states[nextTime] = copy.deepcopy(network.states[time])
-            for region in network.states[nextTime].values():
-                for state in region.keys():
-                    region[state] = 0.0
+        progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
-        doInternalProgressionAllNodes(network.states, time, network.progression)
+        internalInfetions = getInternalInfection(network.states, network.infectionMatrix, time)
+        externalInfections = getExternalInfections(network.graph, network.states, time)
+        exposed = mergeExposed(internalInfetions, externalInfections)
 
-        doInteralInfectionProcessAllNodes(network.states, network.infectionMatrix, time)
+        network.states[time + 1] = createNextStep(progression, exposed, network.states[time])
 
-        doBetweenInfectionAgeStructured(network.graph, network.states, time)
-
-        timeSeriesInfection.append(countInfectionsAgeStructured(network.states, time))
+        timeSeriesInfection.append(countInfectiousAgeStructured(network.states, time))
 
     return timeSeriesInfection
-
-
-# NotCurrentlyInUse
-def nodeUpdate(graph, dictOfStates, time, headString):
-        print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
-        for node in list(graph.nodes()):
-             print('Node ' + str(node)+ " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
-        print('===== END update 1 at time ' + str(time) + '=========')
 
 
 # CurrentlyInUse
 def totalIndividuals(nodeState):
     return sum(nodeState.values())
+
+
+def getAges(node):
+    ages = set()
+    for (age, state) in node:
+        ages.add(age)
+    return ages
 
 
 # CurrentlyInUse
@@ -116,20 +93,18 @@ def getTotalInAge(nodeState, ageTest):
 
 
 # CurrentlyInUse
-def getTotalInfected(nodeState):
-    totalInfectedHere = 0
-    for (age, state) in nodeState:
-            if state == 'A' or state == 'I':
-                totalInfectedHere = totalInfectedHere + nodeState[(age, state)]
+def getTotalInfectious(nodeState):
+    totalInfectedHere = 0.0
+    for age in getAges(nodeState):
+        totalInfectedHere += getInfectious(age, nodeState)
     return totalInfectedHere
 
 
 # CurrentlyInUse
 def getTotalSuscept(nodeState):
-    totalSusHere = 0
-    for (age, state) in nodeState:
-                if state == 'S':
-                        totalSusHere = totalSusHere + nodeState[(age, state)]
+    totalSusHere = 0.0
+    for age in getAges(nodeState):
+        totalSusHere += getSusceptibles(age, nodeState)
     return totalSusHere
 
 
@@ -139,10 +114,9 @@ def getTotalSuscept(nodeState):
 def distributeInfections(nodeState, newInfections):
     ageToSus = {}
     newInfectionsByAge = {}
-    for (age, state) in nodeState:
-        if state == 'S':
-            ageToSus[age] = nodeState[(age, state)]
-    totalSus = sum(ageToSus.values())
+    for age in getAges(nodeState):
+        ageToSus[age] = getSusceptibles(age, nodeState)
+    totalSus = getTotalSuscept(nodeState)
     if totalSus<newInfections:
         print('ERROR: Too many infections to distribute amongst age classes - adjusting num infections')
         newInfections = totalSus
@@ -164,7 +138,7 @@ def doIncomingInfectionsByNode(graph, currentState):
             for givingVertex in neighbours:
                 if givingVertex == receivingVertex:
                     continue
-                totalInfectedGiving = getTotalInfected(currentState[givingVertex])
+                totalInfectedGiving = getTotalInfectious(currentState[givingVertex])
                 if totalInfectedGiving > 0:
                     weight = 1.0
                     if 'weight' not in graph[givingVertex][receivingVertex]:
@@ -189,17 +163,17 @@ def doIncomingInfectionsByNode(graph, currentState):
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
-def doBetweenInfectionAgeStructured(graph, dictOfStates, currentTime):
+def getExternalInfections(graph, dictOfStates, currentTime):
+    infectionsByNode = {}
+
     totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime])
-                        
+
     # This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue
     for vertex in totalIncomingInfectionsByNode:
         totalDelta = totalIncomingInfectionsByNode[vertex]
-        deltaByAge = distributeInfections(dictOfStates[currentTime][vertex], totalDelta)
-        for age in deltaByAge:
-           assert dictOfStates[currentTime+1][vertex][(age, 'S')] >= deltaByAge[age], "number of infected cannot be greater than susceptible"
-           dictOfStates[currentTime+1][vertex][(age, 'S')] = dictOfStates[currentTime+1][vertex][(age, 'S')] - deltaByAge[age]
-           dictOfStates[currentTime+1][vertex][(age, 'E')] = dictOfStates[currentTime+1][vertex][(age, 'E')] + deltaByAge[age]
+        infectionsByNode[vertex] = distributeInfections(dictOfStates[currentTime][vertex], totalDelta)
+
+    return infectionsByNode
 
 
 
@@ -215,12 +189,12 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
     for age in ageMixingInfectionMatrix:
         newInfectedsByAge[age] = 0
 
-        numSuscept = currentInternalStateDict[(age, 'S')]
+        numSuscept = getSusceptibles(age, currentInternalStateDict)
         if numSuscept>0:
             numInfectiousContactsFromAges = {}
             totalNewInfectionContacts = 0
             for ageInf in ageMixingInfectionMatrix[age]:
-                totalInfectious = currentInternalStateDict[(ageInf, 'I')] + currentInternalStateDict[(ageInf, 'A')]
+                totalInfectious = getInfectious(ageInf, currentInternalStateDict)
                 # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
                 numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
                 totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
@@ -239,54 +213,85 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 
 
 # CurrentlyInUse        
-def doInteralInfectionProcessAllNodes(dictOfStates, ageMixingInfectionMatrix, time):
-    nextTime = time+1
+def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time):
+    infectionsByNode = {}
+
     for node in dictOfStates[time]:
-            newInfected = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix)
-            for age in newInfected:
-                assert newInfected[age] <= dictOfStates[nextTime][node][(age, 'S')], f"More infected people than susceptible ({age}, {time}, {dictOfStates[nextTime][node][(age, 'S')]}, {newInfected[age]})"
-                dictOfStates[nextTime][node][(age, 'E')] = dictOfStates[nextTime][node][(age, 'E')] + newInfected[age]
-                dictOfStates[nextTime][node][(age, 'S')] = dictOfStates[nextTime][node][(age, 'S')] - newInfected[age]
+        infectionsByNode[node] = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix)
+
+    return infectionsByNode
 
 
 # CurrentlyInUse
-# internalStateDict should have keys like (age, compartment) 
+# internalStateDict should have keys like (age, compartment)
 #  The values are number of people in that node in that state
 #  diseaseProgressionProbs should have outward probabilities per timestep (rates)
 #  So we will need to do some accounting
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
-    dictOfNewStates = {}
-    for (age, state) in currentInternalStateDict:
-        dictOfNewStates[(age, state)] = 0
-    for (age, state) in currentInternalStateDict:
-        if state == 'S':
-            dictOfNewStates[(age, state)] = currentInternalStateDict[(age, state)]
-        else:
-            outTransitions = diseaseProgressionProbs[age][state]
-            numberInPrevState = currentInternalStateDict[(age, state)]
-    #         we're going to have non-integer numbers of people for now
-            for nextState in outTransitions:
-                numberInNext = outTransitions[nextState]*currentInternalStateDict[(age, state)]
-                dictOfNewStates[(age, nextState)] = dictOfNewStates[(age, nextState)]  + numberInNext
-    return dictOfNewStates
+    newStates = {}
+    for (age, state), people in currentInternalStateDict.items():
+        outTransitions = diseaseProgressionProbs[age].get(state, {})
+        for nextState in outTransitions:
+            newStates.setdefault((age, nextState), 0.0)
+            newStates[(age, nextState)] += outTransitions[nextState] * people
+    return newStates
 
 
 # CurrentlyInUse
-def doInternalProgressionAllNodes(dictOfNodeInternalStates, currentTime, diseaseProgressionProbs):
-    nextTime = currentTime +1
-    currStates = dictOfNodeInternalStates[currentTime]
-    if nextTime not in dictOfNodeInternalStates:
-        dictOfNodeInternalStates[nextTime] = {}
-    for vertex in currStates:
-        nextProgressionState = internalStateDiseaseUpdate(currStates[vertex], diseaseProgressionProbs)
-        dictOfNodeInternalStates[nextTime][vertex] = nextProgressionState
+def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs):
+    """
+    Given the values in the current state in the regions, progress the disease based on the progression matrix. This
+    method is
+    :param currStates: The current state for every region is not modified
+    :param diseaseProgressionProbs: matrix with the probability of each transition
+    """
+    progression = {}
+    for regionID, currRegion in currStates.items():
+        progression[regionID] = internalStateDiseaseUpdate(currRegion, diseaseProgressionProbs)
+    return progression
 
 
+def mergeExposed(*args):
+    exposedTotal = {}
+    for infectionsDict in args:
+        for regionID, region in infectionsDict.items():
+            exposedRegionTotal = exposedTotal.setdefault(regionID, {})
+            for age, exposed in region.items():
+                exposedRegionTotal[age] = exposedRegionTotal.setdefault(age, 0.0) + exposed
+    return exposedTotal
+
+
+def exposeRegions(regions, exposed, ageDistribution, state):
+    """
+    :param regions: a list with all regions to be infected
+    :param exposed: number (float) of people that will be exposed
+    :param ageDistribution: a dict of type {age: float} with the probabilities for exposition in each age
+    :param state: dict representing the slice of time we want to alter
+
+    This function modifies the state parameter.
+    """
+    assert sum(ageDistribution.values()) == 1.0, "the age distribution must add up to 1.0"
+    for region in regions:
+        for age, prob in ageDistribution.items():
+            expose(age, exposed * prob, state[region])
+
+
+# The functions below are the only operations that need to know about the actual state values.
+SUSCEPTIBLE_STATE = "S"
+EXPOSED_STATE = "E"
+INFECTIOUS_STATES = ["I", "A"]
 NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix"])
+
 
 def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn):
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
+
+    assert SUSCEPTIBLE_STATE not in progression.keys(), "progression from susceptible state is not allowed"
+    for state, nextStates in progression.items():
+        for nextState in nextStates:
+            assert state == nextState or state != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
+
     with open(populationFn) as fp:
         population = loaders.readPopulationAgeStructured(fp)
     graph = loaders.genGraphFromContactFile(graphFn)
@@ -305,26 +310,45 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
     for node in list(graph.nodes()):
         region = state0.setdefault(node, {})
         for age, compartments in progression.items():
-            region[(age, "S")] = population[node][age]
+            region[(age, SUSCEPTIBLE_STATE)] = population[node][age]
             for compartment in compartments:
                 region[(age, compartment)] = 0
 
     return NetworkOfPopulation(progression=progression, graph=graph, states={0: state0}, infectionMatrix=infectionMatrix)
 
 
-def exposeRegions(regions, exposed, ageDistribution, state):
+def createNextStep(progression, exposed, currState):
     """
-    :param regions: a list with all regions to be infected
-    :param exposed: number (float) of people that will be exposed
-    :param ageDistribution: a dict of type {age: float} with the probabilities for exposition in each age
-    :param state: dict representing the slice of time we want to alter
+    """
+    assert progression.keys() == exposed.keys() == currState.keys(), "missing regions"
 
-    This function modifies the state parameter.
-    """
-    assert sum(ageDistribution.values()) == 1.0, "the age distribution must add up to 1.0"
-    for region in regions:
-        for age, prob in ageDistribution.items():
-            expose(age, exposed * prob, state[region])
+    nextStep = copy.deepcopy(currState)
+    for region in nextStep.values():
+        for (age, state) in region.keys():
+            # We need to keep the susceptibles in order to infect them
+            if state != SUSCEPTIBLE_STATE:
+                region[(age, state)] = 0.0
+
+    for regionID, region in progression.items():
+        for key, value in region.items():
+            nextStep[regionID][key] = value
+
+    for regionID, region in exposed.items():
+        for age, exposed in region.items():
+            expose(age, exposed, nextStep[regionID])
+
+    return nextStep
+
+
+def getSusceptibles(age, currentInternalStateDict):
+    return currentInternalStateDict[(age, SUSCEPTIBLE_STATE)]
+
+
+def getInfectious(age, currentInternalStateDict):
+    total = 0.0
+    for state in INFECTIOUS_STATES:
+        total += currentInternalStateDict[(age, state)]
+    return total
 
 
 def expose(age, exposed, region):
@@ -335,6 +359,14 @@ def expose(age, exposed, region):
 
     This function modifies the region in-place, removing people from susceptible and adding them to exposed
     """
-    assert region[(age, "S")] >= exposed, "cannot expose more than number of susceptible"
-    region[(age, "E")] += exposed
-    region[(age, "S")] -= exposed
+    assert region[(age, SUSCEPTIBLE_STATE)] >= exposed, f"S:{region[(age, SUSCEPTIBLE_STATE)]} < E:{exposed}"
+    region[(age, EXPOSED_STATE)] += exposed
+    region[(age, SUSCEPTIBLE_STATE)] -= exposed
+
+
+# NotCurrentlyInUse
+def nodeUpdate(graph, dictOfStates, time, headString):
+        print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
+        for node in list(graph.nodes()):
+             print('Node ' + str(node)+ " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
+        print('===== END update 1 at time ' + str(time) + '=========')
