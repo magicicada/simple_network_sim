@@ -481,6 +481,45 @@ def test_createNetworkOfPopulation_infection_matrix_internal_mismatch():
             np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
 
 
+def test_createNetworkOfPopulation_susceptible_in_progression():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write('age,src,dst,rate\n70+,S,E,0.5\n70+,S,S,0.5\n70+,E,E,1.0')
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000016,S08000016,100777")
+        commutes.flush()
+        infectionMatrix.write(',70+\n70+,1.0')
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
+
+def test_createNetworkOfPopulation_transition_to_exposed():
+    with \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
+      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
+        progression.write('age,src,dst,rate\n70+,E,E,1.0\n70+,A,E,0.7\n70+,A,A,0.3')
+        progression.flush()
+        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
+        population.flush()
+        commutes.write("S08000016,S08000016,100777")
+        commutes.flush()
+        infectionMatrix.write(',70+\n70+,1.0')
+        infectionMatrix.flush()
+
+        with pytest.raises(AssertionError):
+            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+
 def test_getAges_multiple_ages():
     assert np.getAges({("[0,17)", "S"): 10, ("70+", "S"): 10}) == {"[0,17)", "70+"}
 
@@ -501,3 +540,75 @@ def test_getAges_empty():
 def test_createNextStep_region_mismatch_raises_assert_error(progression, exposed, currentState):
     with pytest.raises(AssertionError):
         np.createNextStep(progression, exposed, currentState)
+
+
+def test_createNextStep_keep_susceptibles():
+    currState = {"r1": {("70+", "S"): 30.0, ("70+", "E"): 20.0}}
+
+    nextStep = np.createNextStep({"r1": {}}, {"r1": {}}, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 30.0, ("70+", "E"): 0.0}}
+
+
+def test_createNextStep_update_infection():
+    currState = {"r1": {("70+", "S"): 30.0, ("70+", "E"): 0.0}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 20.0}}
+
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 10.0, ("70+", "E"): 20.0}}
+
+
+def test_createNextStep_more_infected_than_susceptible():
+    currState = {"r1": {("70+", "S"): 30.0, ("70+", "E"): 0.0}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 40.0}}
+
+    with pytest.raises(AssertionError):
+        np.createNextStep(progression, exposed, currState)
+
+
+def test_createNextStep_susceptible_in_progression():
+    currState = {"r1": {("70+", "S"): 30.0}}
+    progression = {"r1": {("70+", "S"): 7.0}}
+    exposed = {"r1": {}}
+
+    with pytest.raises(AssertionError):
+        np.createNextStep(progression, exposed, currState)
+
+
+def test_createNextStep_progression_nodes():
+    currState = {"r1": {("70+", "S"): 30.0, ("70+", "E"): 10.0}}
+    progression = {"r1": {("70+", "E"): 7.0, ("70+", "A"): 3.0}}
+    exposed = {"r1": {"70+": 10.0}}
+
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 20.0, ("70+", "E"): 17.0, ("70+", "A"): 3.0}}
+
+
+def test_getSusceptibles():
+    states = {("70+", "S"): 10, ("70+", "E"): 20, ("[17,70)", "S"): 15}
+
+    assert np.getSusceptibles("70+", states) == 10
+
+
+def test_getSusceptibles_non_existant():
+    states = {}
+
+    with pytest.raises(KeyError):
+        np.getSusceptibles("75+", states)
+
+
+def test_getInfectious():
+    states = {("70+", "S"): 10, ("70+", "E"): 20, ("70+", "I"): 7, ("70+", "A"): 11, ("[17,70)", "S"): 15}
+
+    assert np.getInfectious("70+", states) == 18
+
+
+def test_getInfectious_non_existant():
+    states = {}
+
+    with pytest.raises(KeyError):
+        np.getInfectious("70+", states)
