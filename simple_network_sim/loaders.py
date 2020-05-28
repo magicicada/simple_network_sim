@@ -87,7 +87,7 @@ def readNodeAttributesJSON(filename):
 # it should return a networkx graph, ideally with weighted edges
 # eventual replacement with HDF5 reading code?
 def genGraphFromContactFile(filename: str) -> nx.DiGraph:
-    G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float),))
+    G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float), ("dampening_factor", float)))
     return G
 
 

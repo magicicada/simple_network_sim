@@ -71,7 +71,7 @@ def build_args(argv):
     )
     parser.add_argument(
         "--commutes",
-        default=os.path.join(sampledir, "sample_scotHB_commute_moves_wu01.sampleCSV"),
+        default=os.path.join(sampledir, "sample_scotHB_commute_moves_wu01.csv"),
         help="This contains origin-destination flow data during peacetime for health boards",
     )
     parser.add_argument(

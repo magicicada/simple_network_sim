@@ -154,7 +154,7 @@ def test_readNodeAttributesJSON(locations):
 
 
 def test_genGraphFromContactFile(commute_moves):
-    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float),))
+    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float), ("dampening_factor", float)))
 
     assert nx.is_isomorphic(loaders.genGraphFromContactFile(commute_moves), graph)
 

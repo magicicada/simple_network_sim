@@ -50,7 +50,7 @@ def simplified_mixing_matrix():
 @pytest.fixture
 def commute_moves():
     yield os.path.join(
-        os.path.dirname(__file__), "..", "sample_input_files", "sample_scotHB_commute_moves_wu01.sampleCSV"
+        os.path.dirname(__file__), "..", "sample_input_files", "sample_scotHB_commute_moves_wu01.csv"
     )
 
 
