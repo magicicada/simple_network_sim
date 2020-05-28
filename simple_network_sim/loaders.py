@@ -2,6 +2,7 @@ import csv
 import json
 import math
 import re
+from typing import Dict, TextIO, BinaryIO
 
 import networkx as nx
 
@@ -30,7 +31,7 @@ def _checkAgeParameters(agesDictionary):
 
 
 # CurrentlyInUse
-def readCompartmentRatesByAge(fp):
+def readCompartmentRatesByAge(fp: TextIO) -> Dict[str, Dict[str, Dict[str, float]]]:
     """
     :param fp: file-like object that contains the age transition data
     :return: A dictionary of in the format {age: {src: {dest: prob}}}
@@ -49,8 +50,7 @@ def readCompartmentRatesByAge(fp):
 
 
 # CurrentlyInUse
-# This needs exception-catching, and probably shouldn't have hard-coded column indices.
-def readPopulationAgeStructured(fp):
+def readPopulationAgeStructured(fp: TextIO) -> Dict[str, Dict[str, int]]:
     dictOfPops = {}
 
     fieldnames = ["Health_Board", "Sex", "Age", "Total"]
@@ -86,12 +86,16 @@ def readNodeAttributesJSON(filename):
 # in future - e.g. sampling, generating movements, whatever
 # it should return a networkx graph, ideally with weighted edges
 # eventual replacement with HDF5 reading code?
-def genGraphFromContactFile(filename):
+def genGraphFromContactFile(filename: str) -> nx.DiGraph:
     G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float),))
     return G
 
 
-def readInitialInfections(fp):
+def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
+    """
+    :param fp: file object the contents must be a CSV with the header: Health_Board,Age,Infected
+    :return: A dict in the format {<region:str>: {<age:str>: <num infected>}}
+    """
     fieldnames = ["Health_Board", "Age", "Infected"]
     header = fp.readline().strip()
     assert header == ",".join(fieldnames), f"bad header: {header}"
@@ -227,7 +231,7 @@ class MixingMatrix:
 
     """
 
-    def __init__(self, infile):
+    def __init__(self, infile: str):
         """Reads an input file. The input file should be a CSV file, with the
         first row and column as headers. These contain age ranges in either the
         format "[a, b)", or the format "a+". The entry in the table in row R
