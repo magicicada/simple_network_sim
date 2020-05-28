@@ -17,7 +17,7 @@ def _count_people_per_region(state):
 @pytest.mark.parametrize("num_infected", [0, 10])
 def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, seed, num_infected):
     network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
-    np.exposeRegions([region], 10, {"[0,17)": 1.0}, network.states[0])
+    np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
     old_network = copy.deepcopy(network)
@@ -320,32 +320,25 @@ def test_expose_change_only_desired_age():
     assert region == {("m", "S"): 5.0, ("m", "E"): 12.0, ("o", "S"): 10.0, ("o", "E"): 0.0}
 
 
-def test_exposeRegion_distributes_by_age():
+def test_exposeRegion_distributes_multiple_ages():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0, ("o", "S"): 10.0, ("o", "E"): 0.0}}
 
-    np.exposeRegions(["region1"], 10.0, {"m": 0.5, "o": 0.5}, state)
+    np.exposeRegions({"region1": {"m": 5.0, "o": 5.0}}, state)
 
     assert state == {"region1": {("m", "S"): 10.0, ("m", "E"): 5.0, ("o", "S"): 5.0, ("o", "E"): 5.0}}
-
-
-def test_exposeRegion_requires_probabilities_to_add_up():
-    state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}}
-
-    with pytest.raises(AssertionError):
-        np.exposeRegions(["region1"], 10.0, {"m": 0.7}, state)
 
 
 def test_exposeRegion_requires_probabilities_fails_if_age_group_does_not_exist():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
     with pytest.raises(KeyError):
-        np.exposeRegions(["region1"], 10.0, {"m": 1.0, "o": 0.0}, state)
+        np.exposeRegions({"region1": {"m": 10.0, "o": 0.0}}, state)
 
 
 def test_exposeRegion_multiple_regions():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
-    np.exposeRegions(["region1", "region2"], 10.0, {"m": 1.0}, state)
+    np.exposeRegions({"region1": {"m": 10.0}, "region2": {"m": 10.0}}, state)
 
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 5.0, ("m", "E"): 10.0}}
 
@@ -353,7 +346,7 @@ def test_exposeRegion_multiple_regions():
 def test_exposeRegion_only_desired_region():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
-    np.exposeRegions(["region1"], 10.0, {"m": 1.0}, state)
+    np.exposeRegions({"region1": {"m": 10.0}}, state)
 
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 

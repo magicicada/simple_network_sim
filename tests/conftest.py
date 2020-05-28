@@ -16,6 +16,11 @@ def compartmentTransitionsByAgeFilename():
 
 
 @pytest.fixture
+def initial_infection():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "initial_infection.csv")
+
+
+@pytest.fixture
 def demographics(demographicsFilename):
     with open(demographicsFilename) as fp:
         yield fp

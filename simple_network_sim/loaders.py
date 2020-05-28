@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 import re
 
 import networkx as nx
@@ -88,6 +89,20 @@ def readNodeAttributesJSON(filename):
 def genGraphFromContactFile(filename):
     G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float),))
     return G
+
+
+def readInitialInfections(fp):
+    fieldnames = ["Health_Board", "Age", "Infected"]
+    header = fp.readline().strip()
+    assert header == ",".join(fieldnames), f"bad header: {header}"
+    infections = {}
+    for row in csv.DictReader(fp, fieldnames=fieldnames):
+        infected = float(row["Infected"])
+        if infected >= 0.0 and infected != math.inf:
+            infections.setdefault(row["Health_Board"], {})[row["Age"]] = infected
+        else:
+            raise ValueError(f"Invalid infected value: {infected}")
+    return infections
 
 
 def _check_overlap(one, two):

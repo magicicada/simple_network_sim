@@ -1,4 +1,5 @@
 import copy
+import math
 
 from collections import namedtuple
 
@@ -261,19 +262,16 @@ def mergeExposed(*args):
     return exposedTotal
 
 
-def exposeRegions(regions, exposed, ageDistribution, state):
+def exposeRegions(infections, states):
     """
-    :param regions: a list with all regions to be infected
-    :param exposed: number (float) of people that will be exposed
-    :param ageDistribution: a dict of type {age: float} with the probabilities for exposition in each age
-    :param state: dict representing the slice of time we want to alter
+    :param infections: a dict with number of infections per region per age
+    :param states: dict representing the slice of time we want to alter
 
     This function modifies the state parameter.
     """
-    assert sum(ageDistribution.values()) == 1.0, "the age distribution must add up to 1.0"
-    for region in regions:
-        for age, prob in ageDistribution.items():
-            expose(age, exposed * prob, state[region])
+    for regionID in infections:
+        for age in infections[regionID]:
+            expose(age, infections[regionID][age], states[regionID])
 
 
 # The functions below are the only operations that need to know about the actual state values.
