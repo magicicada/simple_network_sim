@@ -123,7 +123,7 @@ def distributeInfections(nodeState, newInfections):
         newInfections = totalSus
     for age in ageToSus:
         if totalSus > 0:
-           newInfectionsByAge[age] = (float(ageToSus[age])/float(totalSus))*newInfections
+            newInfectionsByAge[age] = (float(ageToSus[age])/float(totalSus))*newInfections
         else:
             newInfectionsByAge[age] = 0
     return newInfectionsByAge
