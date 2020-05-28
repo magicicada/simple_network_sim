@@ -2,7 +2,7 @@ import csv
 import json
 import math
 import re
-from typing import Dict, TextIO, BinaryIO
+from typing import Dict, TextIO
 
 import networkx as nx
 
@@ -107,6 +107,29 @@ def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
         else:
             raise ValueError(f"Invalid infected value: {infected}")
     return infections
+
+
+def readMovementMultipliers(fp: TextIO) -> Dict[int, float]:
+    """
+    :param fp: file object containing a CSV with header Time,Movement_Multiplier
+    :return: A dict of ints (time) pointing to floats (Movement_Multiplier). The floats can be greater than 1.0 if the
+             number of people transitioning between nodes should increase rather than decrease
+    """
+    fieldnames = ["Time", "Movement_Multiplier"]
+    header = fp.readline().strip()
+    assert header == ",".join(fieldnames), f"bad header: {header}"
+
+    multipliers = {}
+    for row in csv.DictReader(fp, fieldnames=fieldnames):
+        time = int(row["Time"])
+        if time < 0:
+            raise ValueError("can't have negative time")
+        m = float(row["Movement_Multiplier"])
+        if m < 0.0 or math.isinf(m) or math.isnan(m):
+            raise ValueError("can't have negative multiplier")
+        multipliers[time] = m
+
+    return multipliers
 
 
 def _check_overlap(one, two):

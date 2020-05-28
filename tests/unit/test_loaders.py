@@ -159,6 +159,26 @@ def test_genGraphFromContactFile(commute_moves):
     assert nx.is_isomorphic(loaders.genGraphFromContactFile(commute_moves), graph)
 
 
+def test_readMovementMultipliers(multipliers):
+    ms = loaders.readMovementMultipliers(multipliers)
+
+    assert ms == {0: 1.0, 3: 0.7, 10: 0.9}
+
+
+@pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
+def test_readMovementMultipliers_bad_multipliers(m):
+    content = io.StringIO(f"Time,Movement_Multiplier\n1,{m}")
+    with pytest.raises(ValueError):
+        loaders.readMovementMultipliers(content)
+
+
+@pytest.mark.parametrize("t", ["1.0", "-1", "asdf"])
+def test_readMovementMultipliers_bad_times(t):
+    content = io.StringIO(f"Time,Movement_Multiplier\n{t},1.0")
+    with pytest.raises(ValueError):
+        loaders.readMovementMultipliers(content)
+
+
 def test_AgeRange():
     a = loaders.AgeRange("[10,20)")
     assert 10 in a

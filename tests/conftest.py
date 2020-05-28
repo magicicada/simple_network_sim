@@ -21,6 +21,12 @@ def initial_infection():
 
 
 @pytest.fixture
+def multipliers():
+    with open(os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "movement_multipliers.csv")) as fp:
+        yield fp
+
+
+@pytest.fixture
 def demographics(demographicsFilename):
     with open(demographicsFilename) as fp:
         yield fp
