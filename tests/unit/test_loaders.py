@@ -39,6 +39,13 @@ def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
     }
 
 
+def test_readCompartmentRatesByAge_approximately_one():
+    contents = "age,src,dst,rate\n70+,A,A,0.999999999"
+    result = loaders.readCompartmentRatesByAge(io.StringIO(contents))
+
+    assert result == {"70+": {"A": {"A": 0.999999999}}}
+
+
 @pytest.mark.parametrize("contents", ["o,A,A", "o,A,0.4", "o,A,A,0.4\no,A,0.6", "A,A,1.0"])
 def test_readParametersAgeStructured_missing_column(contents):
     with pytest.raises(Exception):
