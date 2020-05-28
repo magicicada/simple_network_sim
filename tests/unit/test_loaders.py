@@ -154,15 +154,31 @@ def test_readNodeAttributesJSON(locations):
 
 
 def test_genGraphFromContactFile(commute_moves):
-    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float), ("dampening_factor", float)))
+    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float), ("delta_adjustment", float)))
 
     assert nx.is_isomorphic(loaders.genGraphFromContactFile(commute_moves), graph)
+
+
+def test_genGraphFromContactFile_negative_delta_adjustment():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        with pytest.raises(AssertionError):
+            fp.write("a,b,30.0,-1.0")
+            fp.flush()
+            loaders.genGraphFromContactFile(fp.name)
+
+
+def test_genGraphFromContactFile_negative_weight():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        with pytest.raises(AssertionError):
+            fp.write("a,b,-30.0,1.0")
+            fp.flush()
+            loaders.genGraphFromContactFile(fp.name)
 
 
 def test_readMovementMultipliers(multipliers):
     ms = loaders.readMovementMultipliers(multipliers)
 
-    assert ms == {0: 1.0, 3: 0.7, 10: 0.9}
+    assert ms == {50: 0.05, 75: 0.3, 80: 0.8, 100: 0.9}
 
 
 @pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])

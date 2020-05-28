@@ -13,9 +13,8 @@ def _count_people_per_region(state):
     return [sum(region.values()) for region in state.values()]
 
 @pytest.mark.parametrize("region", ["S08000024", "S08000030"])
-@pytest.mark.parametrize("seed", [2, 3])
 @pytest.mark.parametrize("num_infected", [0, 10])
-def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, seed, num_infected):
+def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, num_infected):
     network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
@@ -36,6 +35,41 @@ def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, co
         assert list(network.infectionMatrix[a]) == list(old_network.infectionMatrix[a])
         for b in network.infectionMatrix[a]:
             assert network.infectionMatrix[a][b] == old_network.infectionMatrix[a][b]
+
+
+@pytest.mark.parametrize("region", ["S08000024", "S08000030", "S08000016"])
+@pytest.mark.parametrize("num_infected", [0, 10, 1000])
+def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, num_infected):
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        fp.write("Time,Movement_Multiplier\n0,0.0")
+        fp.flush()
+        network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix, fp.name)
+    np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
+
+    initial_population = sum(_count_people_per_region(network.states[0]))
+    old_network = copy.deepcopy(network)
+
+    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+
+    # population remains constant
+    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
+
+    # the graph is unchanged
+    assert nx.is_isomorphic(old_network.graph, network.graph)
+
+    # infection matrix is unchanged
+    assert list(network.infectionMatrix) == list(old_network.infectionMatrix)
+    for a in network.infectionMatrix:
+        assert list(network.infectionMatrix[a]) == list(old_network.infectionMatrix[a])
+        for b in network.infectionMatrix[a]:
+            assert network.infectionMatrix[a][b] == old_network.infectionMatrix[a][b]
+
+    # no spread across regions
+    for state in network.states.values():
+        for regionID, regionPop in state.items():
+            if regionID != region:
+                infected = sum(np.getInfectious(age, regionPop) for age in np.getAges(regionPop))
+                assert infected == 0.0
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -181,7 +215,7 @@ def test_doIncomingInfectionsByNode_no_susceptibles():
         "r2": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state)
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 1.0)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -196,7 +230,7 @@ def test_doIncomingInfectionsByNode_no_connections():
         "r2": {("m", "S"): 100.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state)
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 1.0)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -212,7 +246,7 @@ def test_doIncomingInfectionsByNode_no_weight():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state)
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 1.0)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 1.0 * 0.1 * 0.8}
 
@@ -228,9 +262,42 @@ def test_doIncomingInfectionsByNode_weight_given():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state)
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 1.0)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.5 * 0.1 * 0.8}
+
+
+def test_doIncomingInfectionsByNode_weight_delta_adjustment():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=10, delta_adjustment=0.75)
+
+    state = {
+        "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+        "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
+    }
+
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 0.5)
+
+    weight = 10 - (5 * 0.75)
+    assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": weight * 0.1 * 0.8}
+
+
+def test_doIncomingInfectionsByNode_weight_multiplier():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=10, delta_adjustment=1.0)
+
+    state = {
+        "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+        "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
+    }
+
+    totalIncomingInfectionsByNode = np.doIncomingInfectionsByNode(graph, state, 0.3)
+
+    assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 10 * 0.3 * 0.1 * 0.8}
 
 
 def test_doBetweenInfectionAgeStructured():
@@ -247,9 +314,52 @@ def test_doBetweenInfectionAgeStructured():
     }
     original_states = copy.deepcopy(states)
 
-    num_infections = np.getExternalInfections(graph, states, 0)
+    num_infections = np.getExternalInfections(graph, states, 0, 1.0)
 
     assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 0.5 * 0.1 * 0.8}}
+    assert states == original_states
+
+
+def test_doBetweenInfectionAgeStructured_multiplier():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=15)
+
+    states = {
+        0: {
+            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
+        }
+    }
+    original_states = copy.deepcopy(states)
+
+    num_infections = np.getExternalInfections(graph, states, 0, 0.3)
+
+    assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 15 * 0.3 * 0.1 * 0.8}}
+    assert states == original_states
+
+
+def test_doBetweenInfectionAgeStructured_delta_adjustment():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=15, delta_adjustment=0.3)
+
+    states = {
+        0: {
+            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
+        }
+    }
+    original_states = copy.deepcopy(states)
+
+    num_infections = np.getExternalInfections(graph, states, 0, 0.5)
+
+    delta = 15 - (15 * 0.5)
+    weight = 15 - (delta * 0.3)
+
+    assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": weight * 0.1 * 0.8}}
     assert states == original_states
 
 
@@ -267,7 +377,7 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
     }
     original_states = copy.deepcopy(states)
 
-    new_infections = np.getExternalInfections(graph, states, 0)
+    new_infections = np.getExternalInfections(graph, states, 0, 1.0)
 
     assert new_infections == {"r1": {"m": 0.0}, "r2": {"m": 30.0}}
     assert states == original_states
@@ -605,3 +715,34 @@ def test_getInfectious_non_existant():
 
     with pytest.raises(KeyError):
         np.getInfectious("70+", states)
+
+
+@pytest.mark.parametrize(
+    "delta_adjustment,multiplier",
+    [(1.0, 1.0), (0.7, 1.0), (1.0, 0.7), (0.0, 0.8), (0.8, 0.0), (2.0, 1.0), (2.0, 2.0), (0.7, 2.0)]
+)
+def test_getWeight(delta_adjustment, multiplier):
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=30.0, delta_adjustment=delta_adjustment)
+
+    assert np.getWeight(graph, "r1", "r2", multiplier) == 30.0 - delta_adjustment * (1 - multiplier) * 30.0
+
+
+def test_getWeight_no_delta():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=100.0, delta_adjustment=0.7)
+
+    assert np.getWeight(graph, "r1", "r2", 1.0) == 100.0
+
+
+def test_getWeight_no_delta_adjustment():
+    graph = nx.DiGraph()
+    graph.add_node("r1")
+    graph.add_node("r2")
+    graph.add_edge("r1", "r2", weight=100.0)
+
+    assert np.getWeight(graph, "r1", "r2", 0.5) == 50.0

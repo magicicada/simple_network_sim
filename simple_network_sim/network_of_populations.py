@@ -1,9 +1,12 @@
 import copy
+import logging
 import math
 
 from collections import namedtuple
 
 from simple_network_sim import loaders
+
+logger = logging.getLogger(__name__)
 
 
 # CurrentlyInUse
@@ -57,12 +60,15 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
     :return: a list with the number of infectious people at each given time
     """
     timeSeriesInfection = []
-
+    movementMultiplier = network.movementMultipliers.get(0, 1.0)
     for time in range(timeHorizon):
+        # we are building the interactions for time + 1, so that's the multiplier value we need to use
+        movementMultiplier = network.movementMultipliers.get(time + 1, movementMultiplier)
+
         progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
         internalInfections = getInternalInfection(network.states, network.infectionMatrix, time)
-        externalInfections = getExternalInfections(network.graph, network.states, time)
+        externalInfections = getExternalInfections(network.graph, network.states, time, movementMultiplier)
         exposed = mergeExposed(internalInfections, externalInfections)
 
         network.states[time + 1] = createNextStep(progression, exposed, network.states[time])
@@ -129,7 +135,7 @@ def distributeInfections(nodeState, newInfections):
     return newInfectionsByAge
 
 
-def doIncomingInfectionsByNode(graph, currentState):
+def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
     totalIncomingInfectionsByNode = {}
     for receivingVertex in currentState:
         totalSusceptHere = getTotalSuscept(currentState[receivingVertex])
@@ -141,21 +147,41 @@ def doIncomingInfectionsByNode(graph, currentState):
                     continue
                 totalInfectedGiving = getTotalInfectious(currentState[givingVertex])
                 if totalInfectedGiving > 0:
-                    weight = 1.0
-                    if 'weight' not in graph[givingVertex][receivingVertex]:
-                        print("ERROR: No weight available for edge " + str(givingVertex) + "," + str(
-                            receivingVertex) + " assigning weight 1.0")
-                    else:
-                        weight = graph[givingVertex][receivingVertex]['weight']
+                    weight = getWeight(graph, givingVertex, receivingVertex, movementMultiplier)
 
-                    fractionGivingInfected = totalInfectedGiving / totalIndividuals(
-                        currentState[givingVertex])
-                    fractionReceivingSus = totalSusceptHere / totalIndividuals(
-                        currentState[receivingVertex])
-                    totalIncomingInfectionsByNode[receivingVertex] = totalIncomingInfectionsByNode[
-                                                                         receivingVertex] + weight * fractionGivingInfected * fractionReceivingSus
+                    fractionGivingInfected = totalInfectedGiving / totalIndividuals(currentState[givingVertex])
+                    fractionReceivingSus = totalSusceptHere / totalIndividuals(currentState[receivingVertex])
+                    totalIncomingInfectionsByNode[receivingVertex] += weight * fractionGivingInfected * fractionReceivingSus
 
     return totalIncomingInfectionsByNode
+
+
+def getWeight(graph, orig, dest, multiplier):
+    """
+    :param graph: the graph with the commutes, weight and multiplier
+    :param orig: vertex people are coming from
+    :param dest: vertex people are going to
+    :param multiplier: value that will dampen or heighten movements between nodes
+    :return: a float with the final weight value
+    """
+    edge  = graph[orig][dest]
+    if "weight" not in edge:
+        logger.error("No weight available for edge %s,%s assuming 1.0", orig, dest)
+        weight = 1.0
+    else:
+        weight = edge["weight"]
+
+    if "delta_adjustment" not in edge:
+        logger.error("delta_adjustment not available for edge %s,%s assuming 1.0", orig, dest)
+        delta_adjustment = 1.0
+    else:
+        delta_adjustment = edge["delta_adjustment"]
+
+    delta = weight - (weight * multiplier)
+    # The delta_adjustment is applied on the delta. It can either completely cancel any changes (factor = 0.0) or
+    # enable it fully (factor = 1.0). If the movement multipler doesn't make any changes to the node's movements (ie.
+    # multiplier = 1.0), then the delta_adjustment will have no effect.
+    return weight - (delta * delta_adjustment)
 
 
 # CurrentlyInUse
@@ -164,10 +190,10 @@ def doIncomingInfectionsByNode(graph, currentState):
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
-def getExternalInfections(graph, dictOfStates, currentTime):
+def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
     infectionsByNode = {}
 
-    totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime])
+    totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime], movementMultiplier)
 
     # This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue
     for vertex in totalIncomingInfectionsByNode:
@@ -278,29 +304,43 @@ def exposeRegions(infections, states):
 SUSCEPTIBLE_STATE = "S"
 EXPOSED_STATE = "E"
 INFECTIOUS_STATES = ["I", "A"]
-NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix"])
+NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix", "movementMultipliers"])
 
 
-def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn):
+def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn, movementMultipliersFn=None):
+    # disases progression matrix
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
 
+    # Check some requirements for this particular model to work with the progression matrix
     for states in progression.values():
         assert SUSCEPTIBLE_STATE not in states, "progression from susceptible state is not allowed"
         for state, nextStates in states.items():
             for nextState in nextStates:
                 assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
 
-    with open(populationFn) as fp:
-        population = loaders.readPopulationAgeStructured(fp)
+    # people movement's graph
     graph = loaders.genGraphFromContactFile(graphFn)
 
+    # movement multipliers (dampening or heightening)
+    if movementMultipliersFn is not None:
+        with open(movementMultipliersFn) as fp:
+            movementMultipliers = loaders.readMovementMultipliers(fp)
+    else:
+        movementMultipliers = {}
+
+    # age-based infection matrix
     infectionMatrix = loaders.MixingMatrix(ageInfectionMatrixFn)
 
     agesInInfectionMatrix = set(infectionMatrix)
     for age in infectionMatrix:
         assert agesInInfectionMatrix == set(infectionMatrix[age]), "infection matrix columns/rows mismatch"
 
+    # population census data
+    with open(populationFn) as fp:
+        population = loaders.readPopulationAgeStructured(fp)
+
+    # Checks across datasets
     assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"
     assert agesInInfectionMatrix == {age for region in population.values() for age in region}, "infection matrix and population ages mismatch"
     assert set(graph.nodes()) == set(population.keys()), "regions mismatch between graph and population"
@@ -313,7 +353,13 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
             for compartment in compartments:
                 region[(age, compartment)] = 0
 
-    return NetworkOfPopulation(progression=progression, graph=graph, states={0: state0}, infectionMatrix=infectionMatrix)
+    return NetworkOfPopulation(
+        progression=progression,
+        graph=graph,
+        states={0: state0},
+        infectionMatrix=infectionMatrix,
+        movementMultipliers=movementMultipliers,
+    )
 
 
 def createNextStep(progression, exposed, currState):

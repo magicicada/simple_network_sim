@@ -21,9 +21,14 @@ def initial_infection():
 
 
 @pytest.fixture
-def multipliers():
-    with open(os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "movement_multipliers.csv")) as fp:
+def multipliers(multipliers_filename):
+    with open(multipliers_filename) as fp:
         yield fp
+
+
+@pytest.fixture
+def multipliers_filename():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "movement_multipliers.csv")
 
 
 @pytest.fixture

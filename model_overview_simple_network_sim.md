@@ -59,9 +59,10 @@ Our aim is to have as much of the specification of model parameters as possible 
 
 Current inputs:
 * age-structured population information for each node
-* weighted edges between nodes (we expect weights to be number of contacts per day)
+* weighted edges between nodes (we expect weights to be number of contacts per day). This file also has an adjustment factor for the movement multiplier
+* movement multiplier - used to dampen or heighten the original weights between nodes over time
 * epidemiological parameter file
-* age-mixing matrix *(not in use as of 17 May 2020 - in development)*
+* age-mixing matrix
 * locations for nodes - currently only used when generating geographically-local edges in the nodes-as-individuals version
 
 
