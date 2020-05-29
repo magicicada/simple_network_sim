@@ -2,6 +2,7 @@ import csv
 import json
 import math
 import re
+from typing import Dict, TextIO
 
 import networkx as nx
 
@@ -22,7 +23,7 @@ def _checkAgeParameters(agesDictionary):
             assert all_compartments == list(compartments.keys()), f"compartments mismatch in {age}"
         for compartment, transitions in compartments.items():
             assert compartment in transitions.keys(), f"{age},{compartment} does not have self referencing key"
-            assert sum(transitions.values()) == 1.0, f"{age},{compartment} transitions do not add up to 1.0"
+            assert math.isclose(sum(transitions.values()), 1.0), f"{age},{compartment} transitions do not add up to 1.0"
             for new_name, prob in transitions.items():
                 assert 0.0 <= prob <= 1.0, f"{age},{compartment},{new_name},{prob} not a valid probability"
 
@@ -30,7 +31,7 @@ def _checkAgeParameters(agesDictionary):
 
 
 # CurrentlyInUse
-def readCompartmentRatesByAge(fp):
+def readCompartmentRatesByAge(fp: TextIO) -> Dict[str, Dict[str, Dict[str, float]]]:
     """
     :param fp: file-like object that contains the age transition data
     :return: A dictionary of in the format {age: {src: {dest: prob}}}
@@ -49,8 +50,7 @@ def readCompartmentRatesByAge(fp):
 
 
 # CurrentlyInUse
-# This needs exception-catching, and probably shouldn't have hard-coded column indices.
-def readPopulationAgeStructured(fp):
+def readPopulationAgeStructured(fp: TextIO) -> Dict[str, Dict[str, int]]:
     dictOfPops = {}
 
     fieldnames = ["Health_Board", "Sex", "Age", "Total"]
@@ -86,12 +86,19 @@ def readNodeAttributesJSON(filename):
 # in future - e.g. sampling, generating movements, whatever
 # it should return a networkx graph, ideally with weighted edges
 # eventual replacement with HDF5 reading code?
-def genGraphFromContactFile(filename):
-    G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float),))
+def genGraphFromContactFile(filename: str) -> nx.DiGraph:
+    G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float), ("delta_adjustment", float)))
+    for edge in G.edges.data():
+        assert edge[2]["weight"] >= 0.0
+        assert edge[2]["delta_adjustment"] >= 0.0
     return G
 
 
-def readInitialInfections(fp):
+def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
+    """
+    :param fp: file object the contents must be a CSV with the header: Health_Board,Age,Infected
+    :return: A dict in the format {<region:str>: {<age:str>: <num infected>}}
+    """
     fieldnames = ["Health_Board", "Age", "Infected"]
     header = fp.readline().strip()
     assert header == ",".join(fieldnames), f"bad header: {header}"
@@ -103,6 +110,29 @@ def readInitialInfections(fp):
         else:
             raise ValueError(f"Invalid infected value: {infected}")
     return infections
+
+
+def readMovementMultipliers(fp: TextIO) -> Dict[int, float]:
+    """
+    :param fp: file object containing a CSV with header Time,Movement_Multiplier
+    :return: A dict of ints (time) pointing to floats (Movement_Multiplier). The floats can be greater than 1.0 if the
+             number of people transitioning between nodes should increase rather than decrease
+    """
+    fieldnames = ["Time", "Movement_Multiplier"]
+    header = fp.readline().strip()
+    assert header == ",".join(fieldnames), f"bad header: {header}"
+
+    multipliers = {}
+    for row in csv.DictReader(fp, fieldnames=fieldnames):
+        time = int(row["Time"])
+        if time < 0:
+            raise ValueError("can't have negative time")
+        m = float(row["Movement_Multiplier"])
+        if m < 0.0 or math.isinf(m) or math.isnan(m):
+            raise ValueError("can't have negative multiplier")
+        multipliers[time] = m
+
+    return multipliers
 
 
 def _check_overlap(one, two):
@@ -227,7 +257,7 @@ class MixingMatrix:
 
     """
 
-    def __init__(self, infile):
+    def __init__(self, infile: str):
         """Reads an input file. The input file should be a CSV file, with the
         first row and column as headers. These contain age ranges in either the
         format "[a, b)", or the format "a+". The entry in the table in row R

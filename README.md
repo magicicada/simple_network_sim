@@ -104,23 +104,18 @@ optional arguments:
   -h, --help            show this help message and exit
   --compartment-transition COMPARTMENT_TRANSITION
                         Epidemiological rate parameters for movement within
-                        the compartmental model. (default: /home/rafael/Pychar
-                        mProjects/simple_network_sim/sample_input_files/compar
-                        tmentTransitionByAge.csv)
+                        the compartmental model. (default: sample_input_files/compartmentTransitionByAge.csv)
   --population POPULATION
                         This file contains age-and-sex-stratified population
-                        numbers by geographic unit. (default: /home/rafael/Pyc
-                        harmProjects/simple_network_sim/sample_input_files/sam
-                        ple_hb2019_pop_est_2018_row_based.csv)
+                        numbers by geographic unit. (default: sample_input_files/sample_hb2019_pop_est_2018_row_based.csv)
   --commutes COMMUTES   This contains origin-destination flow data during
-                        peacetime for health boards (default: /home/rafael/Pyc
-                        harmProjects/simple_network_sim/sample_input_files/sam
-                        ple_scotHB_commute_moves_wu01.sampleCSV)
+                        peacetime for health boards (default: sample_input_files/sample_scotHB_commute_moves_wu01.csv)
   --mixing-matrix MIXING_MATRIX
                         This is a sample square matrix of mixing - each column
-                        and row header is an age category. (default: /home/raf
-                        ael/PycharmProjects/simple_network_sim/sample_input_fi
-                        les/simplified_age_infection_matrix.csv)
+                        and row header is an age category. (default: sample_input_files/simplified_age_infection_matrix.csv)
+  --movement-multipliers MOVEMENT_MULTIPLIERS
+                        By using this parameter you can adjust dampening or
+                        heightening people movement through time (default: None)
   --time TIME           The number of time steps to take for each simulation
                         (default: 200)
 ```

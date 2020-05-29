@@ -21,6 +21,17 @@ def initial_infection():
 
 
 @pytest.fixture
+def multipliers(multipliers_filename):
+    with open(multipliers_filename) as fp:
+        yield fp
+
+
+@pytest.fixture
+def multipliers_filename():
+    yield os.path.join(os.path.dirname(__file__), "..", "sample_input_files", "movement_multipliers.csv")
+
+
+@pytest.fixture
 def demographics(demographicsFilename):
     with open(demographicsFilename) as fp:
         yield fp
@@ -44,7 +55,7 @@ def simplified_mixing_matrix():
 @pytest.fixture
 def commute_moves():
     yield os.path.join(
-        os.path.dirname(__file__), "..", "sample_input_files", "sample_scotHB_commute_moves_wu01.sampleCSV"
+        os.path.dirname(__file__), "..", "sample_input_files", "sample_scotHB_commute_moves_wu01.csv"
     )
 
 

@@ -39,6 +39,13 @@ def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
     }
 
 
+def test_readCompartmentRatesByAge_approximately_one():
+    contents = "age,src,dst,rate\n70+,A,A,0.999999999"
+    result = loaders.readCompartmentRatesByAge(io.StringIO(contents))
+
+    assert result == {"70+": {"A": {"A": 0.999999999}}}
+
+
 @pytest.mark.parametrize("contents", ["o,A,A", "o,A,0.4", "o,A,A,0.4\no,A,0.6", "A,A,1.0"])
 def test_readParametersAgeStructured_missing_column(contents):
     with pytest.raises(Exception):
@@ -147,9 +154,45 @@ def test_readNodeAttributesJSON(locations):
 
 
 def test_genGraphFromContactFile(commute_moves):
-    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float),))
+    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float), ("delta_adjustment", float)))
 
     assert nx.is_isomorphic(loaders.genGraphFromContactFile(commute_moves), graph)
+
+
+def test_genGraphFromContactFile_negative_delta_adjustment():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        with pytest.raises(AssertionError):
+            fp.write("a,b,30.0,-1.0")
+            fp.flush()
+            loaders.genGraphFromContactFile(fp.name)
+
+
+def test_genGraphFromContactFile_negative_weight():
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
+        with pytest.raises(AssertionError):
+            fp.write("a,b,-30.0,1.0")
+            fp.flush()
+            loaders.genGraphFromContactFile(fp.name)
+
+
+def test_readMovementMultipliers(multipliers):
+    ms = loaders.readMovementMultipliers(multipliers)
+
+    assert ms == {50: 0.05, 75: 0.3, 80: 0.8, 100: 0.9}
+
+
+@pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
+def test_readMovementMultipliers_bad_multipliers(m):
+    content = io.StringIO(f"Time,Movement_Multiplier\n1,{m}")
+    with pytest.raises(ValueError):
+        loaders.readMovementMultipliers(content)
+
+
+@pytest.mark.parametrize("t", ["1.0", "-1", "asdf"])
+def test_readMovementMultipliers_bad_times(t):
+    content = io.StringIO(f"Time,Movement_Multiplier\n{t},1.0")
+    with pytest.raises(ValueError):
+        loaders.readMovementMultipliers(content)
 
 
 def test_AgeRange():

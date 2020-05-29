@@ -37,3 +37,16 @@ This is essentially a weighted edge list.
 
 ## sample_20200327_comix_social_contacts.sampleCSV
 This is a sample square matrix of mixing - each column and row header is an age category. For a simplified version, look at simplified_age_infection_matrix.csv.
+
+## movement_multipliers.csv
+
+This table has two columns: Time and Movement Multiplier. For instance, if the file looks like this:
+
+```
+Time,Movement_Multiplier
+0,1.0
+3,0.7
+10,0.9
+```
+
+it means we ought to use full network movements at times 0, 1, 2, then 70% volume network movements at times 3-9, then 90% from then on.

@@ -25,6 +25,7 @@ def main(argv):
         populationFn=args.population,
         graphFn=args.commutes,
         ageInfectionMatrixFn=args.mixing_matrix,
+        movementMultipliersFn=args.movement_multipliers,
     )
 
     basicPlots = []
@@ -71,13 +72,17 @@ def build_args(argv):
     )
     parser.add_argument(
         "--commutes",
-        default=os.path.join(sampledir, "sample_scotHB_commute_moves_wu01.sampleCSV"),
+        default=os.path.join(sampledir, "sample_scotHB_commute_moves_wu01.csv"),
         help="This contains origin-destination flow data during peacetime for health boards",
     )
     parser.add_argument(
         "--mixing-matrix",
         default=os.path.join(sampledir, "simplified_age_infection_matrix.csv"),
         help="This is a sample square matrix of mixing - each column and row header is an age category.",
+    )
+    parser.add_argument(
+        "--movement-multipliers",
+        help="By using this parameter you can adjust dampening or heightening people movement through time",
     )
     parser.add_argument("--time", default=200, type=int, help="The number of time steps to take for each simulation")
 
