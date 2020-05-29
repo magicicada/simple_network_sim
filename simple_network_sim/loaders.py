@@ -147,7 +147,7 @@ def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
 
 def readMovementMultipliers(fp: TextIO) -> Dict[int, float]:
     """Read file containing movement multipliers by time.
-    
+
     :param fp: file object containing a CSV with header Time,Movement_Multiplier
     :return: A dict of ints (time) pointing to floats (Movement_Multiplier). The floats can be greater than 1.0 if the
              number of people transitioning between nodes should increase rather than decrease
@@ -189,8 +189,8 @@ AGE_RE = re.compile(r'\[(\d+),\s*(\d+)\)')
 class AgeRange:
     """A helper class for an age range.
     
-    If b is None, it is assumed that a is a string to be
-    parsed.
+    If b is None, it is assumed that a is a tuple holding the 
+    upper and lower values of the range or a string to be parsed.
 
     The string can be one of the two formats:
     [a,b) - that's an age range from a to b (not including b)
