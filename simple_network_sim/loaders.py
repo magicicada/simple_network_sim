@@ -255,7 +255,7 @@ class MixingRow:
     """One row of a mixing table.
     
     This is a helper class. A row represents a given population, 
-    and can return the expected number of interactions (per day) 
+    and can return the expected number of interactions (per unit time) 
     a member of this population will have with some other target.
     
     :param ages: Ages
