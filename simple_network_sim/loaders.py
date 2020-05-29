@@ -254,10 +254,9 @@ class AgeRange:
 class MixingRow:
     """One row of a mixing table.
     
-    This is a helper class. A row
-    represents a given population, and can return the expected number of
-    interactions (per day) a member of this population will have with some
-    other target.
+    This is a helper class. A row represents a given population, 
+    and can return the expected number of interactions (per day) 
+    a member of this population will have with some other target.
     
     :param ages: Ages
     :type ages: list
