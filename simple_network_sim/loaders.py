@@ -112,7 +112,7 @@ def readNodeAttributesJSON(filename):
 def genGraphFromContactFile(filename: str) -> nx.DiGraph:
     """Read a file containing edge weights between nodes.
 
-    Pairs of nodes are listed in the file by source, destination and weight.
+    Pairs of nodes are listed in the file by source, destination, weight and adjustment.
 
     :param filename: Weighted edge list in `.csv` format.
     :type filename: file-like object
