@@ -407,8 +407,13 @@ def expose(age, exposed, region):
     This function modifies the region in-place, removing people from susceptible and adding them to exposed
     """
     assert region[(age, SUSCEPTIBLE_STATE)] >= exposed, f"S:{region[(age, SUSCEPTIBLE_STATE)]} < E:{exposed}"
-    region[(age, EXPOSED_STATE)] += exposed
-    region[(age, SUSCEPTIBLE_STATE)] -= exposed
+    suscept = region[(age, SUSCEPTIBLE_STATE)]
+    
+    # Allowing for multiple infectious contacts hitting the same person     
+    modifiedExposed = suscept*(1-(1-(1/suscept))**exposed)
+    
+    region[(age, EXPOSED_STATE)] += modifiedExposed
+    region[(age, SUSCEPTIBLE_STATE)] -= modifiedExposed
 
 
 # NotCurrentlyInUse
