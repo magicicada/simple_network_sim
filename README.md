@@ -157,6 +157,10 @@ optional arguments:
  
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/data_dictionary.md).
 
+## Continuous integration
+
+[Continuous integration uses Travis and Codecov](ci.md).
+
 ## License
 
 [The 2-Clause BSD License](LICENSE.txt).
