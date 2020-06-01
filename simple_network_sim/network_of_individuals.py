@@ -19,7 +19,7 @@ def chooseFromDistrib(distrib):
         sumSoFar = sumSoFar + distrib[value]
         if thisLuck <= sumSoFar:
             return value
-    print('Something has gone wrong - no next state was returned.  Choosing arbitrarily')
+    logger.warning('Something has gone wrong - no next state was returned.  Choosing arbitrarily')
     return min(distrib.keys())
 
 

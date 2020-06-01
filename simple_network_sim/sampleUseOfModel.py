@@ -6,18 +6,23 @@ import random
 import sys
 import time
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 
 from . import common, network_of_populations as ss, loaders
-
-logger = logging.getLogger(__name__)
+from . import sns_logger
 
 
 def main(argv):
     t0 = time.time()
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s")
 
     args = build_args(argv)
+
+    # Set up log config and instantiate logger
+    logger = sns_logger.logger
+    sns_logger.setup_logger(args)
+
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
     network = ss.createNetworkOfPopulation(
@@ -84,7 +89,32 @@ def build_args(argv):
         "--movement-multipliers",
         help="By using this parameter you can adjust dampening or heightening people movement through time",
     )
-    parser.add_argument("--time", default=200, type=int, help="The number of time steps to take for each simulation")
+    parser.add_argument(
+        "--time",
+        default=200,
+        type=int,
+        help="The number of time steps to take for each simulation"
+        )
+    parser.add_argument(
+        "-l",
+        "--logfile",
+        dest="logfile",
+        default=None,
+        type=Path,
+        help="Path for logging output")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        help="Provide verbose output to STDERR"
+        )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Provide debug output to STDERR"
+        )
+
 
     sp = parser.add_subparsers(dest="cmd", required=True)
 
