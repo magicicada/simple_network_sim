@@ -382,7 +382,9 @@ def createNextStep(progression, exposed, currState):
 
     for regionID, region in exposed.items():
         for age, exposed in region.items():
-            expose(age, exposed, nextStep[regionID])
+            suscept = nextStep[regionID][(age, SUSCEPTIBLE_STATE)]
+            modifiedExposed = suscept*(1-(1-(1/suscept))**exposed)
+            expose(age, modifiedExposed, nextStep[regionID])
 
     return nextStep
 
@@ -407,14 +409,9 @@ def expose(age, exposed, region):
     This function modifies the region in-place, removing people from susceptible and adding them to exposed
     """
     assert region[(age, SUSCEPTIBLE_STATE)] >= exposed, f"S:{region[(age, SUSCEPTIBLE_STATE)]} < E:{exposed}"
-    suscept = region[(age, SUSCEPTIBLE_STATE)]
-    
-    # Allowing for multiple infectious contacts hitting the same person     
-    modifiedExposed = suscept*(1-(1-(1/suscept))**exposed)
-    
-    region[(age, EXPOSED_STATE)] += modifiedExposed
-    region[(age, SUSCEPTIBLE_STATE)] -= modifiedExposed
 
+    region[(age, EXPOSED_STATE)] += exposed
+    region[(age, SUSCEPTIBLE_STATE)] -= exposed
 
 # NotCurrentlyInUse
 def nodeUpdate(graph, dictOfStates, time, headString):
