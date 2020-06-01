@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Optional
 
 def setup_logger(args: Optional[Namespace] = None) -> None:
-    """Create and return a logging.Logger instance.
+    """Configure the package-wide logging.Logger instance.
     
     :param args: argparse.Namespace
         args.logfile (pathlib.Path) is used to create a logfile if present
