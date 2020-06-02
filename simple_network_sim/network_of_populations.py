@@ -382,7 +382,16 @@ def createNextStep(progression, exposed, currState):
 
     for regionID, region in exposed.items():
         for age, exposed in region.items():
-            expose(age, exposed, nextStep[regionID])
+            suscept = nextStep[regionID][(age, SUSCEPTIBLE_STATE)]
+            # The probability one of our susceptables avoids all infection
+            probOneAvoidsAll = (1-(1/suscept))**exposed
+            # so the probability that it *does* get infected is (1-probOneAvoidsAll)
+            # and because we're only calculating expectation here we can use
+            # linearity of expectation to sum up over all susceptibles by multiplication
+            # Note: this should *never* be more that exposed, and should tend toward
+            # exposed as suscept gets very large
+            modifiedExposed = suscept*(1-probOneAvoidsAll)
+            expose(age, modifiedExposed, nextStep[regionID])
 
     return nextStep
 
@@ -407,9 +416,9 @@ def expose(age, exposed, region):
     This function modifies the region in-place, removing people from susceptible and adding them to exposed
     """
     assert region[(age, SUSCEPTIBLE_STATE)] >= exposed, f"S:{region[(age, SUSCEPTIBLE_STATE)]} < E:{exposed}"
+
     region[(age, EXPOSED_STATE)] += exposed
     region[(age, SUSCEPTIBLE_STATE)] -= exposed
-
 
 # NotCurrentlyInUse
 def nodeUpdate(graph, dictOfStates, time, headString):
