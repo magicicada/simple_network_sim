@@ -1,12 +1,12 @@
 import copy
-# import logging
+import logging
 import math
 
 from collections import namedtuple
 
 from simple_network_sim import loaders
-from simple_network_sim.sns_logger import logger
 
+logger = logging.getLogger(__name__)
 
 # CurrentlyInUse
 def countInfectiousAgeStructured(dictOfStates, time):

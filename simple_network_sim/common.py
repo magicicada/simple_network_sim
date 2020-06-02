@@ -1,6 +1,6 @@
-from simple_network_sim import sns_logger
+import logging
 
-logger = sns_logger.logger
+logger = logging.getLogger(__name__)
 
 # CurrentlyInUse
 def generateMeanPlot(listOfPlots):
