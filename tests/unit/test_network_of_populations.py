@@ -807,7 +807,7 @@ def test_plotStates_three_rows():
         {"time": 1, "healthboard": "hb6", "state": "S", "total": 10.0},
         {"time": 1, "healthboard": "hb7", "state": "S", "total": 10.0},
     ])
-    compare_mpl_plots("unit_network_of_populations_test_plotStates_three_rows", np.plotStates(pd.DataFrame(simple)))
+    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
 
 
@@ -824,7 +824,7 @@ def test_plotStates_two_rows():
         {"time": 1, "healthboard": "hb3", "state": "E", "total": 15.0},
         {"time": 1, "healthboard": "hb4", "state": "S", "total": 0.0},
     ])
-    compare_mpl_plots("unit_network_of_populations_test_plotStates_two_rows", np.plotStates(pd.DataFrame(simple)))
+    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
 
 def test_plotStates_single_row():
@@ -834,7 +834,7 @@ def test_plotStates_single_row():
         {"time": 1, "healthboard": "hb1", "state": "S", "total": 10.0},
         {"time": 1, "healthboard": "hb2", "state": "S", "total": 5.0},
     ])
-    compare_mpl_plots("unit_network_of_populations_test_plotStates_single_row", np.plotStates(pd.DataFrame(simple)))
+    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
 
 def test_plotStates_empty_healthboard():

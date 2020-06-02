@@ -1,17 +1,25 @@
-import hashlib
 import os
 import tempfile
+from glob import glob
 
+import pandas as pd
 from simple_network_sim import sampleUseOfModel
+from tests.utils import create_baseline
 
 
 def test_run_seeded(initial_infection):
-    with tempfile.NamedTemporaryFile(mode="wb+", delete=False, suffix=".png") as fp:
-        sampleUseOfModel.main(["seeded", initial_infection, fp.name])
+    with tempfile.TemporaryDirectory() as dirname:
+        sampleUseOfModel.main(["seeded", initial_infection, f"{dirname}/test"])
 
-        # TODO: improve this once we output a different kind of format
-        fp.seek(0)
-        checksum = hashlib.md5()
-        checksum.update(fp.read())
-        # Removed as suggested         
-        # assert checksum.hexdigest() == "697ce151437d64264a9a9ea8edb37049"
+        files = glob(os.path.join(dirname, "test*"))
+        assert len(files) == 2
+        assert len([f for f in files if f.endswith(".pdf")]) == 1
+        assert len([f for f in files if f.endswith(".csv")]) == 1
+
+        test_data = [f for f in files if f.endswith(".csv")][0]
+        baseline = create_baseline(test_data)
+
+        test_df = pd.read_csv(test_data)
+        baseline_df = pd.read_csv(baseline)
+
+        pd.testing.assert_frame_equal(test_df, baseline_df)

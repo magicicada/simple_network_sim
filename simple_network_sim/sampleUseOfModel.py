@@ -6,6 +6,7 @@ import os
 import random
 import sys
 import time
+from datetime import datetime
 
 from pathlib import Path
 from typing import Optional
@@ -35,7 +36,7 @@ def main(argv):
         movementMultipliersFn=args.movement_multipliers,
     )
 
-    basicPlots = []
+    aggregated = None
     infections = {}
     if args.cmd == "seeded":
         with open(args.input) as fp:
@@ -52,12 +53,26 @@ def main(argv):
                     infections[regionID][age] = args.infected
 
         ss.exposeRegions(infections, disposableNetwork.states[0])
-        basicPlots.append(ss.basicSimulationInternalAgeStructure(disposableNetwork, args.time))
 
-    plt.plot(common.generateMeanPlot(basicPlots), color ='dodgerblue', label='basic')
+        ss.basicSimulationInternalAgeStructure(disposableNetwork, args.time)
+        # index by all columns so it's we can safely aggregate
+        indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(["time", "healthboard", "age", "state"])
+        if aggregated is None:
+            aggregated = indexed
+        else:
+            aggregated.total += indexed.total
 
-    plt.savefig(args.output)
-    logger.info("Took %.2fs to run the simulation", time.time() - t0)
+    averaged = aggregated.reset_index()
+    averaged.total /= args.trials
+
+    filename = f"{args.output_prefix}-{int(time.time())}"
+
+    averaged.to_csv(f"{filename}.csv")
+    ss.plotStates(averaged, states=args.plot_states, healthboards=args.plot_healthboards).savefig(f"{filename}.pdf", dpi=300)
+
+    logger.info("Read the dataframe from: %s.csv", filename)
+    logger.info("Open the visualisation from: %s.pdf", filename)
+    logger.info("Took %.2fs to run the simulation.", time.time() - t0)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -169,26 +184,39 @@ def build_args(argv):
         default=200,
         type=int,
         help="The number of time steps to take for each simulation"
-        )
+    )
     parser.add_argument(
         "-l",
         "--logfile",
         dest="logfile",
         default=None,
         type=Path,
-        help="Path for logging output")
+        help="Path for logging output"
+    )
     parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
         action="store_true",
         help="Provide verbose output to STDERR"
-        )
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
         help="Provide debug output to STDERR"
-        )
+    )
+    parser.add_argument(
+        "--plot-healthboards",
+        default=None,
+        nargs="+",
+        help="If set, will only plot the specified healthboards"
+    )
+    parser.add_argument(
+        "--plot-states",
+        default=None,
+        nargs="+",
+        help="If set, will only plot the specified states"
+    )
 
     sp = parser.add_subparsers(dest="cmd", required=True)
 
@@ -198,13 +226,13 @@ def build_args(argv):
     randomCmd.add_argument("--age-groups", nargs="+", default=["[17,70)"], help="Age groups to infect")
     randomCmd.add_argument("--trials", default=100, type=int, help="Number of experiments to run")
     randomCmd.add_argument("--infected", default=100, type=int, help="Number of infected people in each region/age group")
-    randomCmd.add_argument("output", help="Name of the PDF file that will be created with the visualisation")
+    randomCmd.add_argument("output_prefix", help="Prefix used when exporting the dataframe and plot")
 
     # Parameters when using the seeded infection approach
     seededCmd = sp.add_parser("seeded", help="Use a seed file with infected regions", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     seededCmd.add_argument("--trials", default=1, type=int, help="Number of experiments to run")
     seededCmd.add_argument("input", help="File name with the seed region seeds")
-    seededCmd.add_argument("output", help="Name of the PDF file that will be created with the visualisation")
+    seededCmd.add_argument("output_prefix", help="Prefix use when exporting the dataframe and plot")
 
     return parser.parse_args(argv)
 
