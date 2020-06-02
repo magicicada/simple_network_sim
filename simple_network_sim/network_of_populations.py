@@ -8,7 +8,6 @@ from simple_network_sim import loaders
 
 logger = logging.getLogger(__name__)
 
-
 # CurrentlyInUse
 def countInfectiousAgeStructured(dictOfStates, time):
     total = 0
@@ -40,7 +39,7 @@ def basicReportingFunction(dictOfStates):
             for state in numByState:
                dictOfStringsByNodeAndState[node][state].append(numByState[state])
            
-    # print(dictOfStringsByNodeAndState)
+    logger.debug(dictOfStringsByNodeAndState)
     
     for node in dictOfStringsByNodeAndState:
         for state in dictOfStringsByNodeAndState[node]:
@@ -125,7 +124,7 @@ def distributeInfections(nodeState, newInfections):
         ageToSus[age] = getSusceptibles(age, nodeState)
     totalSus = getTotalSuscept(nodeState)
     if totalSus<newInfections:
-        print('ERROR: Too many infections to distribute amongst age classes - adjusting num infections')
+        logger.error('Too many infections to distribute amongst age classes - adjusting num infections')
         newInfections = totalSus
     for age in ageToSus:
         if totalSus > 0:
