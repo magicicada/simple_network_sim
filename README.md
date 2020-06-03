@@ -68,6 +68,34 @@ After activating your conda environment, execute the following command:
 pytest --cov=simple_network_sim tests
 ```
 
+### Regression testing
+
+Our approach updating regression test data is based on matplotlib's `matplotlib.testing.decorators.image_comparison`.
+The functions `tests.utils.compare_mpl_plots` and `tests.utils.create_baseline` are used to maintain the regression
+test data. They both work very similarly. A regression test may look like this:
+
+```python
+def test_mytest():
+    results_filename = do_some_computation()
+    baseline_filename = create_baseline(results_filename)
+
+    assert open(results_filename).read() == open(baseline_filename).read()
+```
+
+The `create_baseline` function will calculate the baseline filename for that test by using the test's name and path
+(it figures that information out from an environment variable that pytest sets) and return it. If the file is not
+present, then `create_baseline` will make the test fail, but it will copy the result's filename into the baseline
+location. Otherwise, it will not make any changes to the baseline.
+
+If you are altering a regression tests that existed before, you will need to deliberately remove the baseline file
+(or use the `force_update` parameter so that it happens automatically) so that `create_baseline` will create it for
+your. You will then need to validate the newly created file manually. If you didn't intend to have any effects in
+regression tests when you made your changes, then you shouldn't do that, but find out what caused the test to fail
+(running the test multiple times will always result in fail in this scenario).
+
+If you're creating a regression test, the first time you run it, it will fail. You should then manually check the
+resulting file before creating a PR. The second time you run your test in this scenario, it will succeed.
+
 ## Usage
 
 To run a example case, enter the following at the command prompt:
