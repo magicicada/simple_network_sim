@@ -1,8 +1,12 @@
 import copy
 import logging
 import math
+from typing import Dict, Tuple, NamedTuple
 
-from collections import namedtuple
+import matplotlib.pyplot as plt
+import networkx as nx
+import pandas as pd
+from matplotlib.colors import ListedColormap
 
 from simple_network_sim import loaders
 
@@ -202,7 +206,6 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
     return infectionsByNode
 
 
-
 # CurrentlyInUse
 #  (JE, 10 May 2020) I'm realigning this to be more using with a POLYMOD-style matrix (inlcuding the within-lockdown COMIX matrix)
 # I expect the matrix entry at [age1][age2] to be the expected number of contacts in a day between age1 and age2
@@ -299,14 +302,105 @@ def exposeRegions(infections, states):
             expose(age, infections[regionID][age], states[regionID])
 
 
+def modelStatesToPandas(timeseries: Dict[int, Dict[str, Dict[Tuple[str, str], float]]]) -> pd.DataFrame:
+    """
+    Takes an instance of NetworkOfPopulations.states and transforms it into a pandas DataFrame.
+
+    :param timeseries: dict object with the state over the times
+    :return: a pandas dataframe in tabular format with the following columns:
+             - time
+             - healthboard
+             - age
+             - state
+             - total
+    """
+    rows = []
+    for time, nodes in timeseries.items():
+        for nodeID, node in nodes.items():
+            for (age, state), value in node.items():
+                rows.append({"time": time, "healthboard": nodeID, "age": age, "state": state, "total": value})
+    return pd.DataFrame(rows)
+
+
+def plotStates(df, healthboards=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
+    """
+    Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
+    graphs are all Number of People x Time
+
+    :param df: pandas DataFrame with healthboard, time, state and total columns
+    :param healthboards: creates one plot per health board listed (None means all health boards)
+    :param states: plots one curve per state listed (None means all states)
+    :param ncol: number of columns (the number of rows will be calculated to fit all graphs)
+    :param sharey: set to true if all plots should have the same y-axis
+    :param figsize: select the size of each individual plot
+    :param cmap: color map to use
+    :return: returns a matplotlib figure
+    """
+    if healthboards is None:
+        healthboards = df.healthboard.unique().tolist()
+    if states is None:
+        states = df.state.unique().tolist()
+    if cmap is None:
+        cmap = ListedColormap(["#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#E69F00"])
+    nrow = math.ceil(len(healthboards) / ncol)
+    if figsize is None:
+        if nrow >= 3:
+            figsize = (20, 20)
+        elif nrow == 2:
+            figsize = (20, 10)
+        else:
+            figsize = (20, 5)
+
+    if not healthboards:
+        raise ValueError("nodes cannot be an empty list")
+    if not states:
+        raise ValueError("states cannot be an empty list")
+
+    # pre filter by states
+    df = df[df.state.isin(states)]
+
+    fig, axes = plt.subplots(nrow, ncol, squeeze=False, constrained_layout=True, sharey=sharey, figsize=figsize)
+
+    count = 0
+    ax = None
+    for i in range(nrow):
+        for j in range(ncol):
+            if count < len(healthboards):
+                node = healthboards[count]
+                count += 1
+                grouped = df[df.healthboard == node].groupby(["time", "state"]).sum()
+                indexed = grouped.reset_index().pivot(index="time", columns="state", values="total")
+
+                ax = axes[i, j]
+                indexed.plot(ax=ax, legend=False, title=node, cmap=cmap)
+                ax.set_ylabel("Number of People")
+                ax.set_xlabel("Time")
+
+    assert ax is not None, "ax was never assigned"
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper right")
+
+    return fig
+
+
 # The functions below are the only operations that need to know about the actual state values.
 SUSCEPTIBLE_STATE = "S"
 EXPOSED_STATE = "E"
 INFECTIOUS_STATES = ["I", "A"]
-NetworkOfPopulation = namedtuple("NetworkOfPopulation", ["progression", "states", "graph", "infectionMatrix", "movementMultipliers"])
 
 
-def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn, movementMultipliersFn=None):
+class NetworkOfPopulation(NamedTuple):
+    """
+    This type has all the internal data used by this model
+    """
+    progression: Dict[str, Dict[str, Dict[str, float]]]
+    states: Dict[int, Dict[str, Dict[Tuple[str, str], float]]]
+    graph: nx.DiGraph
+    infectionMatrix: loaders.MixingMatrix
+    movementMultipliers: Dict[int, float]
+
+
+def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn, movementMultipliersFn=None) -> NetworkOfPopulation:
     # disases progression matrix
     with open(disasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
@@ -344,7 +438,7 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
     assert agesInInfectionMatrix == {age for region in population.values() for age in region}, "infection matrix and population ages mismatch"
     assert set(graph.nodes()) == set(population.keys()), "regions mismatch between graph and population"
 
-    state0 = {}
+    state0: Dict[str, Dict[Tuple[str, str], float]] = {}
     for node in list(graph.nodes()):
         region = state0.setdefault(node, {})
         for age, compartments in progression.items():

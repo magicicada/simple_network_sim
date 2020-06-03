@@ -10,11 +10,12 @@ __pycache__/
 *.dat
 *.xls
 *.pdf
-data/
+data/*
 .DS_Store
 
 # Do not ignore sample inputs
 !sample_input_files/*
+!sample_output_files/*
 
 # IDE
 .idea
