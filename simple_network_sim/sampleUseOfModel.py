@@ -67,7 +67,7 @@ def main(argv):
 
     filename = f"{args.output_prefix}-{int(time.time())}"
 
-    averaged.to_csv(f"{filename}.csv")
+    averaged.to_csv(f"{filename}.csv", index=False)
     ss.plotStates(averaged, states=args.plot_states, healthboards=args.plot_healthboards).savefig(f"{filename}.pdf", dpi=300)
 
     logger.info("Read the dataframe from: %s.csv", filename)
