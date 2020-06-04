@@ -6,7 +6,7 @@
 simple_network_sim developer documentation!
 ===========================================
 
-This site is intended for developers looking for information on how the modules, functions, classes etc. the comprise simple_network_sim work. More general information can be found in in the `project readme
+This site is intended for developers looking for information on the modules, functions, classes etc. that comprise simple_network_sim work. More general information can be found in in the `project readme
 <https://github.com/ScottishCovidResponse/simple_network_sim/blob/master/README.md>`_.
 
 .. toctree::
@@ -14,6 +14,7 @@ This site is intended for developers looking for information on how the modules,
    :caption: Contents:
 
    simple_network_sim
+   tests
 
 Indices and tables
 ==================
