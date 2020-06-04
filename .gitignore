@@ -21,3 +21,6 @@ data/*
 .idea
 *.sw[po]
 .vscode
+
+# sphinx / readthedocs
+doc/build/*
