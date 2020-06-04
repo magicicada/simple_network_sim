@@ -307,7 +307,7 @@ class MixingMatrix:
     age-ranges.
     
     Examples:    
-    `mm = MixingMatrix("sample_input_file/sample_20200327_comix_social_contacts.csv")`
+    `mm = MixingMatrix("sample_input_file/sample_20200327_comix_social_contacts.sampleCsv")`
     `print(mm[28][57])` Prints the expected number of interactions a 28 year old
     would have with a 57 year old in a day
     `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in the
