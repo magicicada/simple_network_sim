@@ -14,6 +14,17 @@ logger = logging.getLogger(__name__)
 
 # CurrentlyInUse
 def countInfectiousAgeStructured(dictOfStates, time):
+    """Count the number of infectious individuals in all states at a time.
+
+    :param dictOfStates: a time series of the disease status in each region stratified by age.
+    :type dictOfStates: a dictionary with time as keys and whose values are another dictionary with
+    the region as a key and the disease state as values. The states are a dictionary with a tuple
+    of (age, state) as keys and the number of individuals in that state as values.
+    :param time: the day number of the simulation.
+    :type time: int
+    :return: the total number of infectious individuals in all regions.
+    :rtype: float
+    """
     total = 0
     for node in dictOfStates[time]:
         for age in getAges(dictOfStates[time][node]):
@@ -83,10 +94,26 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
 # CurrentlyInUse
 def totalIndividuals(nodeState):
+    """Calculate the total population size over all ages and regions.
+
+    :param nodeState: the disease status of the population stratified by age.
+    :type nodeState: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :return: the total number of individuals.
+    :rtype: float
+    """
     return sum(nodeState.values())
 
 
 def getAges(node):
+    """Get the unique set of ages from the node.
+
+    :param node: the disease status of the population stratified by age.
+    :type node: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :return: the unique collection of ages.
+    :rtype: Set of strings
+    """
     ages = set()
     for (age, state) in node:
         ages.add(age)
@@ -95,6 +122,16 @@ def getAges(node):
 
 # CurrentlyInUse
 def getTotalInAge(nodeState, ageTest):
+    """Get the size of the population within an age range.
+
+    :param nodeState: the disease status of the population stratified by age.
+    :type nodeState: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :param ageTest: the age range of the population.
+    :type ageTest: string, e.g. '70+'
+    :return: the population size within the age range.
+    :rtype: int
+    """
     total= 0
     for (age, state) in nodeState:
             if age == ageTest:
@@ -104,6 +141,14 @@ def getTotalInAge(nodeState, ageTest):
 
 # CurrentlyInUse
 def getTotalInfectious(nodeState):
+    """Get the total number of infected individuals regardless of age.
+
+    :param nodeState: the disease status of the population stratified by age.
+    :type nodeState: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :return: the total number of infectious individuals.
+    :rtype: float
+    """
     totalInfectedHere = 0.0
     for age in getAges(nodeState):
         totalInfectedHere += getInfectious(age, nodeState)
@@ -112,6 +157,14 @@ def getTotalInfectious(nodeState):
 
 # CurrentlyInUse
 def getTotalSuscept(nodeState):
+    """Get the total number of susceptible individuals regardless of age.
+
+    :param nodeState: the disease status of the population stratified by age.
+    :type nodeState: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :return: the total number of susceptible individuals.
+    :rtype: float
+    """
     totalSusHere = 0.0
     for age in getAges(nodeState):
         totalSusHere += getSusceptibles(age, nodeState)
@@ -489,10 +542,30 @@ def createNextStep(progression, exposed, currState):
 
 
 def getSusceptibles(age, currentInternalStateDict):
+    """Calculate the total number of individuals in a susceptible state in an age range.
+
+    :param age: the age (range)
+    :type age: string, e.g. '[17,70)'
+    :param currentInternalStateDict: the disease status of the population stratified by age.
+    :type currentInternalStateDict: a dictionary containing a tuple of age range (as a string)
+    and a disease state as a key and the number of individuals in the (age,state) as a value.
+    :return: the number of individuals in a susceptible state and age range.
+    :rtype: float
+    """
     return currentInternalStateDict[(age, SUSCEPTIBLE_STATE)]
 
 
 def getInfectious(age, currentInternalStateDict):
+    """Calculate the total number of individuals in infectious states in an age range.
+
+    :param age: the age (range)
+    :type age: string, e.g. '[17,70)'
+    :param currentInternalStateDict: the disease status of the population stratified by age.
+    :type currentInternalStateDict: a dictionary containing a tuple of age range (as a string)
+    and a disease state as a key and the number of individuals in the (age,state) as a value.
+    :return: the number of individuals in an infectious state and age range.
+    :rtype: float
+    """
     total = 0.0
     for state in INFECTIOUS_STATES:
         total += currentInternalStateDict[(age, state)]
