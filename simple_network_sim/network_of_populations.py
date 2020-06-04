@@ -266,6 +266,17 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
 #  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
 # function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
 def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, contactsMultiplier):
+    """Calculate the new infections due to mixing with the region and stratify them by age.
+
+    :param currentInternalStateDict: the disease status of the population stratified by age.
+    :type currentInternalStateDict: a dictionary with a tuple of (age, state) as keys and the number of individuals
+    in that state as values.
+    :param ageMixingInfectionMatrix: Stores expected numbers of interactions between people of different ages.
+    :type ageMixingInfectionMatrix: Dictionary with age range object as a key and Mixing Raio as
+    a value.
+    :return: The number of new infections stratified by age.
+    :rtype: A dictionary of {age: number of new infections}
+    """
     newInfectedsByAge = {}
     for age in ageMixingInfectionMatrix:
         newInfectedsByAge[age] = 0
@@ -295,6 +306,22 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 
 # CurrentlyInUse        
 def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsMultiplier):
+    """Calculate the new infections and stratify them by region and age.
+
+    :param dictOfStates: a time series of the disease status in each region stratified by age.
+    :type dictOfStates: a dictionary with time as keys and whose values are another dictionary with
+    the region as a key and the disease state as values. The states are a dictionary with a tuple
+    of (age, state) as keys and the number of individuals in that state as values.
+    :param ageMixingInfectionMatrix: Stores expected numbers of interactions between people of different ages.
+    :type ageMixingInfectionMatrix: Dictionary with age range object as a key and Mixing Raio as
+    a value.
+    :param time: the time
+    :type time: int
+    :return: the number of exposed in each region stratified by age.
+    :rtype: a dictionary containing the region as a key and a dictionary of {age: number of
+    exposed} as a value.
+    """
+
     infectionsByNode = {}
 
     for node in dictOfStates[time]:
@@ -304,11 +331,21 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
 
 
 # CurrentlyInUse
-# internalStateDict should have keys like (age, compartment)
-#  The values are number of people in that node in that state
-#  diseaseProgressionProbs should have outward probabilities per timestep (rates)
-#  So we will need to do some accounting
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
+    """Update the status of exposed individuals, moving them into the next disease state with a
+    probability defined in the given progression matrix.
+
+    :param currentInternalStateDict: the disease status of the population stratified by age.
+    :type currentInternalStateDict: A dictionary with keys (age, state) and the number of
+    individuals in that node in that state as values.
+    :param diseaseProgressionProbs: A matrix with the probabilites if progressing from one state
+    to the next.
+    :type diseaseProgressionProbs: Nested dictionary with the format
+    {age : {disease state 1: {disease state 2: probability of progressing from state 1 to state 2}}}
+    :return: the numbers in each exposed state stratified by age
+    :rtype: A dictionary of { (age: state) : number in this state}. Note this only contains
+    exposed states.
+    """
     newStates = {}
     for (age, state), people in currentInternalStateDict.items():
         outTransitions = diseaseProgressionProbs[age].get(state, {})
@@ -320,11 +357,18 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
 
 # CurrentlyInUse
 def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs):
-    """
-    Given the values in the current state in the regions, progress the disease based on the progression matrix. This
-    method is
+    """Given the values in the current state in the regions, progress the disease based on the
+    progression matrix.
+
     :param currStates: The current state for every region is not modified
-    :param diseaseProgressionProbs: matrix with the probability of each transition
+    :type currStates: A dictionary with the region as a key and the value is a dictionary of
+    states {(age, state): number of individuals in this state}.
+    :param diseaseProgressionProbs: A matrix with the probabilites if progressing from one state
+    to the next.
+    :type diseaseProgressionProbs: Nested dictionary with the format
+    {age : {disease state 1: {disease state 2: probability of progressing from state 1 to state 2}}}
+    :return:
+    :rtype:
     """
     progression = {}
     for regionID, currRegion in currStates.items():
@@ -333,6 +377,16 @@ def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs):
 
 
 def mergeExposed(*args):
+    """From a list of exposed cases stratified by age and region, merge them into a single
+    collection
+
+    :param args: a variable list of regional exposure numbers by age.
+    :type args: a variable list of dictionaries that have a region as a key and the value is a
+    dictionary of age:number of exposed.
+    :return: a dictionary containing the merged number of exposed.
+    :rtype: a dictionary with a region as a key and the whose value is a dictionary of age:number of
+    exposed.
+    """
     exposedTotal = {}
     for infectionsDict in args:
         for regionID, region in infectionsDict.items():
@@ -573,12 +627,15 @@ def getInfectious(age, currentInternalStateDict):
 
 
 def expose(age, exposed, region):
-    """
-    :param age: age group that will be exposed
-    :param exposed: number (float) of exposed individuals
-    :param region: dict representing a region, with all the (age, state) tuples
+    """Update the region in place, moving people from susceptible to exposed.
 
-    This function modifies the region in-place, removing people from susceptible and adding them to exposed
+    :param age: age group that will be exposed
+    :type age: string, e.g.
+    :param exposed: number of exposed individuals
+    :type exposed: float
+    :param region: a region, with all the (age, state) tuples
+    :type region: a dictionary containing a tuple of age range (as a string)
+    and a disease state as a key and the number of individuals in the (age,state) as a value.
     """
     assert region[(age, SUSCEPTIBLE_STATE)] >= exposed, f"S:{region[(age, SUSCEPTIBLE_STATE)]} < E:{exposed}"
 
