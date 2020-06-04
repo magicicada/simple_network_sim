@@ -4,6 +4,7 @@
 
 [![Build Status](https://travis-ci.org/ScottishCovidResponse/simple_network_sim.svg?branch=master)](https://travis-ci.org/ScottishCovidResponse/simple_network_sim)
 [![Code Coverage](https://codecov.io/github/ScottishCovidResponse/simple_network_sim/coverage.svg?branch=master&token=)](https://codecov.io/gh/ScottishCovidResponse/simple_network_sim)
+[![Documentation Status](https://readthedocs.org/projects/simple-network-sim/badge/?version=latest)](https://simple-network-sim.readthedocs.io/en/latest/?badge=latest)
 
 ## Summary
 

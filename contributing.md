@@ -21,6 +21,10 @@ The process for implementing changes is:
 
 Our preferred coding style is [PEP8](https://www.python.org/dev/peps/pep-0008/), although this is not currently mandated.
 
+## Docstrings
+
+It is preferred that docstrings are in [sphinx format](https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html).
+
 ## Licensing
 
 By contributing to this project (e.g. by submitting a pull request or providing advice on code), you agree - unless simultaneously and expressly stated otherwise - that your contribution may be included in the source code of the project and published under the [2-Clause BSD License](license.txt) and that the contribution was created in whole or in part by you and you have the right to submit it under the open source license indicated above.
