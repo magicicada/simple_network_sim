@@ -63,15 +63,15 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
     :return: a list with the number of infectious people at each given time
     """
     timeSeriesInfection = []
-    movementMultiplier = network.movementMultipliers.get(0, 1.0)
+    multipliers = network.movementMultipliers.get(0, loaders.Multiplier(contact=1.0, movement=1.0))
     for time in range(timeHorizon):
         # we are building the interactions for time + 1, so that's the multiplier value we need to use
-        movementMultiplier = network.movementMultipliers.get(time + 1, movementMultiplier)
+        multipliers = network.movementMultipliers.get(time + 1, multipliers)
 
         progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
-        internalInfections = getInternalInfection(network.states, network.infectionMatrix, time)
-        externalInfections = getExternalInfections(network.graph, network.states, time, movementMultiplier)
+        internalInfections = getInternalInfection(network.states, network.infectionMatrix, time, multipliers.contact)
+        externalInfections = getExternalInfections(network.graph, network.states, time, multipliers.movement)
         exposed = mergeExposed(internalInfections, externalInfections)
 
         network.states[time + 1] = createNextStep(progression, exposed, network.states[time])
@@ -198,7 +198,6 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
 
     totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime], movementMultiplier)
 
-    # This might over-infect - we will need to adapt for multiple infections on a single individual if we have high infection threat.  TODO raise an issue
     for vertex in totalIncomingInfectionsByNode:
         totalDelta = totalIncomingInfectionsByNode[vertex]
         infectionsByNode[vertex] = distributeInfections(dictOfStates[currentTime][vertex], totalDelta)
@@ -213,7 +212,7 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
 #  that is, if a usual POLYMOD entry tells us that each individual of age1 is expected to have 1.2 contacts in category age2,
 #  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
 # function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
-def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix):
+def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, contactsMultiplier):
     newInfectedsByAge = {}
     for age in ageMixingInfectionMatrix:
         newInfectedsByAge[age] = 0
@@ -234,7 +233,7 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 #       For now, a simplifying assumption that there are *many more* individuals in totalInAge than there are   totalNewInfectionContacts
 #       So we don't have to deal with multiple infections for the same individual.  TODO - address in future code update, raise issue for this
             if totalInAge > 0.0:
-                numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge)
+                numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge) * contactsMultiplier
             else:
                 numNewInfected = 0.0
             newInfectedsByAge[age] = numNewInfected
@@ -242,11 +241,11 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 
 
 # CurrentlyInUse        
-def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time):
+def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsMultiplier):
     infectionsByNode = {}
 
     for node in dictOfStates[time]:
-        infectionsByNode[node] = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix)
+        infectionsByNode[node] = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix, contactsMultiplier)
 
     return infectionsByNode
 
@@ -397,7 +396,7 @@ class NetworkOfPopulation(NamedTuple):
     states: Dict[int, Dict[str, Dict[Tuple[str, str], float]]]
     graph: nx.DiGraph
     infectionMatrix: loaders.MixingMatrix
-    movementMultipliers: Dict[int, float]
+    movementMultipliers: Dict[int, loaders.Multiplier]
 
 
 def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn, movementMultipliersFn=None) -> NetworkOfPopulation:
@@ -420,7 +419,7 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
         with open(movementMultipliersFn) as fp:
             movementMultipliers = loaders.readMovementMultipliers(fp)
     else:
-        movementMultipliers = {}
+        movementMultipliers: Dict[int, loaders.Multiplier] = {}
 
     # age-based infection matrix
     infectionMatrix = loaders.MixingMatrix(ageInfectionMatrixFn)

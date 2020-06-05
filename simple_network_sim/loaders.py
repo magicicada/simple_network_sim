@@ -4,7 +4,7 @@ import csv
 import json
 import math
 import re
-from typing import Dict, TextIO
+from typing import Dict, TextIO, NamedTuple
 
 import networkx as nx
 
@@ -145,14 +145,24 @@ def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
     return infections
 
 
-def readMovementMultipliers(fp: TextIO) -> Dict[int, float]:
+class Multiplier(NamedTuple):
+    movement: float
+    contact: float
+
+
+def _assertPositiveNumber(value: float):
+    if value < 0.0 or math.isinf(value) or math.isnan(value):
+        raise ValueError(f"{value} must be a positive number")
+
+
+def readMovementMultipliers(fp: TextIO) -> Dict[int, Multiplier]:
     """Read file containing movement multipliers by time.
 
     :param fp: file object containing a CSV with header Time,Movement_Multiplier
-    :return: A dict of ints (time) pointing to floats (Movement_Multiplier). The floats can be greater than 1.0 if the
-             number of people transitioning between nodes should increase rather than decrease
+    :return: A dict of ints (time) pointing to a (named)tuple (contact=float, movement=float). Contact will alter how
+             the disease spreads inside of a node, whereas movement will change how it spread across nodes
     """
-    fieldnames = ["Time", "Movement_Multiplier"]
+    fieldnames = ["Time", "Movement_Multiplier", "Contact_Multiplier"]
     header = fp.readline().strip()
     assert header == ",".join(fieldnames), f"bad header: {header}"
 
@@ -161,10 +171,14 @@ def readMovementMultipliers(fp: TextIO) -> Dict[int, float]:
         time = int(row["Time"])
         if time < 0:
             raise ValueError("can't have negative time")
-        m = float(row["Movement_Multiplier"])
-        if m < 0.0 or math.isinf(m) or math.isnan(m):
-            raise ValueError("can't have negative multiplier")
-        multipliers[time] = m
+
+        movement = float(row["Movement_Multiplier"])
+        _assertPositiveNumber(movement)
+
+        contact = float(row["Contact_Multiplier"])
+        _assertPositiveNumber(contact)
+
+        multipliers[time] = Multiplier(movement=movement, contact=contact)
 
     return multipliers
 
