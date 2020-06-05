@@ -35,8 +35,13 @@ This is essentially a weighted edge list.
 * Second column is the destination location label
 * Third column is the number of individuals undertaking that journey as reported in wu01uk
 
-## sample_20200327_comix_social_contacts.sampleCSV
-This is a sample square matrix of mixing - each column and row header is an age category. For a simplified version, look at simplified_age_infection_matrix.csv.
+## sample_20200327_comix_social_contacts.csv
+This is a possible square matrix of mixing - each column and row header is an age category. For a simplified version, look at simplified_age_infection_matrix_from_comix.csv.  It is from https://cmmid.github.io/topics/covid19/comix-impact-of-physical-distance-measures-on-transmission-in-the-UK.html, and includes all imputed contacts (both face-to-face conversation and physical contact).
+
+## simplified_age_infection_matrix_from_comix.csv
+This is a sample *simplified* square matrix describing age mixing between aggregated age categories, generated from sample_20200327_comix_social_contacts.csv by summing over the columns that need to be aggregated, and then summing (weighted by the approximate population in each category) over the rows that need to be aggregated.  This includes both face-to-face and physical contacts, and is not yet down-weighted to approximate infection probability.  
+Age proportion estimated from https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/articles/overviewoftheukpopulation/august2019.
+
 
 ## movement_multipliers.csv
 
