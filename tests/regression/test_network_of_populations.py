@@ -8,10 +8,10 @@ from simple_network_sim import common, network_of_populations as np, loaders
 from tests.utils import create_baseline
 
 
-def _assert_baseline(result):
+def _assert_baseline(result, force_update=False):
     with tempfile.NamedTemporaryFile(mode="w") as fp:
-        json.dump(result, fp)
-        baseline_filename = create_baseline(fp.name)
+        json.dump(result, fp, indent=4)
+        baseline_filename = create_baseline(fp.name, force_update=force_update)
 
     with open(baseline_filename) as fp:
         assert result == pytest.approx(json.load(fp))

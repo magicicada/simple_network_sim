@@ -42,7 +42,7 @@ def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, co
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
 def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, num_infected):
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        fp.write("Time,Movement_Multiplier\n0,0.0")
+        fp.write("Time,Movement_Multiplier,Contact_Multiplier\n0,0.0,1.0")
         fp.flush()
         network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix, fp.name)
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
@@ -71,6 +71,44 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(de
             if regionID != region:
                 infected = sum(np.getInfectious(age, regionPop) for age in np.getAges(regionPop))
                 assert infected == 0.0
+
+
+@pytest.mark.parametrize("num_infected", [0, 10, 1000])
+def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(compartmentTransitionsByAgeFilename, simplified_mixing_matrix, num_infected):
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as nodes,\
+            tempfile.NamedTemporaryFile(mode="w+", delete=False) as population,\
+            tempfile.NamedTemporaryFile(mode="w+", delete=False) as dampening:
+        nodes.write("S08000016,S08000016,0.0,1.0")
+        nodes.flush()
+        population.write('Health_Board,Sex,Age,Total\n')
+        population.write('S08000016,Female,"[0,17)",31950\n')
+        population.write('S08000016,Female,"[17,70)",31950\n')
+        population.write('S08000016,Female,"70+",31950\n')
+        population.flush()
+        dampening.write("Time,Movement_Multiplier,Contact_Multiplier\n0,1.0,0.0")
+        dampening.flush()
+        network = np.createNetworkOfPopulation(
+            compartmentTransitionsByAgeFilename,
+            population.name,
+            nodes.name,
+            simplified_mixing_matrix,
+            dampening.name
+        )
+    np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.states[0])
+
+    initial_population = sum(_count_people_per_region(network.states[0]))
+    old_network = copy.deepcopy(network)
+
+    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+
+    # population remains constant
+    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
+
+    # susceptibles are never infected
+    for state in network.states.values():
+        assert state["S08000016"][("[17,70)", "S")] == 31950 - num_infected
+        assert state["S08000016"][("[0,17)", "S")] == 31950
+        assert state["S08000016"][("70+", "S")] == 31950
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -105,22 +143,23 @@ def test_doInternalProgressionAllNodes_e_to_a_progession():
 @pytest.mark.parametrize("infectious", [0.5, 100.0, 300.0])
 @pytest.mark.parametrize("asymptomatic", [0.5, 100.0, 300.0])
 @pytest.mark.parametrize("contact_rate", [0.0, 0.2, 1.0, 3.0])
-def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic, contact_rate):
+@pytest.mark.parametrize("dampening", [1.0, 0.0, 0.5, 2.0])
+def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic, contact_rate, dampening):
     current_state = {("m", "S"): susceptible, ("m", "A"): asymptomatic, ("m", "I"): infectious}
     age_matrix = {"m": {"m": contact_rate}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, dampening)
 
     probability_of_susceptible = susceptible / (susceptible + infectious + asymptomatic)
     contacts = contact_rate * (asymptomatic + infectious)
-    assert new_infected["m"] == probability_of_susceptible * contacts
+    assert new_infected["m"] == probability_of_susceptible * contacts * dampening
 
 
 def test_doInternalInfectionProcess_empty_age_group():
     current_state = {("m", "S"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == 0.0
 
@@ -129,7 +168,7 @@ def test_doInternalInfectionProcess_no_contact():
     current_state = {("m", "S"): 500.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == 0.0
 
@@ -138,7 +177,7 @@ def test_doInternalInfectionProcess_no_susceptibles():
     current_state = {("m", "S"): 0.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == 0.0
 
@@ -147,7 +186,7 @@ def test_doInternalInfectionProcess_no_infectious():
     current_state = {("m", "S"): 300.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == 0.0
 
@@ -164,7 +203,7 @@ def test_doInternalInfectionProcess_only_A_and_I_count_as_infectious():
     }
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == 0.0
 
@@ -180,7 +219,7 @@ def test_doInternalInfectionProcess_between_ages():
     }
     age_matrix = {"m": {"m": 0.2, "o": 0.5}, "o": {"o": 0.3, "m": 0.5}}
 
-    new_infected = np.doInternalInfectionProcess(current_state, age_matrix)
+    new_infected = np.doInternalInfectionProcess(current_state, age_matrix, 1.0)
 
     assert new_infected["m"] == (20.0 / 470.0) * ((450.0 * 0.2) + (300.0 * 0.5))
     assert new_infected["o"] == (15.0 / 315.0) * ((300.0 * 0.3) + (450.0 * 0.5))
@@ -190,7 +229,7 @@ def test_doInteralInfectionProcessAllNodes_single_compartment():
     states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 0.2}}
 
-    infections = np.getInternalInfection(states, age_matrix, 0)
+    infections = np.getInternalInfection(states, age_matrix, 0, 1.0)
 
     assert infections == {"region1": {"m": (300.0 / 400.0) * (0.2 * 100.0)}}
     assert states == {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}  # unchanged
@@ -200,7 +239,7 @@ def test_doInteralInfectionProcessAllNodes_large_num_infected_ignored():
     states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 5.0}}
 
-    new_infected = np.getInternalInfection(states, age_matrix, 0)
+    new_infected = np.getInternalInfection(states, age_matrix, 0, 1.0)
 
     assert new_infected == {"region1": {"m": (300.0 / 400.0) * (100.0 * 5.0)}}
 

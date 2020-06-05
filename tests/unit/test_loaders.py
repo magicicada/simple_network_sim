@@ -178,19 +178,32 @@ def test_genGraphFromContactFile_negative_weight():
 def test_readMovementMultipliers(multipliers):
     ms = loaders.readMovementMultipliers(multipliers)
 
-    assert ms == {50: 0.05, 75: 0.3, 80: 0.8, 100: 0.9}
+    assert ms == {
+        50: loaders.Multiplier(movement=0.05, contact=0.05),
+        75: loaders.Multiplier(movement=0.3, contact=0.3),
+        80: loaders.Multiplier(movement=0.8, contact=0.8),
+        100: loaders.Multiplier(movement=0.9, contact=0.9)
+    }
 
 
 @pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
-def test_readMovementMultipliers_bad_multipliers(m):
-    content = io.StringIO(f"Time,Movement_Multiplier\n1,{m}")
+def test_readMovementMultipliers_bad_movement_multipliers(m):
+    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n1,{m},1.0")
     with pytest.raises(ValueError):
         loaders.readMovementMultipliers(content)
 
 
+@pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
+def test_readMovementMultipliers_bad_contact_multipliers(m):
+    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n1,1.0,{m}")
+    with pytest.raises(ValueError):
+        loaders.readMovementMultipliers(content)
+
+
+
 @pytest.mark.parametrize("t", ["1.0", "-1", "asdf"])
 def test_readMovementMultipliers_bad_times(t):
-    content = io.StringIO(f"Time,Movement_Multiplier\n{t},1.0")
+    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n{t},1.0,1.0")
     with pytest.raises(ValueError):
         loaders.readMovementMultipliers(content)
 
