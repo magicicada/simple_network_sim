@@ -118,7 +118,7 @@ def getAges(node):
     :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :return: The unique collection of ages.
-    :rtype: et of str
+    :rtype: Set of str
     """
     ages = set()
     for (age, state) in node:
@@ -331,6 +331,8 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
     different ages.
     :type ageMixingInfectionMatrix: A dict with age range object as a key and Mixing Raio as
     a value.
+    :param contactsMultiplier: Multiplier applied to the number of infectious contacts.
+    :type contactsMultiplier: float
     :return: The number of new infections stratified by age.
     :rtype: A dictionary of {age: number of new infections}
     """
@@ -375,6 +377,8 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
     a value.
     :param time: The time
     :type time: int
+    :param contactsMultiplier: Multiplier applied to the number of infectious contacts.
+    :type contactsMultiplier: float
     :return: The number of exposed in each region stratified by age.
     :rtype: A dictionary containing the region as a key and a dictionary of {age: number of
     exposed} as a value.
