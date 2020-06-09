@@ -118,7 +118,7 @@ def getAges(node):
     :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :return: The unique collection of ages.
-    :rtype: Set of str
+    :rtype: Set[str]
     """
     ages = set()
     for (age, state) in node:
@@ -128,7 +128,7 @@ def getAges(node):
 
 # CurrentlyInUse
 def getTotalInAge(nodeState, ageTest):
-    """Get the size of the population within an age range.
+    """Get the size of the population within an age group.
 
     :param nodeState: The disease states of the population stratified by age.
     :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
@@ -147,7 +147,7 @@ def getTotalInAge(nodeState, ageTest):
 
 # CurrentlyInUse
 def getTotalInfectious(nodeState):
-    """Get the total number of infected individuals regardless of age.
+    """Get the total number of infectious individuals regardless of age in the node.
 
     :param nodeState: The disease status of the population stratified by age.
     :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
@@ -163,7 +163,7 @@ def getTotalInfectious(nodeState):
 
 # CurrentlyInUse
 def getTotalSuscept(nodeState):
-    """Get the total number of susceptible individuals regardless of age.
+    """Get the total number of susceptible individuals regardless of age in the node
 
     :param nodeState: The disease status of the population stratified by age.
     :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
@@ -208,7 +208,8 @@ def distributeInfections(nodeState, newInfections):
 
 
 def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
-    """Determine the number of new infections at each node of a graph.
+    """Determine the number of new infections at each node of a graph based on incoming people
+    from neighbouring nodes.
 
     :param graph: A graph with each region as a node and the weights corresponding to the movements
     between regions. Edges must contain weight and delta_adjustment attributes (assumed 1.0)
@@ -242,9 +243,9 @@ def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
 
 
 def getWeight(graph, orig, dest, multiplier):
-    """Get the weight of the edge from orig to dest in the graph. If the edge doesn't have a
-    weight, 1.0 is assumed and the returned weight is adjusted by the multiplier and any
-    delta_adjustment on the edge.
+    """Get the weight of the edge from orig to dest in the graph. This weight is expected to be
+    proportional to the movement between nodes. If the edge doesn't have a weight, 1.0 is assumed
+    and the returned weight is adjusted by the multiplier and any delta_adjustment on the edge.
 
     :param graph: A graph with each region as a node and the weights corresponding to the commutes
     between regions. Edges must contain weight and delta_adjustment attributes (assumed 1.0)
@@ -290,7 +291,7 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
     node. The infections are distributed to each age group according to the number of suscepitible
     people in them.
 
-    :param graph: A graph with each region as a node and the weights corresponding to the commutes
+    :param graph: A graph with each region as a node and the weights corresponding to the movements
     between regions. Edges must contain weight and delta_adjustment attributes (assumed 1.0)
     :type graph: networkx.Digraph
     :param dictOfStates: A time series of the disease status in each region stratified by age.
@@ -299,7 +300,8 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
     of (age, state) as keys and the number of individuals in that state as values.
     :param currentTime: The time (at which we calculate the infections from outside the region).
     :type currentTime: int
-    :param movementMultiplier: A multiplier applied to each edge (commute) in the network.
+    :param movementMultiplier: A multiplier applied to each edge (movement bbetween nodes) in the
+    network.
     :type movementMultiplier: float
     :return: The number of new infections in each region stratified by age.
     :rtype: A dictionary with the region as a key and a dictionary of {age: number of new
@@ -595,7 +597,7 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
     :param populationFn: The name of the file that contains the population size in each region by
     gender and age.
     :type populationFn: str
-    :param graphFn: The name of the file that contains the commutes between regions.
+    :param graphFn: The name of the file that contains the movements between regions.
     :type graphFn: str
     :param ageInfectionMatrixFn: The name of the file containing the age infection matrix.
     :type ageInfectionMatrixFn: str
