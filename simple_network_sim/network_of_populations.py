@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 # CurrentlyInUse
 def countInfectiousAgeStructured(dictOfStates, time):
-    """Count the number of infectious individuals in all states at some time.
+    """Count the number of infectious individuals in all nodes at some time.
 
     :param dictOfStates: A time series of the disease states in each region stratified by age.
     :type dictOfStates: A dictionary with time as keys and whose values are another dictionary with
     the region as a key and the disease state as values. The states are a dictionary with a tuple
     of (age, state) as keys and the number of individuals in that state as values.
-    :param time: The time (day) within the simulation.
+    :param time: The time within the simulation.
     :type time: int
     :return: The total number of infectious individuals in all regions.
     :rtype: float
@@ -100,9 +100,9 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
 # CurrentlyInUse
 def totalIndividuals(nodeState):
-    """Calculate the total population size over all ages and regions.
+    """This function takes a node (region) and counts individuals from every age and state.
 
-    :param nodeState: The disease status of the population stratified by age.
+    :param nodeState: The disease status of a node (or region) stratified by age.
     :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :return: The total number of individuals.
@@ -112,7 +112,7 @@ def totalIndividuals(nodeState):
 
 
 def getAges(node):
-    """Get the unique set of ages from the node.
+    """Get the set of ages from the node.
 
     :param node: The disease states of the population stratified by age.
     :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
@@ -210,13 +210,13 @@ def distributeInfections(nodeState, newInfections):
 def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
     """Determine the number of new infections at each node of a graph.
 
-    :param graph: A graph with each region as a node and the weights corresponding to the commutes
+    :param graph: A graph with each region as a node and the weights corresponding to the movements
     between regions. Edges must contain weight and delta_adjustment attributes (assumed 1.0)
     :type graph: networkx.Digraph
     :param currentState: The current state for every region.
     :type currentState: A dictionary with the region as a key and the value is a dictionary of
     states in the format {(age, state): number of individuals in this state}.
-    :param movementMultiplier: a multiplier applied to each edge (commute) in the network.
+    :param movementMultiplier: a multiplier applied to each edge (movement) in the network.
     :type movementMultiplier: float
     :return: the number of new infections in each region.
     :rtype: A dictionary with the region as key and the number of new infections as the value.
@@ -285,8 +285,10 @@ def getWeight(graph, orig, dest, multiplier):
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
 def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
-    """Calculate the number of new infections in each region, distributed across each age group
-    relative to the size [of the number of susceptibles] of each age group.
+    """Calculate the number of new infections in each region. The infections are distributed
+    proportionally to the number of susceptibles in the destination node and infected in the origin
+    node. The infections are distributed to each age group according to the number of suscepitible
+    people in them.
 
     :param graph: A graph with each region as a node and the weights corresponding to the commutes
     between regions. Edges must contain weight and delta_adjustment attributes (assumed 1.0)
@@ -322,7 +324,7 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
 #  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
 # function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
 def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, contactsMultiplier):
-    """Calculate the new infections due to mixing with the region and stratify them by age.
+    """Calculate the new infections due to mixing within the region and stratify them by age.
 
     :param currentInternalStateDict: The disease status of the population stratified by age.
     :type currentInternalStateDict: A dict with a tuple of (age, state) as keys and the
@@ -394,7 +396,7 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
 
 # CurrentlyInUse
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs):
-    """Update the status of exposed individuals, moving them into the next disease state with a
+    """Returns the status of exposed individuals, moving them into the next disease state with a
     probability defined in the given progression matrix.
 
     :param currentInternalStateDict: The disease status of the population stratified by age.
@@ -709,11 +711,13 @@ def createNextStep(progression, exposed, currState):
 
 
 def getSusceptibles(age, currentInternalStateDict):
-    """Calculate the total number of individuals in a susceptible state in an age range.
+    """Calculate the total number of individuals in a susceptible state in an age range within a
+    region.
 
     :param age: The age (range)
     :type age: str, e.g. '[17,70)'
-    :param currentInternalStateDict: The disease status of the population stratified by age.
+    :param currentInternalStateDict: The disease status of the population in a region stratified
+    by age.
     :type currentInternalStateDict: A dictionary containing a tuple of age range (as a string)
     and a disease state as a key and the number of individuals in the (age,state) as a value.
     :return: The number of individuals in a susceptible state and age range.
