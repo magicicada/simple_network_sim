@@ -502,10 +502,11 @@ def adjustExposed(susceptible: float, exposed: float):
         return susceptible * (1 - (1 - (1 / susceptible)) ** exposed)
     else:
         # For susceptible or exposed < 1., the formula (which theoretically works
-        # only for integers) breaks down and probOneAvoidsAll is nan. In that case
+        # only for integers) breaks down and returns nan. In that case
         # several choices are acceptable, we assume the fractional person will
-        # be chosen with 100% probability and expose a fraction of it.
-        return exposed
+        # be chosen with 100% probability, taking the minimum to ensure
+        # exposed < susceptible is always true.
+        return min(exposed, susceptible)
 
 
 def getSusceptibles(age, currentInternalStateDict):

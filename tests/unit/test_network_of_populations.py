@@ -732,6 +732,32 @@ def test_createNextStep_very_small_susceptible():
     assert nextStep == {"r1": {("70+", "S"): 0.19999999999999996, ("70+", "E"): 0.5}}
 
 
+def test_createNextStep_zero_susceptible():
+    currState = {"r1": {("70+", "S"): 0., ("70+", "E"): 0.0}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 0.}}
+
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 0., ("70+", "E"): 0.}}
+
+
+def test_createNextStep_susceptible_smaller_than_exposed():
+    currState = {"r1": {("70+", "S"): 10., ("70+", "E"): 10.}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 15.}}
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 2.058911320946491, ("70+", "E"): 7.941088679053509}}
+
+    currState = {"r1": {("70+", "S"): 0.5, ("70+", "E"): 0.}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 0.75}}
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 0., ("70+", "E"): 0.5}}
+
+
 def test_getSusceptibles():
     states = {("70+", "S"): 10, ("70+", "E"): 20, ("[17,70)", "S"): 15}
 
