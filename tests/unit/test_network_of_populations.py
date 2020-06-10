@@ -703,7 +703,6 @@ def test_createNextStep_update_infection():
     assert nextStep == {"r1": {("70+", "S"): 15.22846460770688, ("70+", "E"): 14.77153539229312}}
 
 
-
 def test_createNextStep_susceptible_in_progression():
     currState = {"r1": {("70+", "S"): 30.0}}
     progression = {"r1": {("70+", "S"): 7.0}}
@@ -721,6 +720,16 @@ def test_createNextStep_progression_nodes():
     nextStep = np.createNextStep(progression, exposed, currState)
 
     assert nextStep == {"r1": {("70+", "S"): 21.374141812742014, ("70+", "E"): 15.625858187257986, ("70+", "A"): 3.0}}
+
+
+def test_createNextStep_very_small_susceptible():
+    currState = {"r1": {("70+", "S"): 0.7, ("70+", "E"): 0.0}}
+    progression = {"r1": {}}
+    exposed = {"r1": {"70+": 0.5}}
+
+    nextStep = np.createNextStep(progression, exposed, currState)
+
+    assert nextStep == {"r1": {("70+", "S"): 0.19999999999999996, ("70+", "E"): 0.5}}
 
 
 def test_getSusceptibles():
