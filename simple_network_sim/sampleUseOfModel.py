@@ -21,12 +21,14 @@ def main(argv):
     setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
+    infectiousStates = args.infectious_states.split(",") if args.infectious_states else None
     network = ss.createNetworkOfPopulation(
         diseasesProgressionFn=args.compartment_transition,
         populationFn=args.population,
         graphFn=args.commutes,
         ageInfectionMatrixFn=args.mixing_matrix,
         movementMultipliersFn=args.movement_multipliers,
+        infectiousStates=infectiousStates,
     )
 
     initialInfections = []
@@ -38,7 +40,9 @@ def main(argv):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
 
     results = runSimulation(network, args.time, args.trials, initialInfections)
-    saveResults(results, args.output_prefix, args.plot_states, args.plot_nodes)
+    plot_states = args.plot_states.split(",") if args.plot_states else None
+    plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
+    saveResults(results, args.output_prefix, plot_states, plot_nodes)
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
 
@@ -231,14 +235,21 @@ def build_args(argv):
     parser.add_argument(
         "--plot-nodes",
         default=None,
-        nargs="+",
-        help="If set, will only plot the specified nodes",
+        metavar="nodes,[nodes,...]",
+        help="Comma-separated list of nodes to plot. All nodes will be plotted if not provided."
     )
     parser.add_argument(
         "--plot-states",
         default=None,
-        nargs="+",
-        help="If set, will only plot the specified states",
+        metavar="states,[states,...]",
+        help="Comma-separated list of states to plot. All states will be plotted if not provided."
+    )
+    parser.add_argument(
+        "-i",
+        "--infectious-states",
+        default="A,I",
+        metavar="states,[states,...]",
+        help="Comma-separated list of states that are considered infectious."
     )
 
     sp = parser.add_subparsers(dest="cmd", required=True)
