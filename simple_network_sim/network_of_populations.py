@@ -489,7 +489,7 @@ def modelStatesToPandas(timeseries: Dict[int, Dict[str, Dict[Tuple[str, str], fl
     {time : {region: { (age, state): population size}}}
     :return: a pandas dataframe in tabular format with the following columns:
              - time
-             - healthboard
+             - node
              - age
              - state
              - total
@@ -498,18 +498,21 @@ def modelStatesToPandas(timeseries: Dict[int, Dict[str, Dict[Tuple[str, str], fl
     for time, nodes in timeseries.items():
         for nodeID, node in nodes.items():
             for (age, state), value in node.items():
-                rows.append({"time": time, "healthboard": nodeID, "age": age, "state": state, "total": value})
+                rows.append({"time": time, "node": nodeID, "age": age, "state": state, "total": value})
     return pd.DataFrame(rows)
 
 
-def plotStates(df, healthboards=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
-    """Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
+def plotStates(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
+    """
+    Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
     graphs are all Number of People x Time
 
-    :param df: pandas DataFrame with healthboard, time, state and total columns
+    :param df: pandas DataFrame with node, time, state and total columns
+    :param nodes: creates one plot per nodes listed (None means all nodes)
+    :param df: pandas DataFrame with nodes, time, state and total columns
     :type df: pandas DataFrame
-    :param healthboards: creates one plot per health board listed (None means all health boards)
-    :type healthboards: list (of region names).
+    :param nodes: creates one plot per node listed (None means all nodes)
+    :type nodes: list (of region names).
     :param states: plots one curve per state listed (None means all states)
     :type states: list (of disease states).
     :param ncol: number of columns (the number of rows will be calculated to fit all graphs)
@@ -523,13 +526,13 @@ def plotStates(df, healthboards=None, states=None, ncol=3, sharey=False, figsize
     :return: returns a matplotlib figure
     :rtype: matplotlib figure
     """
-    if healthboards is None:
-        healthboards = df.healthboard.unique().tolist()
+    if nodes is None:
+        nodes = df.node.unique().tolist()
     if states is None:
         states = df.state.unique().tolist()
     if cmap is None:
         cmap = ListedColormap(["#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#E69F00"])
-    nrow = math.ceil(len(healthboards) / ncol)
+    nrow = math.ceil(len(nodes) / ncol)
     if figsize is None:
         if nrow >= 3:
             figsize = (20, 20)
@@ -538,7 +541,7 @@ def plotStates(df, healthboards=None, states=None, ncol=3, sharey=False, figsize
         else:
             figsize = (20, 5)
 
-    if not healthboards:
+    if not nodes:
         raise ValueError("nodes cannot be an empty list")
     if not states:
         raise ValueError("states cannot be an empty list")
@@ -552,10 +555,10 @@ def plotStates(df, healthboards=None, states=None, ncol=3, sharey=False, figsize
     ax = None
     for i in range(nrow):
         for j in range(ncol):
-            if count < len(healthboards):
-                node = healthboards[count]
+            if count < len(nodes):
+                node = nodes[count]
                 count += 1
-                grouped = df[df.healthboard == node].groupby(["time", "state"]).sum()
+                grouped = df[df.node == node].groupby(["time", "state"]).sum()
                 indexed = grouped.reset_index().pivot(index="time", columns="state", values="total")
 
                 ax = axes[i, j]
@@ -587,13 +590,13 @@ class NetworkOfPopulation(NamedTuple):
     movementMultipliers: Dict[int, loaders.Multiplier]
 
 
-def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn,
+def createNetworkOfPopulation(diseasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn,
                               movementMultipliersFn=None) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
-    :param disasesProgressionFn: The name of the file specifying the transition rates between
+    :param diseasesProgressionFn: The name of the file specifying the transition rates between
     infected compartments.
-    :type disasesProgressionFn: str
+    :type diseasesProgressionFn: str
     :param populationFn: The name of the file that contains the population size in each region by
     gender and age.
     :type populationFn: str
@@ -608,7 +611,7 @@ def createNetworkOfPopulation(disasesProgressionFn, populationFn, graphFn, ageIn
     :rtype: A NetworkOfPopulation object.
     """
     # diseases progression matrix
-    with open(disasesProgressionFn) as fp:
+    with open(diseasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
 
     # Check some requirements for this particular model to work with the progression matrix
