@@ -499,7 +499,8 @@ def adjustExposed(susceptible: float, exposed: float):
     = n * (1 - (1 - 1 / n)^k)
     """
     if susceptible > 1. and exposed > 1.:
-        return susceptible * (1 - (1 - (1 / susceptible)) ** exposed)
+        probaNeverChosen = (1 - (1 / susceptible)) ** exposed
+        return susceptible * (1 - probaNeverChosen)
     else:
         # For susceptible or exposed < 1., the formula (which theoretically works
         # only for integers) breaks down and returns nan. In that case
