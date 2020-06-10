@@ -498,11 +498,11 @@ def adjustExposed(susceptible: float, exposed: float):
     = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
     = n * (1 - (1 - 1 / n)^k)
     """
-    if susceptible > 1. and exposed > 1.:
+    if susceptible > 1.:
         probaNeverChosen = (1 - (1 / susceptible)) ** exposed
         return susceptible * (1 - probaNeverChosen)
     else:
-        # For susceptible or exposed < 1., the formula (which theoretically works
+        # For susceptible < 1., the formula (which theoretically works
         # only for integers) breaks down and returns nan. In that case
         # several choices are acceptable, we assume the fractional person will
         # be chosen with 100% probability, taking the minimum to ensure
