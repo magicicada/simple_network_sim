@@ -493,7 +493,7 @@ def adjustExposed(susceptible: float, exposed: float):
     E[Number of different people chosen when picking k in a population of size n, with replacement]
     = sum_{i=1,...,n} P(person i is chosen at least once)
     = sum_{i=1,...,n} (1 - P(person i is never chosen in k samples))
-    = sum_{i=1,...,n} (1 - P(person i is never chosen once)^k)
+    = sum_{i=1,...,n} (1 - P(person i is not chosen once)^k)
     = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
     = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
     = n * (1 - (1 - 1 / n)^k)
