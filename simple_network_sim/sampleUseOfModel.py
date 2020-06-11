@@ -29,16 +29,21 @@ def main(argv):
         movementMultipliersFn=args.movement_multipliers,
     )
 
-    region, age_groups, infected = (None, None, None) \
-        if args.cmd == 'seeded' else (args.regions, args.age_groups, args.infected)
+    initialInfections = []
+    if args.cmd == "seeded":
+        with open(args.input) as fp:
+            initialInfections.append(loaders.readInitialInfections(fp))
+    elif args.cmd == "random":
+        for _ in range(args.trials):
+            initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
 
-    results = runSimulation(network, args.time, args.trials, args.cmd, args.input, region, age_groups, infected)
-    save_results(results, args.output_prefix, args.plot_states, args.plot_nodes)
+    results = runSimulation(network, args.time, args.trials, initialInfections)
+    saveResults(results, args.output_prefix, args.plot_states, args.plot_nodes)
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
 
 
-def runSimulation(network, max_time, trials, mode, initialInfectionsFile, regions, age_groups, infected):
+def runSimulation(network, max_time, trials, initialInfections):
     """Run pre-created network
 
     :param network: object representing the network of populations
@@ -47,33 +52,17 @@ def runSimulation(network, max_time, trials, mode, initialInfectionsFile, region
     :type max_time: int
     :param trials: Number of simulation trials
     :type trials: int
-    :param mode: Mode of simulation, "seeded" or "random"
-    :type mode: str
-    :param initialInfectionsFile: Mode of simulation, "seeded" or "random"
-    :type initialInfectionsFile: str
-    :param regions: The number of regions to expose.
-    :type regions: int
-    :param age_groups: Age groups to infect
-    :type age_groups: list
-    :param infected: People to infect
-    :type infected: int
+    :param initialInfections: List of initial infection. If seeded, only one
+    :type initialInfections: list
     :return: Averaged number of infection through time, through trials
     :rtype: list
     """
     aggregated = None
 
-    infections = {}
-    if mode == "seeded":
-        with open(initialInfectionsFile) as fp:
-            infections = loaders.readInitialInfections(fp)
-
-    for _ in range(trials):
+    for i in range(trials):
         disposableNetwork = copy.deepcopy(network)
 
-        if mode == "random":
-            infections = ss.randomlyInfectRegions(disposableNetwork, regions, age_groups, infected)
-
-        ss.exposeRegions(infections, disposableNetwork.states[0])
+        ss.exposeRegions(initialInfections[i], disposableNetwork.states[0])
         ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
         indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(["time", "node", "age", "state"])
 
@@ -88,7 +77,7 @@ def runSimulation(network, max_time, trials, mode, initialInfectionsFile, region
     return averaged
 
 
-def save_results(results, output_prefix, plot_states, plot_nodes):
+def saveResults(results, output_prefix, plot_states, plot_nodes):
     """Save result from simulation to csv (raw results) and pdf (plot per node).
 
     :param results: Results from simulation
