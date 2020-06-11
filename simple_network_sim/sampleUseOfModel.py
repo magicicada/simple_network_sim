@@ -32,13 +32,13 @@ def main(argv):
     region, age_groups, infected = (None, None, None) \
         if args.cmd == 'seeded' else (args.regions, args.age_groups, args.infected)
 
-    results = run_simulation(network, args.time, args.trials, args.cmd, args.input, region, age_groups, infected)
+    results = runSimulation(network, args.time, args.trials, args.cmd, args.input, region, age_groups, infected)
     save_results(results, args.output_prefix, args.plot_states, args.plot_nodes)
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
 
 
-def run_simulation(network, max_time, trials, mode, initialInfectionsFile, regions, age_groups, infected):
+def runSimulation(network, max_time, trials, mode, initialInfectionsFile, regions, age_groups, infected):
     """Run pre-created network
 
     :param network: object representing the network of populations
