@@ -701,18 +701,40 @@ def createNextStep(progression, exposed, currState):
 
     for regionID, region in exposed.items():
         for age, exposed in region.items():
-            suscept = nextStep[regionID][(age, SUSCEPTIBLE_STATE)]
-            # The probability one of our susceptables avoids all infection
-            probOneAvoidsAll = (1-(1/suscept))**exposed
-            # so the probability that it *does* get infected is (1-probOneAvoidsAll)
-            # and because we're only calculating expectation here we can use
-            # linearity of expectation to sum up over all susceptibles by multiplication
-            # Note: this should *never* be more that exposed, and should tend toward
-            # exposed as suscept gets very large
-            modifiedExposed = suscept*(1-probOneAvoidsAll)
+            susceptible = nextStep[regionID][(age, SUSCEPTIBLE_STATE)]
+            modifiedExposed = adjustExposed(susceptible, exposed)
             expose(age, modifiedExposed, nextStep[regionID])
 
     return nextStep
+
+
+def adjustExposed(susceptible: float, exposed: float):
+    """
+    :param susceptible: number (float) of susceptible individuals
+    :param exposed: number (float) of exposed individuals
+
+    When modelling infections in k people from a susceptible population of size n, we sample
+    these k people WITH replacement, as in several infections can target the same person.
+    This will decrease the exposed number for small values of k, n.
+
+    E[Number of different people chosen when picking k in a population of size n, with replacement]
+    = sum_{i=1,...,n} P(person i is chosen at least once)
+    = sum_{i=1,...,n} (1 - P(person i is never chosen in k samples))
+    = sum_{i=1,...,n} (1 - P(person i is not chosen once)^k)
+    = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
+    = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
+    = n * (1 - (1 - 1 / n)^k)
+    """
+    if susceptible > 1.:
+        probaNeverChosen = (1 - (1 / susceptible)) ** exposed
+        return susceptible * (1 - probaNeverChosen)
+    else:
+        # For susceptible < 1., the formula (which theoretically works
+        # only for integers) breaks down and returns nan. In that case
+        # several choices are acceptable, we assume the fractional person will
+        # be chosen with 100% probability, taking the minimum to ensure
+        # exposed < susceptible is always true.
+        return min(exposed, susceptible)
 
 
 def getSusceptibles(age, currentInternalStateDict):
