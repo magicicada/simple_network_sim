@@ -1,6 +1,7 @@
 import copy
 import logging
 import math
+import random
 from typing import Dict, Tuple, NamedTuple
 
 import matplotlib.pyplot as plt
@@ -785,6 +786,30 @@ def expose(age, exposed, region):
 
     region[(age, EXPOSED_STATE)] += exposed
     region[(age, SUSCEPTIBLE_STATE)] -= exposed
+
+
+def randomlyInfectRegions(network, regions, age_groups, infected):
+    """Randomly infect regions to initialize the random simulation
+
+    :param network: object representing the network of populations
+    :type network: A NetworkOfPopulation object
+    :param regions: The number of regions to expose.
+    :type regions: int
+    :param age_groups: Age groups to infect
+    :type age_groups: list
+    :param infected: People to infect
+    :type infected: int
+    :return: Structure of initially infected regions with number
+    :rtype: dict
+    """
+    infections = {}
+    for regionID in random.choices(list(network.graph.nodes()), k=regions):
+        infections[regionID] = {}
+        for age in age_groups:
+            infections[regionID][age] = infected
+
+    return infections
+
 
 # NotCurrentlyInUse
 def nodeUpdate(graph, dictOfStates, time, headString):

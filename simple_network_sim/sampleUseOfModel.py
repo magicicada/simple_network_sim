@@ -2,14 +2,13 @@ import argparse
 import copy
 import logging
 import logging.config
-import random
 import sys
 import time
 
 from pathlib import Path
 from typing import Optional
 
-from . import common, network_of_populations as ss, loaders
+from . import network_of_populations as ss, loaders
 
 # Default logger, used if module not called as __main__
 logger = logging.getLogger(__name__)
@@ -19,14 +18,8 @@ def main(argv):
     t0 = time.time()
 
     args = build_args(argv)
-
-    # Set up log config
     setup_logger(args)
-
-    logger.info(
-        "Parameters\n%s",
-        "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()),
-    )
+    logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
     network = ss.createNetworkOfPopulation(
         diseasesProgressionFn=args.compartment_transition,
@@ -36,49 +29,84 @@ def main(argv):
         movementMultipliersFn=args.movement_multipliers,
     )
 
+    region, age_groups, infected = (None, None, None) \
+        if args.cmd == 'seeded' else (args.regions, args.age_groups, args.infected)
+
+    results = run_simulation(network, args.time, args.trials, args.cmd, args.input, region, age_groups, infected)
+    save_results(results, args.output_prefix, args.plot_states, args.plot_nodes)
+
+    logger.info("Took %.2fs to run the simulation.", time.time() - t0)
+
+
+def run_simulation(network, max_time, trials, mode, initialInfectionsFile, regions, age_groups, infected):
+    """Run pre-created network
+
+    :param network: object representing the network of populations
+    :type network: A NetworkOfPopulation object
+    :param max_time: Maximum time for simulation
+    :type max_time: int
+    :param trials: Number of simulation trials
+    :type trials: int
+    :param mode: Mode of simulation, "seeded" or "random"
+    :type mode: str
+    :param initialInfectionsFile: Mode of simulation, "seeded" or "random"
+    :type initialInfectionsFile: str
+    :param regions: The number of regions to expose.
+    :type regions: int
+    :param age_groups: Age groups to infect
+    :type age_groups: list
+    :param infected: People to infect
+    :type infected: int
+    :return: Averaged number of infection through time, through trials
+    :rtype: list
+    """
     aggregated = None
+
     infections = {}
-    if args.cmd == "seeded":
-        with open(args.input) as fp:
+    if mode == "seeded":
+        with open(initialInfectionsFile) as fp:
             infections = loaders.readInitialInfections(fp)
-    for _ in range(args.trials):
+
+    for _ in range(trials):
         disposableNetwork = copy.deepcopy(network)
 
-        if args.cmd == "random":
-            # If random, pick new infections at each iteration
-            infections = {}
-            for regionID in random.choices(
-                list(disposableNetwork.graph.nodes()), k=args.regions
-            ):
-                infections[regionID] = {}
-                for age in args.age_groups:
-                    infections[regionID][age] = args.infected
+        if mode == "random":
+            infections = ss.randomlyInfectRegions(disposableNetwork, regions, age_groups, infected)
 
         ss.exposeRegions(infections, disposableNetwork.states[0])
+        ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
+        indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(["time", "node", "age", "state"])
 
-        ss.basicSimulationInternalAgeStructure(disposableNetwork, args.time)
-        # index by all columns so it's we can safely aggregate
-        indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(
-            ["time", "node", "age", "state"]
-        )
         if aggregated is None:
             aggregated = indexed
         else:
             aggregated.total += indexed.total
 
     averaged = aggregated.reset_index()
-    averaged.total /= args.trials
+    averaged.total /= trials
 
-    filename = f"{args.output_prefix}-{int(time.time())}"
+    return averaged
 
-    averaged.to_csv(f"{filename}.csv", index=False)
-    ss.plotStates(
-        averaged, states=args.plot_states, nodes=args.plot_healthboards
-    ).savefig(f"{filename}.pdf", dpi=300)
+
+def save_results(results, output_prefix, plot_states, plot_nodes):
+    """Save result from simulation to csv (raw results) and pdf (plot per node).
+
+    :param results: Results from simulation
+    :type results: pd.DataFrame
+    :param output_prefix: Prefix for output file
+    :type output_prefix: str
+    :param plot_states: plots one curve per state listed (None means all states)
+    :type plot_states: list (of disease states).
+    :param plot_nodes: creates one plot per node listed (None means all nodes)
+    :type plot_nodes: list (of region names).
+    """
+    filename = f"{output_prefix}-{int(time.time())}"
+
+    results.to_csv(f"{filename}.csv", index=False)
+    ss.plotStates(results, states=plot_states, nodes=plot_nodes).savefig(f"{filename}.pdf", dpi=300)
 
     logger.info("Read the dataframe from: %s.csv", filename)
     logger.info("Open the visualisation from: %s.pdf", filename)
-    logger.info("Took %.2fs to run the simulation.", time.time() - t0)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -92,7 +120,7 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     package logger to write WARNING and above to STDERR.
 
     When called with args, it uses args.logfile to determine if logs (by
-    deafult, INFO and above) should be written to a file, and the path of
+    default, INFO and above) should be written to a file, and the path of
     that file. args.verbose and args.debug are used to control reporting
     level.
     """
@@ -149,7 +177,11 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
 
 
 def build_args(argv):
-    """Return parsed CLI arguments as argparse.Namespace."""
+    """Return parsed CLI arguments as argparse.Namespace.
+
+    :param argv: CLI arguments
+    :type argv: list
+    """
     sampledir = Path(__file__).parents[1] / "sample_input_files"
 
     parser = argparse.ArgumentParser(
@@ -208,10 +240,10 @@ def build_args(argv):
         "--debug", action="store_true", help="Provide debug output to STDERR"
     )
     parser.add_argument(
-        "--plot-healthboards",
+        "--plot-nodes",
         default=None,
         nargs="+",
-        help="If set, will only plot the specified healthboards",
+        help="If set, will only plot the specified nodes",
     )
     parser.add_argument(
         "--plot-states",
