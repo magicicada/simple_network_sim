@@ -1,4 +1,5 @@
 import copy
+import random
 import tempfile
 
 import networkx as nx
@@ -13,10 +14,14 @@ from tests.utils import compare_mpl_plots
 def _count_people_per_region(state):
     return [sum(region.values()) for region in state.values()]
 
+
 @pytest.mark.parametrize("region", ["S08000024", "S08000030"])
 @pytest.mark.parametrize("num_infected", [0, 10])
-def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, num_infected):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
+def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves,
+                                                        compartmentTransitionsByAgeFilename, simplified_mixing_matrix,
+                                                        region, num_infected):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
+                                           simplified_mixing_matrix)
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
@@ -40,11 +45,15 @@ def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, co
 
 @pytest.mark.parametrize("region", ["S08000024", "S08000030", "S08000016"])
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
-def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, region, num_infected):
+def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(demographicsFilename, commute_moves,
+                                                                              compartmentTransitionsByAgeFilename,
+                                                                              simplified_mixing_matrix, region,
+                                                                              num_infected):
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
         fp.write("Time,Movement_Multiplier,Contact_Multiplier\n0,0.0,1.0")
         fp.flush()
-        network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix, fp.name)
+        network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
+                                               simplified_mixing_matrix, fp.name)
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
@@ -53,7 +62,8 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(de
     np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
+    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population)
+                for state in network.states.values()])
 
     # the graph is unchanged
     assert nx.is_isomorphic(old_network.graph, network.graph)
@@ -74,7 +84,8 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(de
 
 
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
-def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(compartmentTransitionsByAgeFilename, simplified_mixing_matrix, num_infected):
+def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(compartmentTransitionsByAgeFilename,
+                                                                         simplified_mixing_matrix, num_infected):
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as nodes,\
             tempfile.NamedTemporaryFile(mode="w+", delete=False) as population,\
             tempfile.NamedTemporaryFile(mode="w+", delete=False) as dampening:
@@ -102,7 +113,8 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(compart
     np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
+    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population)
+                for state in network.states.values()])
 
     # susceptibles are never infected
     for state in network.states.values():
@@ -225,7 +237,7 @@ def test_doInternalInfectionProcess_between_ages():
     assert new_infected["o"] == (15.0 / 315.0) * ((300.0 * 0.3) + (450.0 * 0.5))
 
 
-def test_doInteralInfectionProcessAllNodes_single_compartment():
+def test_doInternalInfectionProcessAllNodes_single_compartment():
     states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 0.2}}
 
@@ -235,7 +247,7 @@ def test_doInteralInfectionProcessAllNodes_single_compartment():
     assert states == {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}  # unchanged
 
 
-def test_doInteralInfectionProcessAllNodes_large_num_infected_ignored():
+def test_doInternalInfectionProcessAllNodes_large_num_infected_ignored():
     states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
     age_matrix = {"m": {"m": 5.0}}
 
@@ -501,8 +513,10 @@ def test_exposeRegion_only_desired_region():
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
 
-def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
+def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename,
+                                   simplified_mixing_matrix):
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
+                                           simplified_mixing_matrix)
 
     assert network.graph
     assert network.infectionMatrix
@@ -641,7 +655,6 @@ def test_createNetworkOfPopulation_susceptible_in_progression():
 
         with pytest.raises(AssertionError):
             np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
-
 
 
 def test_createNetworkOfPopulation_transition_to_exposed():
@@ -833,7 +846,7 @@ def test_model_states_to_pandas_multiple_times():
 
 
 def test_model_states_to_pandas_multiple_states():
-    states = {0: {"hb1": {("70+", "S"): 21.0, ("70+", "E"): 10.0}},}
+    states = {0: {"hb1": {("70+", "S"): 21.0, ("70+", "E"): 10.0}}}
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
@@ -843,7 +856,7 @@ def test_model_states_to_pandas_multiple_states():
 
 
 def test_model_states_to_pandas_multiple_ages():
-    states = {0: {"hb1": {("70+", "S"): 21.0, ("[17,70)", "S"): 10.0}},}
+    states = {0: {"hb1": {("70+", "S"): 21.0, ("[17,70)", "S"): 10.0}}}
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
@@ -853,7 +866,7 @@ def test_model_states_to_pandas_multiple_ages():
 
 
 def test_model_states_to_pandas_multiple_nodes():
-    states = {0: {"hb1": {("70+", "S"): 21.0}, "hb2": {("70+", "S"): 21.0}},}
+    states = {0: {"hb1": {("70+", "S"): 21.0}, "hb2": {("70+", "S"): 21.0}}}
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
@@ -882,7 +895,6 @@ def test_plotStates_three_rows():
         {"time": 1, "node": "hb7", "state": "S", "total": 10.0},
     ])
     compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
-
 
 
 def test_plotStates_two_rows():
@@ -927,3 +939,20 @@ def test_plotStates_empty_missing_column():
     simple = pd.DataFrame([{"node": "hb1", "state": "S", "total": 15.0}])
     with pytest.raises(ValueError):
         np.plotStates(pd.DataFrame(simple), states=[])
+
+
+@pytest.mark.parametrize("infected", [100, 10])
+@pytest.mark.parametrize("regions", [2, 4])
+@pytest.mark.parametrize("age_groups", [['70+']])
+def test_randomlyInfectRegions(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename,
+                               simplified_mixing_matrix, regions, infected, age_groups):
+
+    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
+                                           simplified_mixing_matrix)
+
+    random.seed(3)
+    infections = np.randomlyInfectRegions(network, regions, age_groups, infected)
+
+    assert len(infections) == regions
+    assert list(age_groups[0] in infection for infection in infections.values())
+    assert all(infection[age_groups[0]] == infected for infection in infections.values())

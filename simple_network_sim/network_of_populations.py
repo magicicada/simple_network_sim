@@ -1,6 +1,7 @@
 import copy
 import logging
 import math
+import random
 from typing import Dict, Tuple, NamedTuple
 
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ from matplotlib.colors import ListedColormap
 from simple_network_sim import loaders
 
 logger = logging.getLogger(__name__)
+
 
 # CurrentlyInUse
 def countInfectiousAgeStructured(dictOfStates, time):
@@ -138,10 +140,10 @@ def getTotalInAge(nodeState, ageTest):
     :return: The population size within the age range.
     :rtype: int
     """
-    total= 0
+    total = 0
     for (age, state) in nodeState:
-            if age == ageTest:
-                total = total + nodeState[(age, state)]
+        if age == ageTest:
+            total = total + nodeState[(age, state)]
     return total
 
 
@@ -196,7 +198,7 @@ def distributeInfections(nodeState, newInfections):
     for age in getAges(nodeState):
         ageToSus[age] = getSusceptibles(age, nodeState)
     totalSus = getTotalSuscept(nodeState)
-    if totalSus<newInfections:
+    if totalSus < newInfections:
         logger.error('Too many infections to distribute amongst age classes - adjusting num infections')
         newInfections = totalSus
     for age in ageToSus:
@@ -786,9 +788,34 @@ def expose(age, exposed, region):
     region[(age, EXPOSED_STATE)] += exposed
     region[(age, SUSCEPTIBLE_STATE)] -= exposed
 
+
+def randomlyInfectRegions(network, regions, age_groups, infected):
+    """Randomly infect regions to initialize the random simulation
+
+    :param network: object representing the network of populations
+    :type network: A NetworkOfPopulation object
+    :param regions: The number of regions to expose.
+    :type regions: int
+    :param age_groups: Age groups to infect
+    :type age_groups: list
+    :param infected: People to infect
+    :type infected: int
+    :return: Structure of initially infected regions with number
+    :rtype: dict
+    """
+    infections = {}
+    for regionID in random.choices(list(network.graph.nodes()), k=regions):
+        infections[regionID] = {}
+        for age in age_groups:
+            infections[regionID][age] = infected
+
+    return infections
+
+
 # NotCurrentlyInUse
 def nodeUpdate(graph, dictOfStates, time, headString):
-        print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
-        for node in list(graph.nodes()):
-             print('Node ' + str(node)+ " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
-        print('===== END update 1 at time ' + str(time) + '=========')
+    print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
+    for node in list(graph.nodes()):
+        print('Node ' + str(node) + " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +
+              str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
+    print('===== END update 1 at time ' + str(time) + '=========')
