@@ -5,12 +5,9 @@ import logging.config
 import random
 import sys
 import time
-from datetime import datetime
 
 from pathlib import Path
 from typing import Optional
-
-import matplotlib.pyplot as plt
 
 from . import common, network_of_populations as ss, loaders
 
@@ -32,7 +29,7 @@ def main(argv):
     )
 
     network = ss.createNetworkOfPopulation(
-        disasesProgressionFn=args.compartment_transition,
+        diseasesProgressionFn=args.compartment_transition,
         populationFn=args.population,
         graphFn=args.commutes,
         ageInfectionMatrixFn=args.mixing_matrix,
@@ -62,7 +59,7 @@ def main(argv):
         ss.basicSimulationInternalAgeStructure(disposableNetwork, args.time)
         # index by all columns so it's we can safely aggregate
         indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(
-            ["time", "healthboard", "age", "state"]
+            ["time", "node", "age", "state"]
         )
         if aggregated is None:
             aggregated = indexed
@@ -76,7 +73,7 @@ def main(argv):
 
     averaged.to_csv(f"{filename}.csv", index=False)
     ss.plotStates(
-        averaged, states=args.plot_states, healthboards=args.plot_healthboards
+        averaged, states=args.plot_states, nodes=args.plot_healthboards
     ).savefig(f"{filename}.pdf", dpi=300)
 
     logger.info("Read the dataframe from: %s.csv", filename)

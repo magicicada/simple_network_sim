@@ -784,7 +784,7 @@ def test_model_states_to_pandas():
     states = {0: {"hb1": {("70+", "S"): 21.0}}}
     df = np.modelStatesToPandas(states)
 
-    pd.testing.assert_frame_equal(df, pd.DataFrame([{"time": 0, "healthboard": "hb1", "age": "70+", "state": "S", "total": 21.0}]))
+    pd.testing.assert_frame_equal(df, pd.DataFrame([{"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0}]))
 
 
 def test_model_states_to_pandas_multiple_times():
@@ -792,8 +792,8 @@ def test_model_states_to_pandas_multiple_times():
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 1, "healthboard": "hb1", "age": "70+", "state": "S", "total": 30.0},
+        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
+        {"time": 1, "node": "hb1", "age": "70+", "state": "S", "total": 30.0},
     ]))
 
 
@@ -802,8 +802,8 @@ def test_model_states_to_pandas_multiple_states():
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "healthboard": "hb1", "age": "70+", "state": "E", "total": 10.0},
+        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb1", "age": "70+", "state": "E", "total": 10.0},
     ]))
 
 
@@ -812,39 +812,39 @@ def test_model_states_to_pandas_multiple_ages():
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "healthboard": "hb1", "age": "[17,70)", "state": "S", "total": 10.0},
+        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb1", "age": "[17,70)", "state": "S", "total": 10.0},
     ]))
 
 
-def test_model_states_to_pandas_multiple_healthboards():
+def test_model_states_to_pandas_multiple_nodes():
     states = {0: {"hb1": {("70+", "S"): 21.0}, "hb2": {("70+", "S"): 21.0}},}
     df = np.modelStatesToPandas(states)
 
     pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "healthboard": "hb2", "age": "70+", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb2", "age": "70+", "state": "S", "total": 21.0},
     ]))
 
 
 def test_plotStates_three_rows():
     simple = pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "healthboard": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "healthboard": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "healthboard": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "healthboard": "hb4", "state": "S", "total": 10.0},
-        {"time": 0, "healthboard": "hb5", "state": "S", "total": 10.0},
-        {"time": 0, "healthboard": "hb6", "state": "S", "total": 10.0},
-        {"time": 0, "healthboard": "hb7", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "healthboard": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "healthboard": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "healthboard": "hb4", "state": "S", "total": 0.0},
-        {"time": 1, "healthboard": "hb5", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb6", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb7", "state": "S", "total": 10.0},
+        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
+        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
+        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
+        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
+        {"time": 0, "node": "hb5", "state": "S", "total": 10.0},
+        {"time": 0, "node": "hb6", "state": "S", "total": 10.0},
+        {"time": 0, "node": "hb7", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
+        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
+        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
+        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
+        {"time": 1, "node": "hb5", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb6", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb7", "state": "S", "total": 10.0},
     ])
     compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
@@ -852,43 +852,43 @@ def test_plotStates_three_rows():
 
 def test_plotStates_two_rows():
     simple = pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "healthboard": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "healthboard": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "healthboard": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "healthboard": "hb4", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "healthboard": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "healthboard": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "healthboard": "hb4", "state": "S", "total": 0.0},
+        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
+        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
+        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
+        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
+        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
+        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
+        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
+        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
     ])
     compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
 
 def test_plotStates_single_row():
     simple = pd.DataFrame([
-        {"time": 0, "healthboard": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "healthboard": "hb2", "state": "S", "total": 21.0},
-        {"time": 1, "healthboard": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "healthboard": "hb2", "state": "S", "total": 5.0},
+        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
+        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
+        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
+        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
     ])
     compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
 
 
-def test_plotStates_empty_healthboard():
-    simple = pd.DataFrame([{"time": 0, "healthboard": "hb1", "state": "S", "total": 15.0}])
+def test_plotStates_empty_node():
+    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
     with pytest.raises(ValueError):
-        np.plotStates(pd.DataFrame(simple), healthboards=[])
+        np.plotStates(pd.DataFrame(simple), nodes=[])
 
 
 def test_plotStates_empty_states():
-    simple = pd.DataFrame([{"time": 0, "healthboard": "hb1", "state": "S", "total": 15.0}])
+    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
     with pytest.raises(ValueError):
         np.plotStates(pd.DataFrame(simple), states=[])
 
 
 def test_plotStates_empty_missing_column():
-    simple = pd.DataFrame([{"healthboard": "hb1", "state": "S", "total": 15.0}])
+    simple = pd.DataFrame([{"node": "hb1", "state": "S", "total": 15.0}])
     with pytest.raises(ValueError):
         np.plotStates(pd.DataFrame(simple), states=[])

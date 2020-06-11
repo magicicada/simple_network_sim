@@ -1,4 +1,4 @@
-time,healthboard,age,state,total
+time,node,age,state,total
 0,S08000015,70+,S,58683.0
 0,S08000015,70+,E,0.0
 0,S08000015,70+,A,0.0
