@@ -184,7 +184,7 @@ optional arguments:
                         (default: 100)
 ```
  
-Descriptions of the data files used can be found in the [data dictionary](sample_input_files/data_dictionary.md).
+Descriptions of the data files used can be found in the [data dictionary](sample_input_files/README.md).
 
 ## Continuous integration
 
