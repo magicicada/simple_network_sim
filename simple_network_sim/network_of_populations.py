@@ -651,11 +651,11 @@ class NetworkOfPopulation(NamedTuple):
 
 
 def createNetworkOfPopulation(
-    diseasesProgressionFn,
-    populationFn,
-    graphFn,
-    ageInfectionMatrixFn,
-    movementMultipliersFn=None,
+    compartment_transition_table,
+    population_table,
+    commutes_table,
+    mixing_matrix_table,
+    movement_multipliers_table=None,
     infectiousStates=None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
@@ -682,8 +682,10 @@ def createNetworkOfPopulation(
         infectiousStates = ["I", "A"]
 
     # diseases progression matrix
-    with open(diseasesProgressionFn) as fp:
-        progression = loaders.readCompartmentRatesByAge(fp)
+    progression = loaders.readCompartmentRatesByAge(compartment_transition_table)
+
+    # population census data
+    population = loaders.readPopulationAgeStructured(population_table)
 
     # Check some requirements for this particular model to work with the progression matrix
     all_states = set()
@@ -697,25 +699,20 @@ def createNetworkOfPopulation(
     assert (set(infectiousStates) - all_states) == set(), f"mismatched infectious states and states {infectiousStates} {set(progression.keys())}"
 
     # people movement's graph
-    graph = loaders.genGraphFromContactFile(graphFn)
+    graph = loaders.genGraphFromContactFile(commutes_table)
 
     # movement multipliers (dampening or heightening)
-    if movementMultipliersFn is not None:
-        with open(movementMultipliersFn) as fp:
-            movementMultipliers = loaders.readMovementMultipliers(fp)
+    if movement_multipliers_table is not None:
+        movementMultipliers = loaders.readMovementMultipliers(movement_multipliers_table)
     else:
         movementMultipliers: Dict[int, loaders.Multiplier] = {}
 
     # age-based infection matrix
-    infectionMatrix = loaders.MixingMatrix(ageInfectionMatrixFn)
+    infectionMatrix = loaders.MixingMatrix(mixing_matrix_table)
 
     agesInInfectionMatrix = set(infectionMatrix)
     for age in infectionMatrix:
         assert agesInInfectionMatrix == set(infectionMatrix[age]), "infection matrix columns/rows mismatch"
-
-    # population census data
-    with open(populationFn) as fp:
-        population = loaders.readPopulationAgeStructured(fp)
 
     # Checks across datasets
     assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"

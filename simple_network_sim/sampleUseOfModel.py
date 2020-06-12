@@ -8,6 +8,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from data_pipeline_api.api import API, DataAccess, ParameterRead
+from data_pipeline_api.file_system_data_access import FileSystemDataAccess
+
 from . import network_of_populations as ss, loaders
 
 # Default logger, used if module not called as __main__
@@ -15,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def main(argv):
+    api = API(FileSystemDataAccess("data_pipeline_inputs", "metadata.toml"))
+
     t0 = time.time()
 
     args = build_args(argv)
@@ -23,11 +28,11 @@ def main(argv):
 
     infectiousStates = args.infectious_states.split(",") if args.infectious_states else None
     network = ss.createNetworkOfPopulation(
-        diseasesProgressionFn=args.compartment_transition,
-        populationFn=args.population,
-        graphFn=args.commutes,
-        ageInfectionMatrixFn=args.mixing_matrix,
-        movementMultipliersFn=args.movement_multipliers,
+        api.read_table("human/compartment-transition", version=1),
+        api.read_table("human/population", version=1),
+        api.read_table("human/commutes", version=1),
+        api.read_table("human/mixing-matrix", version=1),
+        api.read_table("human/movement-multipliers", version=1) if args.use_movement_multipliers else None,
         infectiousStates=infectiousStates,
     )
 
@@ -43,8 +48,10 @@ def main(argv):
     plot_states = args.plot_states.split(",") if args.plot_states else None
     plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
+    api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version=1)
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
+    api.close()
 
 
 def runSimulation(network, max_time, trials, initialInfections):
@@ -184,31 +191,9 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
         description="Uses the deterministic network of populations model to simulation the disease progression",
     )
     parser.add_argument(
-        "--compartment-transition",
-        default=sampledir / "compartmentTransitionByAge.csv",
-        help="Epidemiological rate parameters for movement within the compartmental model.",
-    )
-    parser.add_argument(
-        "--population",
-        default=sampledir / "sample_hb2019_pop_est_2018_row_based.csv",
-        type=Path,
-        help="This file contains age-and-sex-stratified population numbers by geographic unit.",
-    )
-    parser.add_argument(
-        "--commutes",
-        default=sampledir / "sample_scotHB_commute_moves_wu01.csv",
-        type=Path,
-        help="This contains origin-destination flow data during peacetime for health boards",
-    )
-    parser.add_argument(
-        "--mixing-matrix",
-        default=sampledir / "simplified_age_infection_matrix.csv",
-        type=Path,
-        help="This is a sample square matrix of mixing - each column and row header is an age category.",
-    )
-    parser.add_argument(
-        "--movement-multipliers",
-        help="By using this parameter you can adjust dampening or heightening people movement through time",
+        "--use-movement-multipliers",
+        action="store_true",
+        help="By enabling this parameter you can adjust dampening or heightening people movement through time",
     )
     parser.add_argument(
         "--time",
