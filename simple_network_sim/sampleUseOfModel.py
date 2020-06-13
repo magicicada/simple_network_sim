@@ -169,13 +169,15 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     logging.config.dictConfig(logconf)
 
 
-def build_args(argv):
+def build_args(argv, inputFilesFolder="sample_input_files"):
     """Return parsed CLI arguments as argparse.Namespace.
 
     :param argv: CLI arguments
     :type argv: list
+    :param inputFilesFolder: Folder name with input files
+    :type inputFilesFolder: str
     """
-    sampledir = Path(__file__).parents[1] / "sample_input_files"
+    sampledir = Path(__file__).parents[1] / inputFilesFolder
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
