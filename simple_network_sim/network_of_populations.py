@@ -2,7 +2,7 @@ import copy
 import logging
 import math
 import random
-from typing import Dict, Tuple, NamedTuple
+from typing import Dict, Tuple, NamedTuple, List
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 # CurrentlyInUse
-def countInfectiousAgeStructured(dictOfStates, time):
+def countInfectiousAgeStructured(dictOfStates, time, infectiousStates):
     """Count the number of infectious individuals in all nodes at some time.
 
     :param dictOfStates: A time series of the disease states in each region stratified by age.
@@ -24,13 +24,15 @@ def countInfectiousAgeStructured(dictOfStates, time):
     of (age, state) as keys and the number of individuals in that state as values.
     :param time: The time within the simulation.
     :type time: int
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The total number of infectious individuals in all regions.
     :rtype: float
     """
     total = 0
     for node in dictOfStates[time]:
         for age in getAges(dictOfStates[time][node]):
-            total += getInfectious(age, dictOfStates[time][node])
+            total += getInfectious(age, dictOfStates[time][node], infectiousStates)
     return total
 
 
@@ -89,13 +91,25 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
         progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
-        internalInfections = getInternalInfection(network.states, network.infectionMatrix, time, multipliers.contact)
-        externalInfections = getExternalInfections(network.graph, network.states, time, multipliers.movement)
+        internalInfections = getInternalInfection(
+            network.states,
+            network.infectionMatrix,
+            time,
+            multipliers.contact,
+            network.infectiousStates,
+        )
+        externalInfections = getExternalInfections(
+            network.graph,
+            network.states,
+            time,
+            multipliers.movement,
+            network.infectiousStates,
+        )
         exposed = mergeExposed(internalInfections, externalInfections)
 
         network.states[time + 1] = createNextStep(progression, exposed, network.states[time])
 
-        timeSeriesInfection.append(countInfectiousAgeStructured(network.states, time))
+        timeSeriesInfection.append(countInfectiousAgeStructured(network.states, time, network.infectiousStates))
 
     return timeSeriesInfection
 
@@ -148,18 +162,20 @@ def getTotalInAge(nodeState, ageTest):
 
 
 # CurrentlyInUse
-def getTotalInfectious(nodeState):
+def getTotalInfectious(nodeState, infectiousStates):
     """Get the total number of infectious individuals regardless of age in the node.
 
     :param nodeState: The disease status of the population stratified by age.
     :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The total number of infectious individuals.
     :rtype: float
     """
     totalInfectedHere = 0.0
     for age in getAges(nodeState):
-        totalInfectedHere += getInfectious(age, nodeState)
+        totalInfectedHere += getInfectious(age, nodeState, infectiousStates)
     return totalInfectedHere
 
 
@@ -209,7 +225,7 @@ def distributeInfections(nodeState, newInfections):
     return newInfectionsByAge
 
 
-def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
+def doIncomingInfectionsByNode(graph, currentState, movementMultiplier, infectiousStates):
     """Determine the number of new infections at each node of a graph based on incoming people
     from neighbouring nodes.
 
@@ -221,6 +237,8 @@ def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
     states in the format {(age, state): number of individuals in this state}.
     :param movementMultiplier: a multiplier applied to each edge (movement) in the network.
     :type movementMultiplier: float
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: the number of new infections in each region.
     :rtype: A dictionary with the region as key and the number of new infections as the value.
     """
@@ -233,7 +251,7 @@ def doIncomingInfectionsByNode(graph, currentState, movementMultiplier):
             for givingVertex in neighbours:
                 if givingVertex == receivingVertex:
                     continue
-                totalInfectedGiving = getTotalInfectious(currentState[givingVertex])
+                totalInfectedGiving = getTotalInfectious(currentState[givingVertex], infectiousStates)
                 if totalInfectedGiving > 0:
                     weight = getWeight(graph, givingVertex, receivingVertex, movementMultiplier)
 
@@ -287,7 +305,7 @@ def getWeight(graph, orig, dest, multiplier):
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
-def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
+def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier, infectiousStates):
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
     node. The infections are distributed to each age group according to the number of suscepitible
@@ -305,13 +323,20 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
     :param movementMultiplier: A multiplier applied to each edge (movement bbetween nodes) in the
     network.
     :type movementMultiplier: float
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The number of new infections in each region stratified by age.
     :rtype: A dictionary with the region as a key and a dictionary of {age: number of new
     infections} as values.
     """
     infectionsByNode = {}
 
-    totalIncomingInfectionsByNode = doIncomingInfectionsByNode(graph, dictOfStates[currentTime], movementMultiplier)
+    totalIncomingInfectionsByNode = doIncomingInfectionsByNode(
+        graph,
+        dictOfStates[currentTime],
+        movementMultiplier,
+        infectiousStates
+    )
 
     for vertex in totalIncomingInfectionsByNode:
         totalDelta = totalIncomingInfectionsByNode[vertex]
@@ -327,7 +352,12 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier):
 #  that is, if a usual POLYMOD entry tells us that each individual of age1 is expected to have 1.2 contacts in category age2,
 #  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
 # function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
-def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatrix, contactsMultiplier):
+def doInternalInfectionProcess(
+    currentInternalStateDict,
+    ageMixingInfectionMatrix,
+    contactsMultiplier,
+    infectiousStates,
+):
     """Calculate the new infections due to mixing within the region and stratify them by age.
 
     :param currentInternalStateDict: The disease status of the population stratified by age.
@@ -339,6 +369,8 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
     a value.
     :param contactsMultiplier: Multiplier applied to the number of infectious contacts.
     :type contactsMultiplier: float
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The number of new infections stratified by age.
     :rtype: A dictionary of {age: number of new infections}
     """
@@ -351,7 +383,7 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
             numInfectiousContactsFromAges = {}
             totalNewInfectionContacts = 0
             for ageInf in ageMixingInfectionMatrix[age]:
-                totalInfectious = getInfectious(ageInf, currentInternalStateDict)
+                totalInfectious = getInfectious(ageInf, currentInternalStateDict, infectiousStates)
                 # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
                 numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
                 totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
@@ -370,7 +402,7 @@ def doInternalInfectionProcess(currentInternalStateDict, ageMixingInfectionMatri
 
 
 # CurrentlyInUse        
-def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsMultiplier):
+def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsMultiplier, infectiousStates):
     """Calculate the new infections and stratify them by region and age.
 
     :param dictOfStates: A time series of the disease status in each region stratified by age.
@@ -385,6 +417,8 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
     :type time: int
     :param contactsMultiplier: Multiplier applied to the number of infectious contacts.
     :type contactsMultiplier: float
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The number of exposed in each region stratified by age.
     :rtype: A dictionary containing the region as a key and a dictionary of {age: number of
     exposed} as a value.
@@ -393,7 +427,12 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
     infectionsByNode = {}
 
     for node in dictOfStates[time]:
-        infectionsByNode[node] = doInternalInfectionProcess(dictOfStates[time][node], ageMixingInfectionMatrix, contactsMultiplier)
+        infectionsByNode[node] = doInternalInfectionProcess(
+            dictOfStates[time][node],
+            ageMixingInfectionMatrix,
+            contactsMultiplier,
+            infectiousStates,
+        )
 
     return infectionsByNode
 
@@ -575,10 +614,28 @@ def plotStates(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, 
     return fig
 
 
+def getInfectious(age, currentInternalStateDict, infectiousStates):
+    """Calculate the total number of individuals in infectious states in an age range.
+
+    :param age: The age (range)
+    :type age: str, e.g. '[17,70)'
+    :param currentInternalStateDict: The disease status of the population stratified by age.
+    :type currentInternalStateDict: A dictionary containing a tuple of age range (as a string)
+    and a disease state as a key and the number of individuals in the (age,state) as a value.
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
+    :return: The number of individuals in an infectious state and age range.
+    :rtype: float
+    """
+    total = 0.0
+    for state in infectiousStates:
+        total += currentInternalStateDict[(age, state)]
+    return total
+
+
 # The functions below are the only operations that need to know about the actual state values.
 SUSCEPTIBLE_STATE = "S"
 EXPOSED_STATE = "E"
-INFECTIOUS_STATES = ["I", "A"]
 
 
 class NetworkOfPopulation(NamedTuple):
@@ -590,10 +647,17 @@ class NetworkOfPopulation(NamedTuple):
     graph: nx.DiGraph
     infectionMatrix: loaders.MixingMatrix
     movementMultipliers: Dict[int, loaders.Multiplier]
+    infectiousStates: List[str]
 
 
-def createNetworkOfPopulation(diseasesProgressionFn, populationFn, graphFn, ageInfectionMatrixFn,
-                              movementMultipliersFn=None) -> NetworkOfPopulation:
+def createNetworkOfPopulation(
+    diseasesProgressionFn,
+    populationFn,
+    graphFn,
+    ageInfectionMatrixFn,
+    movementMultipliersFn=None,
+    infectiousStates=None,
+) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
     :param diseasesProgressionFn: The name of the file specifying the transition rates between
@@ -609,19 +673,28 @@ def createNetworkOfPopulation(diseasesProgressionFn, populationFn, graphFn, ageI
     :param movementMultipliersFn: The file containing the movement multipliers. This may be None, in
     which case no multipliers are applied to the movements.
     :type movementMultipliersFn: str
+    :param infectiousStates: States that are considered infectious
+    :type infectiousStates: list of strings
     :return: The constructed network
     :rtype: A NetworkOfPopulation object.
     """
+    if infectiousStates is None:
+        infectiousStates = ["I", "A"]
+
     # diseases progression matrix
     with open(diseasesProgressionFn) as fp:
         progression = loaders.readCompartmentRatesByAge(fp)
 
     # Check some requirements for this particular model to work with the progression matrix
+    all_states = set()
     for states in progression.values():
         assert SUSCEPTIBLE_STATE not in states, "progression from susceptible state is not allowed"
         for state, nextStates in states.items():
             for nextState in nextStates:
+                all_states.add(state)
+                all_states.add(nextState)
                 assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
+    assert (set(infectiousStates) - all_states) == set(), f"mismatched infectious states and states {infectiousStates} {set(progression.keys())}"
 
     # people movement's graph
     graph = loaders.genGraphFromContactFile(graphFn)
@@ -663,6 +736,7 @@ def createNetworkOfPopulation(diseasesProgressionFn, populationFn, graphFn, ageI
         states={0: state0},
         infectionMatrix=infectionMatrix,
         movementMultipliers=movementMultipliers,
+        infectiousStates=infectiousStates,
     )
 
 
@@ -753,23 +827,6 @@ def getSusceptibles(age, currentInternalStateDict):
     :rtype: float
     """
     return currentInternalStateDict[(age, SUSCEPTIBLE_STATE)]
-
-
-def getInfectious(age, currentInternalStateDict):
-    """Calculate the total number of individuals in infectious states in an age range.
-
-    :param age: The age (range)
-    :type age: str, e.g. '[17,70)'
-    :param currentInternalStateDict: The disease status of the population stratified by age.
-    :type currentInternalStateDict: A dictionary containing a tuple of age range (as a string)
-    and a disease state as a key and the number of individuals in the (age,state) as a value.
-    :return: The number of individuals in an infectious state and age range.
-    :rtype: float
-    """
-    total = 0.0
-    for state in INFECTIOUS_STATES:
-        total += currentInternalStateDict[(age, state)]
-    return total
 
 
 def expose(age, exposed, region):
