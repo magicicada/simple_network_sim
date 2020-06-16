@@ -308,7 +308,7 @@ def getWeight(graph, orig, dest, multiplier):
 def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier, infectiousStates):
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
-    node. The infections are distributed to each age group according to the number of suscepitible
+    node. The infections are distributed to each age group according to the number of susceptible
     people in them.
 
     :param graph: A graph with each region as a node and the weights corresponding to the movements
@@ -320,7 +320,7 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier, 
     of (age, state) as keys and the number of individuals in that state as values.
     :param currentTime: The time (at which we calculate the infections from outside the region).
     :type currentTime: int
-    :param movementMultiplier: A multiplier applied to each edge (movement bbetween nodes) in the
+    :param movementMultiplier: A multiplier applied to each edge (movement between nodes) in the
     network.
     :type movementMultiplier: float
     :param infectiousStates: States that are considered infectious
@@ -346,12 +346,12 @@ def getExternalInfections(graph, dictOfStates, currentTime, movementMultiplier, 
 
 
 # CurrentlyInUse
-#  (JE, 10 May 2020) I'm realigning this to be more using with a POLYMOD-style matrix (inlcuding the within-lockdown COMIX matrix)
-# I expect the matrix entry at [age1][age2] to be the expected number of contacts in a day between age1 and age2
-#  *that would infect if only one end of the contact were infectious*
-#  that is, if a usual POLYMOD entry tells us that each individual of age1 is expected to have 1.2 contacts in category age2,
-#  and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
-# function as  ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
+#  (JE, 10 May 2020) I'm realigning this to be more using with a POLYMOD-style matrix (including the within-lockdown
+#  COMIX matrix) I expect the matrix entry at [age1][age2] to be the expected number of contacts in a day between age1
+#  and age2, that would infect if only one end of the contact were infectious.
+#  That is, if a usual POLYMOD entry tells us that each individual of age1 is expected to have 1.2 contacts in category
+#  age2, and the probability of each of these being infectious is 0.25, then I would expect the matrix going into this
+# function as ageMixingInfectionMatrix to have 0.3 in the entry [age1][age2]
 def doInternalInfectionProcess(
     currentInternalStateDict,
     ageMixingInfectionMatrix,
@@ -365,7 +365,7 @@ def doInternalInfectionProcess(
     number of individuals in that state as values.
     :param ageMixingInfectionMatrix: Stores expected numbers of interactions between people of
     different ages.
-    :type ageMixingInfectionMatrix: A dict with age range object as a key and Mixing Raio as
+    :type ageMixingInfectionMatrix: A dict with age range object as a key and Mixing Ratio as
     a value.
     :param contactsMultiplier: Multiplier applied to the number of infectious contacts.
     :type contactsMultiplier: float
@@ -374,31 +374,31 @@ def doInternalInfectionProcess(
     :return: The number of new infections stratified by age.
     :rtype: A dictionary of {age: number of new infections}
     """
-    newInfectedsByAge = {}
+    newInfectedByAge = {}
     for age in ageMixingInfectionMatrix:
-        newInfectedsByAge[age] = 0
+        newInfectedByAge[age] = 0
 
         numSuscept = getSusceptibles(age, currentInternalStateDict)
-        if numSuscept>0:
-            numInfectiousContactsFromAges = {}
+        if numSuscept > 0:
             totalNewInfectionContacts = 0
             for ageInf in ageMixingInfectionMatrix[age]:
                 totalInfectious = getInfectious(ageInf, currentInternalStateDict, infectiousStates)
                 # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
-                numInfectiousContactsFromAges[ageInf] = totalInfectious*ageMixingInfectionMatrix[ageInf][age]
-                totalNewInfectionContacts = totalNewInfectionContacts + numInfectiousContactsFromAges[ageInf]
-#      Now, given that we expect totalNewInfectionContacts infectious contacts into our age category, how much overlap do we expect?
-#       and how many are with susceptible individuals? 
+                totalNewInfectionContacts += totalInfectious * ageMixingInfectionMatrix[ageInf][age]
+
             totalInAge = getTotalInAge(currentInternalStateDict, age)
-#       Now when we draw totalNewInfectionContacts from totalInAge with replacement, how many do we expect?
-#       For now, a simplifying assumption that there are *many more* individuals in totalInAge than there are   totalNewInfectionContacts
-#       So we don't have to deal with multiple infections for the same individual.  TODO - address in future code update, raise issue for this
+            # Now when we draw totalNewInfectionContacts from totalInAge with replacement, how many do we expect?
+            # For now, a simplifying assumption that there are *many more* individuals in totalInAge than there are
+            # totalNewInfectionContacts. So we don't have to deal with multiple infections for the same individual.
+            # TODO - address in future code update, raise issue for this
             if totalInAge > 0.0:
-                numNewInfected = totalNewInfectionContacts*(numSuscept/totalInAge) * contactsMultiplier
+                numNewInfected = totalNewInfectionContacts * (numSuscept / totalInAge) * contactsMultiplier
             else:
                 numNewInfected = 0.0
-            newInfectedsByAge[age] = numNewInfected
-    return newInfectedsByAge
+
+            newInfectedByAge[age] = numNewInfected
+
+    return newInfectedByAge
 
 
 # CurrentlyInUse        
@@ -411,7 +411,7 @@ def getInternalInfection(dictOfStates, ageMixingInfectionMatrix, time, contactsM
     of (age, state) as keys and the number of individuals in that state as values.
     :param ageMixingInfectionMatrix: Stores expected numbers of interactions between people of different ages.
     :type ageMixingInfectionMatrix: Dictionary with age range object as a key and Mixing Ratio as
-    a value, essentially a dict with age range object as a key and Mixing Raio as
+    a value, essentially a dict with age range object as a key and Mixing Ratio as
     a value.
     :param time: The time
     :type time: int
