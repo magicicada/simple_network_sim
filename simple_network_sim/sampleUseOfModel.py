@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 def main(argv):
-    api = API(FileSystemDataAccess("data_pipeline_inputs", "metadata.toml"))
-
     t0 = time.time()
 
     args = build_args(argv)
     setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
+
+    api = API(FileSystemDataAccess(args.base_data_dir, args.metadata_file))
 
     infectiousStates = args.infectious_states.split(",") if args.infectious_states else None
     network = ss.createNetworkOfPopulation(
@@ -47,6 +47,8 @@ def main(argv):
     results = runSimulation(network, args.time, args.trials, initialInfections)
     plot_states = args.plot_states.split(",") if args.plot_states else None
     plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
+    # TODO: replace the current .csv file that's saved as part of the results with api.write table. This was not done
+    #       yet while we wait for the next data API version
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
     api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version=1)
 
@@ -237,6 +239,18 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
         default="A,I",
         metavar="states,[states,...]",
         help="Comma-separated list of states that are considered infectious."
+    )
+    parser.add_argument(
+        "-b",
+        "--base-data-dir",
+        default="data_pipeline_inputs",
+        help="Base directory with the input paramters",
+    )
+    parser.add_argument(
+        "-m",
+        "--metadata-file",
+        default="metadata.toml",
+        help="Data API interaction log"
     )
 
     sp = parser.add_subparsers(dest="cmd", required=True)

@@ -3,77 +3,78 @@ import json
 import tempfile
 
 import networkx as nx
+import pandas as pd
 import pytest
 
 from simple_network_sim import loaders
 
 
-def test_readCompartmentRatesByAge(compartmentTransitionsByAge):
-    result = loaders.readCompartmentRatesByAge(compartmentTransitionsByAge)
+def test_readCompartmentRatesByAge(data_api):
+    result = loaders.readCompartmentRatesByAge(data_api.read_table("human/compartment-transition", version=1))
 
     assert result == {
         "70+": {
-            "E": {"E": 0.573, "A": 0.427},
-            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
-            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
-            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
-            "R": {"R": 1.0},
-            "D": {"D": 1.0},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
         "[17,70)": {
-            "E": {"E": 0.573, "A": 0.427},
-            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
-            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
-            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
-            "R": {"R": 1.0},
-            "D": {"D": 1.0},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
         "[0,17)": {
-            "E": {"E": 0.573, "A": 0.427},
-            "A": {"A": 0.803, "I": 0.0197, "R": 0.1773},
-            "I": {"I": 0.67, "D": 0.0165, "H": 0.0495, "R": 0.264},
-            "H": {"H": 0.9, "D": 0.042, "R": 0.058},
-            "R": {"R": 1.0},
-            "D": {"D": 1.0},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
     }
 
 
 def test_readCompartmentRatesByAge_approximately_one():
-    contents = "age,src,dst,rate\n70+,A,A,0.999999999"
-    result = loaders.readCompartmentRatesByAge(io.StringIO(contents))
+    result = loaders.readCompartmentRatesByAge(pd.DataFrame([{"age": "70+", "src": "A", "dst": "A", "rate": 0.999999999}]))
 
     assert result == {"70+": {"A": {"A": 0.999999999}}}
 
 
-@pytest.mark.parametrize("contents", ["o,A,A", "o,A,0.4", "o,A,A,0.4\no,A,0.6", "A,A,1.0"])
-def test_readParametersAgeStructured_missing_column(contents):
-    with pytest.raises(Exception):
-        contents = "age,src,dst,rate\n" + contents
-        loaders.readCompartmentRatesByAge(io.StringIO(contents))
-
-
-@pytest.mark.parametrize("contents", ["o,A,A,", "o,A,A,wrong"])
-def test_readParametersAgeStructured_bad_value(contents):
-    with pytest.raises(ValueError):
-        contents = "age,src,dst,rate\n" + contents
-        loaders.readCompartmentRatesByAge(io.StringIO(contents))
-
-
 def test_readParametersAgeStructured_invalid_float():
     with pytest.raises(AssertionError):
-        contents = "age,src,dst,rate\no,A,A,1.5\no,A,I,-0.5"
-        loaders.readCompartmentRatesByAge(io.StringIO(contents))
+        df = pd.DataFrame([
+            {"age": "70+", "src": "A", "dst": "A", "rate": 1.5},
+            {"age": "70+", "src": "A", "dst": "I", "rate": -0.5},
+        ])
+        loaders.readCompartmentRatesByAge(df)
 
 
-@pytest.mark.parametrize("contents", ["o,A,A,1.0\nm,A,A,1.0", "", "age,source,destination,rate"])
-def test_readParametersAgeStructured_requires_header(contents):
+def test_readParametersAgeStructured_more_than_100_percent():
     with pytest.raises(AssertionError):
-        assert loaders.readCompartmentRatesByAge(io.StringIO(contents))
+        df = pd.DataFrame([
+            {"age": "70+", "src": "A", "dst": "A", "rate": 0.7},
+            {"age": "70+", "src": "A", "dst": "I", "rate": 0.5},
+        ])
+        loaders.readCompartmentRatesByAge(df)
 
 
-def test_readPopulationAgeStructured(demographics):
-    population = loaders.readPopulationAgeStructured(demographics)
+def test_readParametersAgeStructured_less_than_100_percent():
+    with pytest.raises(AssertionError):
+        df = pd.DataFrame([
+            {"age": "70+", "src": "A", "dst": "A", "rate": 0.5},
+            {"age": "70+", "src": "A", "dst": "I", "rate": 0.2},
+        ])
+        loaders.readCompartmentRatesByAge(df)
+
+
+def test_readPopulationAgeStructured(data_api):
+    population = loaders.readPopulationAgeStructured(data_api.read_table("human/population", version=1))
 
     expected = {
         "S08000015": {"[0,17)": 65307, "[17,70)": 245680, "70+": 58683},
@@ -95,54 +96,39 @@ def test_readPopulationAgeStructured(demographics):
     assert population == expected
 
 
-def test_readPopulationAgeStructured_empty_file():
-    with pytest.raises(AssertionError):
-        assert loaders.readPopulationAgeStructured(io.StringIO("")) == {}
-
-
-@pytest.mark.parametrize("header", ["Health_Board,Sex,Total", "Total"])
-def test_readPopulationAgeStructured_bad_header(header):
-    with pytest.raises(AssertionError):
-        loaders.readPopulationAgeStructured(io.StringIO(f"{header}\nS08000015,Female,o,10"))
-
-
-@pytest.mark.parametrize("data", ["S08000015,Female,o", "S08000015,Female,o,"])
-def test_readPopulationAgeStructured_all_columns_required(data):
-    with pytest.raises(AssertionError):
-        loaders.readPopulationAgeStructured(io.StringIO(f"Health_Board,Sex,Age,Total\n{data}"))
-
-
 @pytest.mark.parametrize("total", ["-20", "NaN", "ten"])
 def test_readPopulationAgeStructured_bad_total(total):
-    rows = [
-        "Health_Board,Sex,Age,Total",
-        f"S08000015,Female,y,{total}",
-    ]
+    df = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "[17,70)", "Total": total},
+    ])
 
     with pytest.raises(ValueError):
-        loaders.readPopulationAgeStructured(io.StringIO("\n".join(rows)))
+        loaders.readPopulationAgeStructured(df)
 
 
 def test_readPopulationAgeStructured_aggregate_ages():
-    rows = ["Health_Board,Sex,Age,Total", "S08000015,Female,o,100", "S08000015,Male,o,100"]
-    population = loaders.readPopulationAgeStructured(io.StringIO("\n".join(rows)))
+    df = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "[17,70)", "Total": 100},
+        {"Health_Board": "S08000015", "Sex": "Male", "Age": "[17,70)", "Total": 100},
+    ])
+    population = loaders.readPopulationAgeStructured(df)
 
-    assert population == {"S08000015": {"o": 200}}
+    assert population == {"S08000015": {"[17,70)": 200}}
 
 
 @pytest.mark.parametrize("header", ["Health_Board,Age,Total", "Health_Board,Infected"])
-def test_readPopulationAgeStructured_bad_header(header):
+def test_readInitialInfections_bad_header(header):
     with pytest.raises(AssertionError):
         loaders.readInitialInfections(io.StringIO(f"{header}\nS08000015,[17,70),10"))
 
 
 @pytest.mark.parametrize("invalid_infected", ["", "asdf", "NaN", "-1", "inf"])
-def test_readPopulationAgeStructured_invalid_total(invalid_infected):
+def test_readInitialInfections_invalid_total(invalid_infected):
     with pytest.raises(ValueError):
         loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",{invalid_infected}'))
 
 
-def test_readPopulationAgeStructured():
+def test_readInitialInfections():
     infected = loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",10\nS08000015,"70+",5\nS08000016,"70+",5'))
 
     assert infected == {"S08000015": {"[17,70)": 10.0, "70+": 5.0}, "S08000016": {"70+": 5.0}}
@@ -153,30 +139,31 @@ def test_readNodeAttributesJSON(locations):
         assert loaders.readNodeAttributesJSON(locations) == json.load(fp)
 
 
-def test_genGraphFromContactFile(commute_moves):
-    graph = nx.read_edgelist(commute_moves, create_using=nx.DiGraph, delimiter=",", data=(("weight", float), ("delta_adjustment", float)))
+def test_genGraphFromContactFile(base_data_dir, data_api):
+    graph = nx.convert_matrix.from_pandas_edgelist(pd.read_csv(str(base_data_dir / "human" / "commutes" / "1" / "data.csv")), edge_attr=True, create_using=nx.DiGraph)
 
-    assert nx.is_isomorphic(loaders.genGraphFromContactFile(commute_moves), graph)
+    assert nx.is_isomorphic(loaders.genGraphFromContactFile(data_api.read_table("human/commutes", version=1)), graph)
 
 
 def test_genGraphFromContactFile_negative_delta_adjustment():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        with pytest.raises(AssertionError):
-            fp.write("a,b,30.0,-1.0")
-            fp.flush()
-            loaders.genGraphFromContactFile(fp.name)
+    df = pd.DataFrame([
+        {"source": "a", "target": "b", "weight": 0, "delta_adjustment": -1.0}
+    ])
+    with pytest.raises(AssertionError):
+        loaders.genGraphFromContactFile(df)
 
 
 def test_genGraphFromContactFile_negative_weight():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        with pytest.raises(AssertionError):
-            fp.write("a,b,-30.0,1.0")
-            fp.flush()
-            loaders.genGraphFromContactFile(fp.name)
+    df = pd.DataFrame([
+        {"source": "a", "target": "b", "weight": -30.0, "delta_adjustment": 1.0}
+    ])
+
+    with pytest.raises(AssertionError):
+        loaders.genGraphFromContactFile(df)
 
 
-def test_readMovementMultipliers(multipliers):
-    ms = loaders.readMovementMultipliers(multipliers)
+def test_readMovementMultipliers(data_api):
+    ms = loaders.readMovementMultipliers(data_api.read_table("human/movement-multipliers", version=1))
 
     assert ms == {
         50: loaders.Multiplier(movement=0.05, contact=0.05),
@@ -186,26 +173,25 @@ def test_readMovementMultipliers(multipliers):
     }
 
 
-@pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
+@pytest.mark.parametrize("m", [float("NaN"), float("inf"), -1.0, "asdf"])
 def test_readMovementMultipliers_bad_movement_multipliers(m):
-    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n1,{m},1.0")
+    df = pd.DataFrame([{"Time": 0, "Movement_Multiplier": m, "Contact_Multiplier": 1.0}])
     with pytest.raises(ValueError):
-        loaders.readMovementMultipliers(content)
+        loaders.readMovementMultipliers(df)
 
 
-@pytest.mark.parametrize("m", ["NaN", "inf", "-1.0", "asdf"])
+@pytest.mark.parametrize("m", [float("NaN"), float("inf"), -1.0, "asdf"])
 def test_readMovementMultipliers_bad_contact_multipliers(m):
-    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n1,1.0,{m}")
+    df = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 1.0, "Contact_Multiplier": m}])
     with pytest.raises(ValueError):
-        loaders.readMovementMultipliers(content)
+        loaders.readMovementMultipliers(df)
 
 
-
-@pytest.mark.parametrize("t", ["1.0", "-1", "asdf"])
+@pytest.mark.parametrize("t", [-1, "asdf"])
 def test_readMovementMultipliers_bad_times(t):
-    content = io.StringIO(f"Time,Movement_Multiplier,Contact_Multiplier\n{t},1.0,1.0")
+    df = pd.DataFrame([{"Time": t, "Movement_Multiplier": 1.0, "Contact_Multiplier": 1.0}])
     with pytest.raises(ValueError):
-        loaders.readMovementMultipliers(content)
+        loaders.readMovementMultipliers(df)
 
 
 def test_AgeRange():
@@ -296,92 +282,39 @@ def test_AgeRange_to_str(range, expected):
     assert str(loaders.AgeRange(range)) == expected
 
 
-def test_invalidMixingMatrixFilesDuplicateHeaders():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,15)","[0,15)"',
-            '"[0,15)",0.1, 0.05',
-            '"[15,30)",0.2, 0.2',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        with pytest.raises(Exception) as e_info:
-            loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Duplicate column header found in mixing matrix: [0,15)"
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,15)","[15,30)"',
-            '"[0,15)",0.1, 0.05',
-            '"[0,15)",0.2, 0.2',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        with pytest.raises(Exception) as e_info:
-            loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Duplicate row header found in mixing matrix: [0,15)"
-
-
 def test_invalidMixingMatrixFilesOverlappingRanges():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,20)","[15,30)"',
-            '"[0,15)",0.1, 0.05',
-            '"[15,30)",0.2, 0.2',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        with pytest.raises(Exception) as e_info:
-            loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Overlap in age ranges with [0,20) and [15,30)"
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,15)","[15,30)"',
-            '"[0,15)",0.1, 0.05',
-            '"[10,30)",0.2, 0.2',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        with pytest.raises(Exception) as e_info:
-            loaders.MixingMatrix(fp.name)
-        assert e_info.value.args[0] == "Overlap in age ranges with [0,15) and [10,30)"
+    df = pd.DataFrame([
+        {"source": "[0,20)", "target": "[0,20)", "mixing": 0.1},
+        {"source": "[0,20)", "target": "[15,30)", "mixing": 0.05},
+        {"source": "[15,30)", "target": "[0,20)", "mixing": 0.2},
+        {"source": "[15,30)", "target": "[15,30)", "mixing": 0.2},
+    ])
+    with pytest.raises(Exception) as e_info:
+        loaders.MixingMatrix(df)
+    assert e_info.value.args[0] == "Overlap in age ranges with [0,20) and [15,30)"
 
 
-def test_sampleMixingMatrix(mixing_matrix):
-    mm = loaders.MixingMatrix(mixing_matrix)
-    assert mm[28][57] == 0.097096431
-    assert mm["[30,40)"][75] == 0.026352071
-    assert mm[(30,40)][75] == 0.026352071
-    assert mm[(30,40)][(18,30)] == 0.144896108
+def test_sampleMixingMatrix(data_api):
+    mm = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix", version=1))
+    assert mm[28][57] == 0.2
+    assert mm["[17,70)"][75] == 0.2
+    assert mm[(17,70)][75] == 0.2
+    assert mm[(17,70)][(0,17)] == 0.2
 
 
-def test_sampleMixingMatrix_iterate_keys():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,15)","[15,30)",30+',
-            '"[0,15)",0.1,0.05,0.3',
-            '"[15,30)",0.2,0.2,0.1',
-            '30+,0.01,0.02,0.2',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        matrix = loaders.MixingMatrix(fp.name)
-        assert list(matrix) == ["[0,15)", "[15,30)", "30+"]
-        for key in matrix:
-            assert matrix[key]
+def test_sampleMixingMatrix_iterate_keys(data_api):
+    matrix = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix", version=1))
+    assert set(matrix) == {"[0,17)", "[17,70)", "70+"}
+    for key in matrix:
+        assert matrix[key]
 
 
 def test_sampleMixingMatrix_iterate_keys_one_element():
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        rows = [
-            ',"[0,15)"',
-            '"[0,15)",0.1',
-        ]
-        fp.write("\n".join(rows))
-        fp.flush()
-        matrix = loaders.MixingMatrix(fp.name)
-        assert list(matrix) == ["[0,15)"]
-        for key in matrix:
-            assert matrix[key]
+    df = pd.DataFrame([{"source": "[0,15)", "target": "[0,15)", "mixing": 0.1}])
+    matrix = loaders.MixingMatrix(df)
+    assert list(matrix) == ["[0,15)"]
+    for key in matrix:
+        assert matrix[key]
 
 
 def test_MixingRow_iterate_over_keys():

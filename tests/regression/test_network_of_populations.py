@@ -3,6 +3,8 @@ import random
 import tempfile
 
 import pytest
+from data_pipeline_api.api import API
+from data_pipeline_api.file_system_data_access import FileSystemDataAccess
 
 from simple_network_sim import common, network_of_populations as np, loaders
 from tests.utils import create_baseline
@@ -17,22 +19,12 @@ def _assert_baseline(result, force_update=False):
         assert result == pytest.approx(json.load(fp))
 
 
-def test_basic_simulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
-    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
-
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
-
-    _assert_baseline(result)
-
-
-def test_basic_simulation_with_dampening(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix, multipliers_filename):
+def test_basic_simulation(data_api):
     network = np.createNetworkOfPopulation(
-        compartmentTransitionsByAgeFilename,
-        demographicsFilename,
-        commute_moves,
-        simplified_mixing_matrix,
-        multipliers_filename,
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
     )
     np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
 
@@ -41,8 +33,28 @@ def test_basic_simulation_with_dampening(demographicsFilename, commute_moves, co
     _assert_baseline(result)
 
 
-def test_basic_simulation_100_runs(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix)
+def test_basic_simulation_with_dampening(data_api):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/movement-multipliers", version=1),
+    )
+    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
+
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
+
+    _assert_baseline(result)
+
+
+def test_basic_simulation_100_runs(data_api):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+    )
 
     runs = []
     rand = random.Random(1)
