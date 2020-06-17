@@ -382,9 +382,9 @@ def doInternalInfectionProcess(
         if numSuscept > 0:
             totalNewInfectionContacts = 0
             for ageInf in ageMixingInfectionMatrix[age]:
-                totalInfectious = getInfectious(ageInf, currentInternalStateDict, infectiousStates)
                 # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
-                totalNewInfectionContacts += totalInfectious * ageMixingInfectionMatrix[ageInf][age]
+                totalNewInfectionContacts += getInfectious(ageInf, currentInternalStateDict, infectiousStates) \
+                                             * ageMixingInfectionMatrix[ageInf][age]
 
             totalInAge = getTotalInAge(currentInternalStateDict, age)
             # Now when we draw totalNewInfectionContacts from totalInAge with replacement, how many do we expect?
