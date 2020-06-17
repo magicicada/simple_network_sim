@@ -116,6 +116,14 @@ def test_readPopulationAgeStructured_aggregate_ages():
     assert population == {"S08000015": {"[17,70)": 200}}
 
 
+def test_readInfectiousStates():
+    assert set(loaders.readInfectiousStates(pd.DataFrame([{"Compartment": "A"}, {"Compartment": "I"}]))) == {"A", "I"}
+
+
+def test_readInfectiousStates_empty():
+    assert loaders.readInfectiousStates(pd.DataFrame([])) == []
+
+
 @pytest.mark.parametrize("header", ["Health_Board,Age,Total", "Health_Board,Infected"])
 def test_readInitialInfections_bad_header(header):
     with pytest.raises(AssertionError):

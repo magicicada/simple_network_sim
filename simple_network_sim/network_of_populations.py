@@ -655,8 +655,8 @@ def createNetworkOfPopulation(
     population_table,
     commutes_table,
     mixing_matrix_table,
+    infectious_states,
     movement_multipliers_table=None,
-    infectiousStates=None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -678,9 +678,7 @@ def createNetworkOfPopulation(
     :return: The constructed network
     :rtype: A NetworkOfPopulation object.
     """
-    if infectiousStates is None:
-        infectiousStates = ["I", "A"]
-
+    infectious_states = loaders.readInfectiousStates(infectious_states)
     # diseases progression matrix
     progression = loaders.readCompartmentRatesByAge(compartment_transition_table)
 
@@ -696,7 +694,7 @@ def createNetworkOfPopulation(
                 all_states.add(state)
                 all_states.add(nextState)
                 assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
-    assert (set(infectiousStates) - all_states) == set(), f"mismatched infectious states and states {infectiousStates} {set(progression.keys())}"
+    assert (set(infectious_states) - all_states) == set(), f"mismatched infectious states and states {infectious_states} {set(progression.keys())}"
 
     # people movement's graph
     graph = loaders.genGraphFromContactFile(commutes_table)
@@ -733,7 +731,7 @@ def createNetworkOfPopulation(
         states={0: state0},
         infectionMatrix=infectionMatrix,
         movementMultipliers=movementMultipliers,
-        infectiousStates=infectiousStates,
+        infectiousStates=infectious_states,
     )
 
 

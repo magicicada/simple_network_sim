@@ -4,7 +4,7 @@ import csv
 import json
 import math
 import re
-from typing import Dict, TextIO, NamedTuple
+from typing import Dict, TextIO, NamedTuple, List
 
 import networkx as nx
 import pandas as pd
@@ -168,6 +168,17 @@ def readMovementMultipliers(table: pd.DataFrame) -> Dict[int, Multiplier]:
         multipliers[time] = Multiplier(movement=movement, contact=contact)
 
     return multipliers
+
+
+def readInfectiousStates(infectious_states: pd.DataFrame) -> List[str]:
+    """
+    Transforms the API output of infectious_states into the internal representation: a list of strings
+    :param infectious_states: API dataframe
+    :return: a list of strings of infectious compartments
+    """
+    if infectious_states.size == 0:
+        return []
+    return list(infectious_states.Compartment)
 
 
 def _check_overlap(one, two):

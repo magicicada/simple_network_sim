@@ -23,6 +23,7 @@ def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_in
         data_api.read_table("human/population", version=1),
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
     )
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
@@ -54,7 +55,8 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
         data_api.read_table("human/population", version=1),
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
-        df,
+        data_api.read_table("human/infectious-compartments", version=1),
+        pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
     )
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
@@ -99,6 +101,7 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
         population,
         nodes,
         data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
         dampening,
     )
     np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.states[0])
@@ -514,6 +517,7 @@ def test_createNetworkOfPopulation(data_api):
         data_api.read_table("human/population", version=1),
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
     )
 
     assert network.graph
@@ -521,21 +525,21 @@ def test_createNetworkOfPopulation(data_api):
     assert network.states
     assert network.progression
     assert network.movementMultipliers == {}
-    assert network.infectiousStates == ["I", "A"]
+    assert set(network.infectiousStates) == {"I", "A"}
 
 
-def test_basicSimulationInternalAgeStructure_no_infectious_invariants(data_api):
+def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
     with pytest.raises(AssertionError):
         np.createNetworkOfPopulation(
             data_api.read_table("human/compartment-transition", version=1),
             data_api.read_table("human/population", version=1),
             data_api.read_table("human/commutes", version=1),
             data_api.read_table("human/mixing-matrix", version=1),
-            infectiousStates=["INVALID"],
+            pd.DataFrame([{"Compartment": "INVALID"}]),
         )
 
 
-def test_createNetworkOfPopulation_age_mismatch_matrix():
+def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):
     progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
     population = pd.DataFrame([
         {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
@@ -546,10 +550,16 @@ def test_createNetworkOfPopulation_age_mismatch_matrix():
     infectionMatrix = pd.DataFrame([{"source": "71+", "target": "71+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_age_mismatch_matrix_internal():
+def test_createNetworkOfPopulation_age_mismatch_matrix_internal(data_api):
     progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
     population = pd.DataFrame([
         {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
@@ -560,10 +570,16 @@ def test_createNetworkOfPopulation_age_mismatch_matrix_internal():
     infectionMatrix = pd.DataFrame([{"source": "71+", "target": "70+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_age_mismatch_population():
+def test_createNetworkOfPopulation_age_mismatch_population(data_api):
     progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
     population = pd.DataFrame([
         {"Health_Board": "S08000015", "Sex": "Female", "Age": "71+", "Total": 31950},
@@ -574,10 +590,16 @@ def test_createNetworkOfPopulation_age_mismatch_population():
     infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_age_mismatch_progression():
+def test_createNetworkOfPopulation_age_mismatch_progression(data_api):
     progression = pd.DataFrame([{"age": "71+", "src": "E", "dst": "E", "rate": 1.0}])
     population = pd.DataFrame([
         {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
@@ -588,10 +610,16 @@ def test_createNetworkOfPopulation_age_mismatch_progression():
     infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_region_mismatch():
+def test_createNetworkOfPopulation_region_mismatch(data_api):
     progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
     population = pd.DataFrame([
         {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
@@ -601,10 +629,16 @@ def test_createNetworkOfPopulation_region_mismatch():
     ])
     infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_susceptible_in_progression():
+def test_createNetworkOfPopulation_susceptible_in_progression(data_api):
     progression = pd.DataFrame([
         {"age": "70+", "src": "S", "dst": "E", "rate": 0.5},
         {"age": "70+", "src": "S", "dst": "S", "rate": 0.5},
@@ -619,10 +653,16 @@ def test_createNetworkOfPopulation_susceptible_in_progression():
     infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_transition_to_exposed():
+def test_createNetworkOfPopulation_transition_to_exposed(data_api):
     progression = pd.DataFrame([
         {"age": "70+", "src": "A", "dst": "E", "rate": 0.7},
         {"age": "70+", "src": "A", "dst": "A", "rate": 0.3},
@@ -637,7 +677,13 @@ def test_createNetworkOfPopulation_transition_to_exposed():
     infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(progression, population, commutes, infectionMatrix)
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
 def test_getAges_multiple_ages():
@@ -933,6 +979,7 @@ def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
         data_api.read_table("human/population", version=1),
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
     )
 
     random.seed(3)

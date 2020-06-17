@@ -26,14 +26,13 @@ def main(argv):
 
     api = API(FileSystemDataAccess(args.base_data_dir, args.metadata_file))
 
-    infectiousStates = args.infectious_states.split(",") if args.infectious_states else None
     network = ss.createNetworkOfPopulation(
         api.read_table("human/compartment-transition", version=1),
         api.read_table("human/population", version=1),
         api.read_table("human/commutes", version=1),
         api.read_table("human/mixing-matrix", version=1),
+        api.read_table("human/infectious-compartments", version=1),
         api.read_table("human/movement-multipliers", version=1) if args.use_movement_multipliers else None,
-        infectiousStates=infectiousStates,
     )
 
     initialInfections = []
@@ -232,13 +231,6 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
         default=None,
         metavar="states,[states,...]",
         help="Comma-separated list of states to plot. All states will be plotted if not provided."
-    )
-    parser.add_argument(
-        "-i",
-        "--infectious-states",
-        default="A,I",
-        metavar="states,[states,...]",
-        help="Comma-separated list of states that are considered infectious."
     )
     parser.add_argument(
         "-b",
