@@ -3,8 +3,6 @@ import random
 import tempfile
 
 import pytest
-from data_pipeline_api.api import API
-from data_pipeline_api.file_system_data_access import FileSystemDataAccess
 
 from simple_network_sim import common, network_of_populations as np, loaders
 from tests.utils import create_baseline
@@ -26,6 +24,7 @@ def test_basic_simulation(data_api):
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
         data_api.read_table("human/infectious-compartments", version=1),
+        data_api.read_table("human/infection-probability", version=1),
     )
     np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
 
@@ -41,6 +40,7 @@ def test_basic_simulation_with_dampening(data_api):
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
         data_api.read_table("human/infectious-compartments", version=1),
+        data_api.read_table("human/infection-probability", version=1),
         data_api.read_table("human/movement-multipliers", version=1),
     )
     np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
@@ -57,6 +57,7 @@ def test_basic_simulation_100_runs(data_api):
         data_api.read_table("human/commutes", version=1),
         data_api.read_table("human/mixing-matrix", version=1),
         data_api.read_table("human/infectious-compartments", version=1),
+        data_api.read_table("human/infection-probability", version=1),
     )
 
     runs = []

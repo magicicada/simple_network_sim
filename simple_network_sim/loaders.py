@@ -179,6 +179,32 @@ def readInfectiousStates(infectious_states: pd.DataFrame) -> List[Compartment]:
     return list(infectious_states.Compartment)
 
 
+def readInfectionProbability(df: pd.DataFrame) -> Dict[int, float]:
+    """
+    Transforms the dataframe from the data API into a dict usable inside the model
+
+    :param df: a timeseries of infection probabilities
+    :return: a timeseries of infection probabilities in the dict format
+    """
+    probs: Dict[int, float] = {}
+    has_time_zero = False
+    for row in df.to_dict(orient="row"):
+        time = int(row["Time"])
+        if time == 0:
+            has_time_zero = True
+        elif time < 0:
+            raise ValueError("can't have negative time")
+        value = float(row["Value"])
+        if value < 0.0 or value > 1.0 or math.isnan(value):
+            raise ValueError("infection probabilty must be between 0 and 1")
+        probs[time] = value
+
+    if not has_time_zero:
+        raise ValueError("the infection probability needs to be present since the time 0")
+
+    return probs
+
+
 def _check_overlap(one, two):
     """Check two AgeRange objects to see if they overlap.
     
