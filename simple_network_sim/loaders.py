@@ -116,23 +116,19 @@ def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     return G
 
 
-def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
+def readInitialInfections(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
     """Read initial numbers of infected individuals by health board and age.
 
-    :param fp: file object the contents must be a CSV with the header: Health_Board,Age,Infected
-    :type fp: file-like object    
+    :param df: raw data to be loaded
+    :type df: a pandas DataFrame with columns Health_Board (str), Age (str) and Infected (float)
     :return: A dict in the format {<region:str>: {<age:str>: <num infected>}}
     """
-    fieldnames = ["Health_Board", "Age", "Infected"]
-    header = fp.readline().strip()
-    assert header == ",".join(fieldnames), f"bad header: {header}"
-    infections = {}
-    for row in csv.DictReader(fp, fieldnames=fieldnames):
-        infected = float(row["Infected"])
-        if infected >= 0.0 and infected != math.inf:
-            infections.setdefault(row["Health_Board"], {})[row["Age"]] = infected
+    infections: Dict[str, Dict[str, float]] = {}
+    for row in df.to_dict(orient="row"):
+        if float(row["Infected"]) >= 0.0 and row["Infected"] != math.inf:
+            infections.setdefault(row["Health_Board"], {})[row["Age"]] = row["Infected"]
         else:
-            raise ValueError(f"Invalid infected value: {infected}")
+            raise ValueError(f"Invalid infected value: {row['Infected']}")
     return infections
 
 

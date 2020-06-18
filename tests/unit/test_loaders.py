@@ -124,20 +124,19 @@ def test_readInfectiousStates_empty():
     assert loaders.readInfectiousStates(pd.DataFrame([])) == []
 
 
-@pytest.mark.parametrize("header", ["Health_Board,Age,Total", "Health_Board,Infected"])
-def test_readInitialInfections_bad_header(header):
-    with pytest.raises(AssertionError):
-        loaders.readInitialInfections(io.StringIO(f"{header}\nS08000015,[17,70),10"))
-
-
-@pytest.mark.parametrize("invalid_infected", ["", "asdf", "NaN", "-1", "inf"])
+@pytest.mark.parametrize("invalid_infected", ["asdf", float("NaN"), -1, float("inf")])
 def test_readInitialInfections_invalid_total(invalid_infected):
+    df = pd.DataFrame([("S08000015", "[17,70)", invalid_infected)], columns=("Health_Board", "Age", "Infected"))
     with pytest.raises(ValueError):
-        loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",{invalid_infected}'))
+        loaders.readInitialInfections(df)
 
 
 def test_readInitialInfections():
-    infected = loaders.readInitialInfections(io.StringIO(f'Health_Board,Age,Infected\nS08000015,"[17,70)",10\nS08000015,"70+",5\nS08000016,"70+",5'))
+    df = pd.DataFrame(
+        [("S08000015", "[17,70)", 10), ("S08000015", "70+", 5), ("S08000016", "70+", 5)],
+        columns=("Health_Board", "Age", "Infected"),
+    )
+    infected = loaders.readInitialInfections(df)
 
     assert infected == {"S08000015": {"[17,70)": 10.0, "70+": 5.0}, "S08000016": {"70+": 5.0}}
 

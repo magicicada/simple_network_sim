@@ -5,8 +5,9 @@ import logging.config
 import sys
 import time
 
+import pandas as pd
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from data_pipeline_api.api import API, DataAccess, ParameterRead
 from data_pipeline_api.file_system_data_access import FileSystemDataAccess
@@ -37,8 +38,7 @@ def main(argv):
 
     initialInfections = []
     if args.cmd == "seeded":
-        with open(args.input) as fp:
-            initialInfections.append(loaders.readInitialInfections(fp))
+        initialInfections.append(loaders.readInitialInfections(api.read_table("human/initial-infections", version=1)))
     elif args.cmd == "random":
         for _ in range(args.trials):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
@@ -55,7 +55,12 @@ def main(argv):
     api.close()
 
 
-def runSimulation(network, max_time, trials, initialInfections):
+def runSimulation(
+    network: ss.NetworkOfPopulation,
+    max_time: int,
+    trials: int,
+    initialInfections: List,
+) -> pd.DataFrame:
     """Run pre-created network
 
     :param network: object representing the network of populations
@@ -280,9 +285,6 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
     )
     seededCmd.add_argument(
         "--trials", default=1, type=int, help="Number of experiments to run"
-    )
-    seededCmd.add_argument(
-        "input", type=Path, help="File name with the seed region seeds"
     )
     seededCmd.add_argument(
         "output_prefix",
