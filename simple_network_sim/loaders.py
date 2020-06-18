@@ -9,6 +9,12 @@ from typing import Dict, TextIO, NamedTuple, List
 import networkx as nx
 import pandas as pd
 
+# Type aliases used to make the types for the functions below easier to read
+Age = str
+Compartment = str
+NodeName = str
+
+
 # CurrentlyInUse
 def _checkAgeParameters(agesDictionary):
     """Check the consistency of data within the ages dictionary.
@@ -33,15 +39,14 @@ def _checkAgeParameters(agesDictionary):
 
 
 # CurrentlyInUse
-def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[str, Dict[str, Dict[str, float]]]:
+def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartment, Dict[Compartment, float]]]:
     """Read a file containing a list of age-specific epidemiological parameters.
     
     Epidemiological parameters are transition rates between or out of epidemiological compartments,
     here they differ by age group.
 
-    :param fp: Age transition data
-    :type fp: file-like object
-    :return: A dictionary of in the format {age: {src: {dest: prob}}}
+    :param table: Age transition data
+    :return: nested dictionary with progression rates
     """
     agesDictionary = {}
     for row in table.to_dict(orient="row"):
@@ -52,15 +57,13 @@ def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[str, Dict[str, Dict[
 
 
 # CurrentlyInUse
-
-def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[str, Dict[str, int]]:
+def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age, int]]:
     """Read a file containing population data.
 
     Population is labelled by node ID, sex and age. Sex is currently ignored.
     
     :param fp: Population data
-    :type fp: file-like object
-    :return: A dictionary in the format {health_board: {age: pop, age: pop, age: pop}}
+    :return: Nested dict with age-stratified population in each node
     """
     dictOfPops = {}
 
@@ -116,12 +119,11 @@ def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     return G
 
 
-def readInitialInfections(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
+def readInitialInfections(df: pd.DataFrame) -> Dict[NodeName, Dict[Age, float]]:
     """Read initial numbers of infected individuals by health board and age.
 
     :param df: raw data to be loaded
-    :type df: a pandas DataFrame with columns Health_Board (str), Age (str) and Infected (float)
-    :return: A dict in the format {<region:str>: {<age:str>: <num infected>}}
+    :return: nested dict with number of infected per age per node
     """
     infections: Dict[str, Dict[str, float]] = {}
     for row in df.to_dict(orient="row"):
@@ -166,10 +168,10 @@ def readMovementMultipliers(table: pd.DataFrame) -> Dict[int, Multiplier]:
     return multipliers
 
 
-def readInfectiousStates(infectious_states: pd.DataFrame) -> List[str]:
+def readInfectiousStates(infectious_states: pd.DataFrame) -> List[Compartment]:
     """
     Transforms the API output of infectious_states into the internal representation: a list of strings
-    :param infectious_states: API dataframe
+    :param infectious_states: pandas DataFrame with the raw data from the API
     :return: a list of strings of infectious compartments
     """
     if infectious_states.size == 0:
@@ -315,20 +317,14 @@ class MixingMatrix:
     age-ranges.
     
     Examples:    
-    `mm = MixingMatrix("sample_input_file/sample_20200327_comix_social_contacts.sampleCsv")`
+    `mm = MixingMatrix(api.read_table("human/mixing-matrix")`
     `print(mm[28][57])` Prints the expected number of interactions a 28 year old
     would have with a 57 year old in a day
     `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in the
     age range [30-40) would have with someone aged 70 or older
     in any given day.
 
-    :param infile: The input file should be a `.csv` file, with the
-        first row and column as headers. These contain age ranges in either the
-        format "[a, b)", or the format "a+". The entry in the table in row R
-        and column C then indicates how many expected interactions per day a
-        member of the R column interacts with a member of the C columns.
-    :type infile: file-like object
-
+    :param mixing_table: Raw DataFrame from the data API. The expected columns are: source, target and mixing (value).
     """
 
     def __init__(self, mixing_table: pd.DataFrame):
