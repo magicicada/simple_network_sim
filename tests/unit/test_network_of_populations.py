@@ -17,11 +17,14 @@ def _count_people_per_region(state):
 
 @pytest.mark.parametrize("region", ["S08000024", "S08000030"])
 @pytest.mark.parametrize("num_infected", [0, 10])
-def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, commute_moves,
-                                                        compartmentTransitionsByAgeFilename, simplified_mixing_matrix,
-                                                        region, num_infected):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
-                                           simplified_mixing_matrix)
+def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_infected):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
+    )
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
@@ -45,15 +48,16 @@ def test_basicSimulationInternalAgeStructure_invariants(demographicsFilename, co
 
 @pytest.mark.parametrize("region", ["S08000024", "S08000030", "S08000016"])
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
-def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(demographicsFilename, commute_moves,
-                                                                              compartmentTransitionsByAgeFilename,
-                                                                              simplified_mixing_matrix, region,
-                                                                              num_infected):
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as fp:
-        fp.write("Time,Movement_Multiplier,Contact_Multiplier\n0,0.0,1.0")
-        fp.flush()
-        network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
-                                               simplified_mixing_matrix, fp.name)
+def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(data_api, region, num_infected):
+    df = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}])
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
+        pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
+    )
     np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
@@ -84,31 +88,25 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(de
 
 
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
-def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(compartmentTransitionsByAgeFilename,
-                                                                         simplified_mixing_matrix, num_infected):
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as nodes,\
-            tempfile.NamedTemporaryFile(mode="w+", delete=False) as population,\
-            tempfile.NamedTemporaryFile(mode="w+", delete=False) as dampening:
-        nodes.write("S08000016,S08000016,0.0,1.0")
-        nodes.flush()
-        population.write('Health_Board,Sex,Age,Total\n')
-        population.write('S08000016,Female,"[0,17)",31950\n')
-        population.write('S08000016,Female,"[17,70)",31950\n')
-        population.write('S08000016,Female,"70+",31950\n')
-        population.flush()
-        dampening.write("Time,Movement_Multiplier,Contact_Multiplier\n0,1.0,0.0")
-        dampening.flush()
-        network = np.createNetworkOfPopulation(
-            compartmentTransitionsByAgeFilename,
-            population.name,
-            nodes.name,
-            simplified_mixing_matrix,
-            dampening.name
-        )
+def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_api, num_infected):
+    nodes = pd.DataFrame([{"source": "S08000016", "target": "S08000016", "weight": 0.0, "delta_adjustment": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "[0,17)", "Total": 31950},
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "[17,70)", "Total": 31950},
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    dampening = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 1.0, "Contact_Multiplier": 0.0}])
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        population,
+        nodes,
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
+        dampening,
+    )
     np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.states[0])
 
     initial_population = sum(_count_people_per_region(network.states[0]))
-    old_network = copy.deepcopy(network)
 
     np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
@@ -513,174 +511,179 @@ def test_exposeRegion_only_desired_region():
     assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
 
-def test_createNetworkOfPopulation(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename,
-                                   simplified_mixing_matrix):
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
-                                           simplified_mixing_matrix)
+def test_createNetworkOfPopulation(data_api):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
+    )
 
     assert network.graph
     assert network.infectionMatrix
     assert network.states
     assert network.progression
     assert network.movementMultipliers == {}
-    assert network.infectiousStates == ["I", "A"]
+    assert set(network.infectiousStates) == {"I", "A"}
 
 
-def test_basicSimulationInternalAgeStructure_no_infectious_invariants(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename, simplified_mixing_matrix):
+def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
     with pytest.raises(AssertionError):
-        np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves, simplified_mixing_matrix, infectiousStates=["INVALID"])
+        np.createNetworkOfPopulation(
+            data_api.read_table("human/compartment-transition", version=1),
+            data_api.read_table("human/population", version=1),
+            data_api.read_table("human/commutes", version=1),
+            data_api.read_table("human/mixing-matrix", version=1),
+            pd.DataFrame([{"Compartment": "INVALID"}]),
+        )
 
 
-def test_createNetworkOfPopulation_age_mismatch_matrix():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write("age,src,dst,rate\n70+,E,E,1.0")
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000015,S08000015,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(",71+\n71+,1.0")
-        infectionMatrix.flush()
+def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):
+    progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S0800001", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "71+", "target": "71+", "mixing": 1.0}])
 
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
-
-
-def test_createNetworkOfPopulation_age_mismatch_matrix_internal():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write("age,src,dst,rate\n70+,E,E,1.0")
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000015,S08000015,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(",71+\n70+,1.0")
-        infectionMatrix.flush()
-
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_age_mismatch_population():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write("age,src,dst,rate\n70+,E,E,1.0")
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,71+,31950')
-        population.flush()
-        commutes.write("S08000015,S08000015,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(",70+\n70+,1.0")
-        infectionMatrix.flush()
+def test_createNetworkOfPopulation_age_mismatch_matrix_internal(data_api):
+    progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S0800001", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "71+", "target": "70+", "mixing": 1.0}])
 
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
-
-
-def test_createNetworkOfPopulation_age_mismatch_progression():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write("age,src,dst,rate\n71+,E,E,1.0")
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000015,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000015,S08000015,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(",70+\n70+,1.0")
-        infectionMatrix.flush()
-
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_region_mismatch():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write("age,src,dst,rate\n70+,E,E,1.0")
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000015,S08000015,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(",70+\n70+,1.0")
-        infectionMatrix.flush()
+def test_createNetworkOfPopulation_age_mismatch_population(data_api):
+    progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "71+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S0800001", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
-
-
-def test_createNetworkOfPopulation_infection_matrix_internal_mismatch():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write('age,src,dst,rate\n70+,E,E,1.0\n"[10,30)",E,E,1.0')
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950\nS08000016,Female,"[10,30)",31950')
-        population.flush()
-        commutes.write("S08000016,S08000016,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(',70+\n70+,1.0\n"[10,30),1.0')
-        infectionMatrix.flush()
-
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_susceptible_in_progression():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write('age,src,dst,rate\n70+,S,E,0.5\n70+,S,S,0.5\n70+,E,E,1.0')
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000016,S08000016,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(',70+\n70+,1.0')
-        infectionMatrix.flush()
+def test_createNetworkOfPopulation_age_mismatch_progression(data_api):
+    progression = pd.DataFrame([{"age": "71+", "src": "E", "dst": "E", "rate": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000015", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S0800001", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
 
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
-def test_createNetworkOfPopulation_transition_to_exposed():
-    with \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as progression, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as population, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as commutes, \
-      tempfile.NamedTemporaryFile(mode="w+", delete=False) as infectionMatrix:
-        progression.write('age,src,dst,rate\n70+,E,E,1.0\n70+,A,E,0.7\n70+,A,A,0.3')
-        progression.flush()
-        population.write('Health_Board,Sex,Age,Total\nS08000016,Female,70+,31950')
-        population.flush()
-        commutes.write("S08000016,S08000016,100777,1.0")
-        commutes.flush()
-        infectionMatrix.write(',70+\n70+,1.0')
-        infectionMatrix.flush()
+def test_createNetworkOfPopulation_region_mismatch(data_api):
+    progression = pd.DataFrame([{"age": "70+", "src": "E", "dst": "E", "rate": 1.0}])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S08000015", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
-        with pytest.raises(AssertionError):
-            np.createNetworkOfPopulation(progression.name, population.name, commutes.name, infectionMatrix.name)
+
+def test_createNetworkOfPopulation_susceptible_in_progression(data_api):
+    progression = pd.DataFrame([
+        {"age": "70+", "src": "S", "dst": "E", "rate": 0.5},
+        {"age": "70+", "src": "S", "dst": "S", "rate": 0.5},
+        {"age": "70+", "src": "E", "dst": "E", "rate": 1.0},
+    ])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S08000015", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
+
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
+
+
+def test_createNetworkOfPopulation_transition_to_exposed(data_api):
+    progression = pd.DataFrame([
+        {"age": "70+", "src": "A", "dst": "E", "rate": 0.7},
+        {"age": "70+", "src": "A", "dst": "A", "rate": 0.3},
+        {"age": "70+", "src": "E", "dst": "E", "rate": 1.0},
+    ])
+    population = pd.DataFrame([
+        {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
+    ])
+    commutes = pd.DataFrame([
+        {"source": "S08000015", "target": "S08000015", "weight": 100777.0, "delta_adjustment": 1.0}
+    ])
+    infectionMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 1.0}])
+
+    with pytest.raises(AssertionError):
+        np.createNetworkOfPopulation(
+            progression,
+            population,
+            commutes,
+            infectionMatrix,
+            data_api.read_table("human/infectious-compartments", version=1),
+        )
 
 
 def test_getAges_multiple_ages():
@@ -967,14 +970,17 @@ def test_plotStates_empty_missing_column():
         np.plotStates(pd.DataFrame(simple), states=[])
 
 
-@pytest.mark.parametrize("infected", [100, 10])
 @pytest.mark.parametrize("regions", [2, 4])
 @pytest.mark.parametrize("age_groups", [['70+']])
-def test_randomlyInfectRegions(demographicsFilename, commute_moves, compartmentTransitionsByAgeFilename,
-                               simplified_mixing_matrix, regions, infected, age_groups):
-
-    network = np.createNetworkOfPopulation(compartmentTransitionsByAgeFilename, demographicsFilename, commute_moves,
-                                           simplified_mixing_matrix)
+@pytest.mark.parametrize("infected", [100, 10])
+def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", version=1),
+        data_api.read_table("human/population", version=1),
+        data_api.read_table("human/commutes", version=1),
+        data_api.read_table("human/mixing-matrix", version=1),
+        data_api.read_table("human/infectious-compartments", version=1),
+    )
 
     random.seed(3)
     infections = np.randomlyInfectRegions(network, regions, age_groups, infected)

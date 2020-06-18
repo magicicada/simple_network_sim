@@ -651,12 +651,12 @@ class NetworkOfPopulation(NamedTuple):
 
 
 def createNetworkOfPopulation(
-    diseasesProgressionFn,
-    populationFn,
-    graphFn,
-    ageInfectionMatrixFn,
-    movementMultipliersFn=None,
-    infectiousStates=None,
+    compartment_transition_table,
+    population_table,
+    commutes_table,
+    mixing_matrix_table,
+    infectious_states,
+    movement_multipliers_table=None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -678,12 +678,12 @@ def createNetworkOfPopulation(
     :return: The constructed network
     :rtype: A NetworkOfPopulation object.
     """
-    if infectiousStates is None:
-        infectiousStates = ["I", "A"]
-
+    infectious_states = loaders.readInfectiousStates(infectious_states)
     # diseases progression matrix
-    with open(diseasesProgressionFn) as fp:
-        progression = loaders.readCompartmentRatesByAge(fp)
+    progression = loaders.readCompartmentRatesByAge(compartment_transition_table)
+
+    # population census data
+    population = loaders.readPopulationAgeStructured(population_table)
 
     # Check some requirements for this particular model to work with the progression matrix
     all_states = set()
@@ -694,28 +694,23 @@ def createNetworkOfPopulation(
                 all_states.add(state)
                 all_states.add(nextState)
                 assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
-    assert (set(infectiousStates) - all_states) == set(), f"mismatched infectious states and states {infectiousStates} {set(progression.keys())}"
+    assert (set(infectious_states) - all_states) == set(), f"mismatched infectious states and states {infectious_states} {set(progression.keys())}"
 
     # people movement's graph
-    graph = loaders.genGraphFromContactFile(graphFn)
+    graph = loaders.genGraphFromContactFile(commutes_table)
 
     # movement multipliers (dampening or heightening)
-    if movementMultipliersFn is not None:
-        with open(movementMultipliersFn) as fp:
-            movementMultipliers = loaders.readMovementMultipliers(fp)
+    if movement_multipliers_table is not None:
+        movementMultipliers = loaders.readMovementMultipliers(movement_multipliers_table)
     else:
         movementMultipliers: Dict[int, loaders.Multiplier] = {}
 
     # age-based infection matrix
-    infectionMatrix = loaders.MixingMatrix(ageInfectionMatrixFn)
+    infectionMatrix = loaders.MixingMatrix(mixing_matrix_table)
 
     agesInInfectionMatrix = set(infectionMatrix)
     for age in infectionMatrix:
         assert agesInInfectionMatrix == set(infectionMatrix[age]), "infection matrix columns/rows mismatch"
-
-    # population census data
-    with open(populationFn) as fp:
-        population = loaders.readPopulationAgeStructured(fp)
 
     # Checks across datasets
     assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"
@@ -736,7 +731,7 @@ def createNetworkOfPopulation(
         states={0: state0},
         infectionMatrix=infectionMatrix,
         movementMultipliers=movementMultipliers,
-        infectiousStates=infectiousStates,
+        infectiousStates=infectious_states,
     )
 
 

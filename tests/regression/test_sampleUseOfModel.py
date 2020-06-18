@@ -10,10 +10,11 @@ from simple_network_sim import sampleUseOfModel
 from tests.utils import create_baseline
 
 
-def test_run_seeded(initial_infection):
-    with tempfile.TemporaryDirectory() as dirname:
+def test_run_seeded(base_data_dir):
+    with tempfile.TemporaryDirectory() as dirname, \
+            tempfile.NamedTemporaryFile() as metadata:
         sampleUseOfModel.main(
-            ["seeded", str(initial_infection), str(Path(dirname) / "test")]
+            ["-b", str(base_data_dir), "-m", str(metadata.name), "seeded", str(Path(dirname) / "test")]
         )
 
         files = glob(os.path.join(dirname, "test*"))

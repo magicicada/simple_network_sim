@@ -5,8 +5,12 @@ import logging.config
 import sys
 import time
 
+import pandas as pd
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+
+from data_pipeline_api.api import API, DataAccess, ParameterRead
+from data_pipeline_api.file_system_data_access import FileSystemDataAccess
 
 from . import network_of_populations as ss, loaders
 
@@ -21,20 +25,20 @@ def main(argv):
     setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
-    infectiousStates = args.infectious_states.split(",") if args.infectious_states else None
+    api = API(FileSystemDataAccess(args.base_data_dir, args.metadata_file))
+
     network = ss.createNetworkOfPopulation(
-        diseasesProgressionFn=args.compartment_transition,
-        populationFn=args.population,
-        graphFn=args.commutes,
-        ageInfectionMatrixFn=args.mixing_matrix,
-        movementMultipliersFn=args.movement_multipliers,
-        infectiousStates=infectiousStates,
+        api.read_table("human/compartment-transition", version=1),
+        api.read_table("human/population", version=1),
+        api.read_table("human/commutes", version=1),
+        api.read_table("human/mixing-matrix", version=1),
+        api.read_table("human/infectious-compartments", version=1),
+        api.read_table("human/movement-multipliers", version=1) if args.use_movement_multipliers else None,
     )
 
     initialInfections = []
     if args.cmd == "seeded":
-        with open(args.input) as fp:
-            initialInfections.append(loaders.readInitialInfections(fp))
+        initialInfections.append(loaders.readInitialInfections(api.read_table("human/initial-infections", version=1)))
     elif args.cmd == "random":
         for _ in range(args.trials):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
@@ -42,12 +46,21 @@ def main(argv):
     results = runSimulation(network, args.time, args.trials, initialInfections)
     plot_states = args.plot_states.split(",") if args.plot_states else None
     plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
+    # TODO: replace the current .csv file that's saved as part of the results with api.write table. This was not done
+    #       yet while we wait for the next data API version
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
+    api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version=1)
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
+    api.close()
 
 
-def runSimulation(network, max_time, trials, initialInfections):
+def runSimulation(
+    network: ss.NetworkOfPopulation,
+    max_time: int,
+    trials: int,
+    initialInfections: List,
+) -> pd.DataFrame:
     """Run pre-created network
 
     :param network: object representing the network of populations
@@ -184,31 +197,9 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
         description="Uses the deterministic network of populations model to simulation the disease progression",
     )
     parser.add_argument(
-        "--compartment-transition",
-        default=sampledir / "compartmentTransitionByAge.csv",
-        help="Epidemiological rate parameters for movement within the compartmental model.",
-    )
-    parser.add_argument(
-        "--population",
-        default=sampledir / "sample_hb2019_pop_est_2018_row_based.csv",
-        type=Path,
-        help="This file contains age-and-sex-stratified population numbers by geographic unit.",
-    )
-    parser.add_argument(
-        "--commutes",
-        default=sampledir / "sample_scotHB_commute_moves_wu01.csv",
-        type=Path,
-        help="This contains origin-destination flow data during peacetime for health boards",
-    )
-    parser.add_argument(
-        "--mixing-matrix",
-        default=sampledir / "simplified_age_infection_matrix.csv",
-        type=Path,
-        help="This is a sample square matrix of mixing - each column and row header is an age category.",
-    )
-    parser.add_argument(
-        "--movement-multipliers",
-        help="By using this parameter you can adjust dampening or heightening people movement through time",
+        "--use-movement-multipliers",
+        action="store_true",
+        help="By enabling this parameter you can adjust dampening or heightening people movement through time",
     )
     parser.add_argument(
         "--time",
@@ -247,11 +238,16 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
         help="Comma-separated list of states to plot. All states will be plotted if not provided."
     )
     parser.add_argument(
-        "-i",
-        "--infectious-states",
-        default="A,I",
-        metavar="states,[states,...]",
-        help="Comma-separated list of states that are considered infectious."
+        "-b",
+        "--base-data-dir",
+        default="data_pipeline_inputs",
+        help="Base directory with the input paramters",
+    )
+    parser.add_argument(
+        "-m",
+        "--metadata-file",
+        default="metadata.toml",
+        help="Data API interaction log"
     )
 
     sp = parser.add_subparsers(dest="cmd", required=True)
@@ -289,9 +285,6 @@ def build_args(argv, inputFilesFolder="sample_input_files"):
     )
     seededCmd.add_argument(
         "--trials", default=1, type=int, help="Number of experiments to run"
-    )
-    seededCmd.add_argument(
-        "input", type=Path, help="File name with the seed region seeds"
     )
     seededCmd.add_argument(
         "output_prefix",

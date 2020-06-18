@@ -16,6 +16,8 @@ data/*
 # Do not ignore sample inputs
 !sample_input_files/*
 !sample_output_files/*
+!data_pipeline_inputs/**
+!tests/test_data/**
 
 # IDE
 .idea

@@ -4,9 +4,16 @@ import csv
 import json
 import math
 import re
-from typing import Dict, TextIO, NamedTuple
+from typing import Dict, TextIO, NamedTuple, List
 
 import networkx as nx
+import pandas as pd
+
+# Type aliases used to make the types for the functions below easier to read
+Age = str
+Compartment = str
+NodeName = str
+
 
 # CurrentlyInUse
 def _checkAgeParameters(agesDictionary):
@@ -32,48 +39,35 @@ def _checkAgeParameters(agesDictionary):
 
 
 # CurrentlyInUse
-def readCompartmentRatesByAge(fp: TextIO) -> Dict[str, Dict[str, Dict[str, float]]]:
+def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartment, Dict[Compartment, float]]]:
     """Read a file containing a list of age-specific epidemiological parameters.
     
     Epidemiological parameters are transition rates between or out of epidemiological compartments,
     here they differ by age group.
 
-    :param fp: Age transition data
-    :type fp: file-like object
-    :return: A dictionary of in the format {age: {src: {dest: prob}}}
+    :param table: Age transition data
+    :return: nested dictionary with progression rates
     """
     agesDictionary = {}
-
-    fieldnames = ["age", "src", "dst", "rate"]
-    header = fp.readline().strip()
-    assert header == ",".join(fieldnames), f"bad header: {header}"
-    for row in csv.DictReader(fp, fieldnames=fieldnames):
+    for row in table.to_dict(orient="row"):
         compartments = agesDictionary.setdefault(row["age"], {})
         transitions = compartments.setdefault(row["src"], {})
         transitions[row["dst"]] = float(row["rate"])
-
     return _checkAgeParameters(agesDictionary)
 
 
 # CurrentlyInUse
-
-def readPopulationAgeStructured(fp: TextIO) -> Dict[str, Dict[str, int]]:
+def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age, int]]:
     """Read a file containing population data.
 
     Population is labelled by node ID, sex and age. Sex is currently ignored.
     
     :param fp: Population data
-    :type fp: file-like object
-    :return: A dictionary in the format {health_board: {age: pop, age: pop, age: pop}}
+    :return: Nested dict with age-stratified population in each node
     """
     dictOfPops = {}
 
-    fieldnames = ["Health_Board", "Sex", "Age", "Total"]
-    header = fp.readline().strip()
-    assert header == ",".join(fieldnames), f"bad header: {header}"
-    for row in csv.DictReader(fp, fieldnames=fieldnames):
-        for fieldname in fieldnames:
-            assert row[fieldname], f"Invalid {fieldname}: {row[fieldname]}"
+    for row in table.to_dict(orient="row"):
         board = dictOfPops.setdefault(row["Health_Board"], {})
         total = int(row["Total"])
         if total < 0:
@@ -109,39 +103,34 @@ def readNodeAttributesJSON(filename):
 # in future - e.g. sampling, generating movements, whatever
 # it should return a networkx graph, ideally with weighted edges
 # eventual replacement with HDF5 reading code?
-def genGraphFromContactFile(filename: str) -> nx.DiGraph:
+def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     """Read a file containing edge weights between nodes.
 
     Pairs of nodes are listed in the file by source, destination, weight and adjustment.
 
-    :param filename: Weighted edge list in `.csv` format.
-    :type filename: file-like object
+    :param commutes: Weighted edge list.
+    :type pd.DataFrame: pandas DataFrame.
     :return: `networkx.classes.digraph.DiGraph` object representing the graph.
     """
-    G = nx.read_edgelist(filename, create_using=nx.DiGraph, delimiter=",", data=(('weight', float), ("delta_adjustment", float)))
+    G = nx.convert_matrix.from_pandas_edgelist(commutes, edge_attr=True, create_using=nx.DiGraph)
     for edge in G.edges.data():
         assert edge[2]["weight"] >= 0.0
         assert edge[2]["delta_adjustment"] >= 0.0
     return G
 
 
-def readInitialInfections(fp: TextIO) -> Dict[str, Dict[str, float]]:
+def readInitialInfections(df: pd.DataFrame) -> Dict[NodeName, Dict[Age, float]]:
     """Read initial numbers of infected individuals by health board and age.
 
-    :param fp: file object the contents must be a CSV with the header: Health_Board,Age,Infected
-    :type fp: file-like object    
-    :return: A dict in the format {<region:str>: {<age:str>: <num infected>}}
+    :param df: raw data to be loaded
+    :return: nested dict with number of infected per age per node
     """
-    fieldnames = ["Health_Board", "Age", "Infected"]
-    header = fp.readline().strip()
-    assert header == ",".join(fieldnames), f"bad header: {header}"
-    infections = {}
-    for row in csv.DictReader(fp, fieldnames=fieldnames):
-        infected = float(row["Infected"])
-        if infected >= 0.0 and infected != math.inf:
-            infections.setdefault(row["Health_Board"], {})[row["Age"]] = infected
+    infections: Dict[str, Dict[str, float]] = {}
+    for row in df.to_dict(orient="row"):
+        if float(row["Infected"]) >= 0.0 and row["Infected"] != math.inf:
+            infections.setdefault(row["Health_Board"], {})[row["Age"]] = row["Infected"]
         else:
-            raise ValueError(f"Invalid infected value: {infected}")
+            raise ValueError(f"Invalid infected value: {row['Infected']}")
     return infections
 
 
@@ -155,19 +144,15 @@ def _assertPositiveNumber(value: float):
         raise ValueError(f"{value} must be a positive number")
 
 
-def readMovementMultipliers(fp: TextIO) -> Dict[int, Multiplier]:
+def readMovementMultipliers(table: pd.DataFrame) -> Dict[int, Multiplier]:
     """Read file containing movement multipliers by time.
 
-    :param fp: file object containing a CSV with header Time,Movement_Multiplier
+    :param table: pandas DataFrame containing movement multipliers
     :return: A dict of ints (time) pointing to a (named)tuple (contact=float, movement=float). Contact will alter how
              the disease spreads inside of a node, whereas movement will change how it spread across nodes
     """
-    fieldnames = ["Time", "Movement_Multiplier", "Contact_Multiplier"]
-    header = fp.readline().strip()
-    assert header == ",".join(fieldnames), f"bad header: {header}"
-
     multipliers = {}
-    for row in csv.DictReader(fp, fieldnames=fieldnames):
+    for row in table.to_dict(orient="row"):
         time = int(row["Time"])
         if time < 0:
             raise ValueError("can't have negative time")
@@ -181,6 +166,17 @@ def readMovementMultipliers(fp: TextIO) -> Dict[int, Multiplier]:
         multipliers[time] = Multiplier(movement=movement, contact=contact)
 
     return multipliers
+
+
+def readInfectiousStates(infectious_states: pd.DataFrame) -> List[Compartment]:
+    """
+    Transforms the API output of infectious_states into the internal representation: a list of strings
+    :param infectious_states: pandas DataFrame with the raw data from the API
+    :return: a list of strings of infectious compartments
+    """
+    if infectious_states.size == 0:
+        return []
+    return list(infectious_states.Compartment)
 
 
 def _check_overlap(one, two):
@@ -321,41 +317,23 @@ class MixingMatrix:
     age-ranges.
     
     Examples:    
-    `mm = MixingMatrix("sample_input_file/sample_20200327_comix_social_contacts.sampleCsv")`
+    `mm = MixingMatrix(api.read_table("human/mixing-matrix")`
     `print(mm[28][57])` Prints the expected number of interactions a 28 year old
     would have with a 57 year old in a day
     `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in the
     age range [30-40) would have with someone aged 70 or older
     in any given day.
 
-    :param infile: The input file should be a `.csv` file, with the
-        first row and column as headers. These contain age ranges in either the
-        format "[a, b)", or the format "a+". The entry in the table in row R
-        and column C then indicates how many expected interactions per day a
-        member of the R column interacts with a member of the C columns.
-    :type infile: file-like object
-
+    :param mixing_table: Raw DataFrame from the data API. The expected columns are: source, target and mixing (value).
     """
 
-    def __init__(self, infile: str):
+    def __init__(self, mixing_table: pd.DataFrame):
         """Initialise."""
-        self._matrix = {}
-        with open(infile, "r") as inp:
-            reader = csv.reader(inp)
-            headers = [AgeRange(text) for text in next(reader)[1:]]
-            # Check for any overlap in the column headers
-            for i, one in enumerate(headers):
-                for j, two in enumerate(headers):
-                    if i == j:
-                        continue
-                    if one == two:
-                        raise Exception(f"Duplicate column header found in mixing matrix: {one}")
-                    _check_overlap(one, two)
-            for row in reader:
-                row_header = AgeRange(row[0])
-                if row_header in self._matrix:
-                    raise Exception(f"Duplicate row header found in mixing matrix: {row_header}")
-                self._matrix[row_header] = MixingRow(headers, row[1:])
+        self._matrix = {
+            AgeRange(group_name): MixingRow([AgeRange(target) for target in group["target"]], list(group["mixing"]))
+            for group_name, group in mixing_table.groupby("source")
+        }
+
         # Check for any overlap in the column headers
         for i, one in enumerate(self._matrix.keys()):
             for j, two in enumerate(self._matrix.keys()):
