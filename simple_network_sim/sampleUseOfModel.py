@@ -33,6 +33,7 @@ def main(argv):
         api.read_table("human/commutes", version=1),
         api.read_table("human/mixing-matrix", version=1),
         api.read_table("human/infectious-compartments", version=1),
+        api.read_table("human/infection-probability", version=1),
         api.read_table("human/movement-multipliers", version=1) if args.use_movement_multipliers else None,
     )
 

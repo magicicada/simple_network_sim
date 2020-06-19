@@ -201,6 +201,33 @@ def test_readMovementMultipliers_bad_times(t):
         loaders.readMovementMultipliers(df)
 
 
+def test_readInfectionProbability():
+    df = pd.DataFrame([(0, 0.3), (4, 0.7), (30, 1.0)], columns=["Time", "Value"])
+
+    assert loaders.readInfectionProbability(df) == {0: 0.3, 4: 0.7, 30: 1.0}
+
+
+def test_readInfectionProbability_empty():
+    with pytest.raises(ValueError):
+        loaders.readInfectionProbability(pd.DataFrame())
+
+
+def test_readInfectionProbability_no_zeroth_time():
+    with pytest.raises(ValueError):
+        loaders.readInfectionProbability(pd.DataFrame([{"Time": 3, "Value": 1.0}]))
+
+
+def test_readInfectionProbability_invalid_time():
+    with pytest.raises(ValueError):
+        loaders.readInfectionProbability(pd.DataFrame([{"Time": -1, "Value": 1.0}, {"Time": 0, "Value": 1.0}]))
+
+
+@pytest.mark.parametrize("prob", [-1.0, 2.0, float("inf"), float("nan"), "asdf"])
+def test_readInfectionProbability_invalid_prob(prob):
+    with pytest.raises(ValueError):
+        loaders.readInfectionProbability(pd.DataFrame([{"Time": 0, "Value": prob}]))
+
+
 def test_AgeRange():
     a = loaders.AgeRange("[10,20)")
     assert 10 in a
