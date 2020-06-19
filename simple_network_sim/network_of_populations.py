@@ -236,7 +236,7 @@ def distributeContactsOverAges(nodeState, newInfections):
         ageToSus[age] = getSusceptibles(age, nodeState)
     totalSus = getTotalSuscept(nodeState)
     if totalSus < newInfections:
-        logger.error('Too many infections to distribute amongst age classes - adjusting num infections')
+        logger.error("totalSus < incoming infectious (%s < %s) - adjusting to totalSus", totalSus, newInfections)
         newInfections = totalSus
     for age in ageToSus:
         if totalSus > 0:
@@ -763,24 +763,27 @@ def createNextStep(
 
     assert progression.keys() == infectiousContacts.keys() == currState.keys(), "missing regions"
 
-    nextStep = copy.deepcopy(currState)
-    for region in nextStep.values():
-        for (age, state) in region.keys():
+    nextStep = {}
+    for name, node in currState.items():
+        new_node = nextStep.setdefault(name, {})
+        for key, value in node.items():
             # We need to keep the susceptibles in order to infect them
-            if state != SUSCEPTIBLE_STATE:
-                region[(age, state)] = 0.0
+            if key[1] == SUSCEPTIBLE_STATE:
+                new_node[key] = value
+            else:
+                new_node[key] = 0.0
 
-    for regionID, region in progression.items():
-        for (age, state), value in region.items():
+    for name, node in progression.items():
+        for key, value in node.items():
             # Note that the progression is responsible for populating every other state
-            assert state != SUSCEPTIBLE_STATE, "Susceptibles can't be part of progression states"
-            nextStep[regionID][(age, state)] = value
+            assert key[1] != SUSCEPTIBLE_STATE, "Susceptibles can't be part of progression states"
+            nextStep[name][key] = value
 
-    for regionID, region in infectiousContacts.items():
-        for age, infectiousContacts in region.items():
-            susceptible = nextStep[regionID][(age, SUSCEPTIBLE_STATE)]
+    for name, node in infectiousContacts.items():
+        for age, infectiousContacts in node.items():
+            susceptible = nextStep[name][(age, SUSCEPTIBLE_STATE)]
             exposed = _calculateExposed(susceptible, infectiousContacts, infectionProb)
-            expose(age, exposed, nextStep[regionID])
+            expose(age, exposed, nextStep[name])
 
     return nextStep
 
