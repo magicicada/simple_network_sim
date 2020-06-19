@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional, List
 
-from data_pipeline_api.api import API, DataAccess, ParameterRead
+from data_pipeline_api.api import API
 from data_pipeline_api.file_system_data_access import FileSystemDataAccess
 
 from . import network_of_populations as ss, loaders
@@ -28,18 +28,18 @@ def main(argv):
     api = API(FileSystemDataAccess(args.base_data_dir, args.metadata_file))
 
     network = ss.createNetworkOfPopulation(
-        api.read_table("human/compartment-transition", version=1),
-        api.read_table("human/population", version=1),
-        api.read_table("human/commutes", version=1),
-        api.read_table("human/mixing-matrix", version=1),
-        api.read_table("human/infectious-compartments", version=1),
-        api.read_table("human/infection-probability", version=1),
-        api.read_table("human/movement-multipliers", version=1) if args.use_movement_multipliers else None,
+        api.read_table("human/compartment-transition", version="1"),
+        api.read_table("human/population", version="1"),
+        api.read_table("human/commutes", version="1"),
+        api.read_table("human/mixing-matrix", version="1"),
+        api.read_table("human/infectious-compartments", version="1"),
+        api.read_table("human/infection-probability", version="1"),
+        api.read_table("human/movement-multipliers", version="1") if args.use_movement_multipliers else None,
     )
 
     initialInfections = []
     if args.cmd == "seeded":
-        initialInfections.append(loaders.readInitialInfections(api.read_table("human/initial-infections", version=1)))
+        initialInfections.append(loaders.readInitialInfections(api.read_table("human/initial-infections", version="1")))
     elif args.cmd == "random":
         for _ in range(args.trials):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
@@ -50,7 +50,7 @@ def main(argv):
     # TODO: replace the current .csv file that's saved as part of the results with api.write table. This was not done
     #       yet while we wait for the next data API version
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
-    api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version=1)
+    api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version="1")
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
     api.close()
@@ -148,7 +148,7 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
                 "stream": "ext://sys.stderr",
             },
         },
-        "loggers": {__package__: {"handlers": ["stderr"], "level": "DEBUG",},},
+        "loggers": {__package__: {"handlers": ["stderr"], "level": "DEBUG"}},
     }
 
     # If args.logpath is specified, add logfile
@@ -183,15 +183,12 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     logging.config.dictConfig(logconf)
 
 
-def build_args(argv, inputFilesFolder="sample_input_files"):
+def build_args(argv):
     """Return parsed CLI arguments as argparse.Namespace.
 
     :param argv: CLI arguments
     :type argv: list
-    :param inputFilesFolder: Folder name with input files
-    :type inputFilesFolder: str
     """
-    sampledir = Path(__file__).parents[1] / inputFilesFolder
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
