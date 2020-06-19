@@ -12,7 +12,7 @@ from tests.utils import create_baseline
 
 def test_run_seeded(base_data_dir):
     with tempfile.TemporaryDirectory() as dirname, \
-            tempfile.NamedTemporaryFile() as metadata:
+            tempfile.NamedTemporaryFile(delete=False) as metadata:
         sampleUseOfModel.main(
             ["-b", str(base_data_dir), "-m", str(metadata.name), "seeded", str(Path(dirname) / "test")]
         )
