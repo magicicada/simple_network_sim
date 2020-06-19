@@ -4,7 +4,7 @@ import tempfile
 
 import pytest
 
-from simple_network_sim import common, network_of_populations as np, loaders
+from simple_network_sim import common, network_of_populations as np
 from tests.utils import create_baseline
 
 
