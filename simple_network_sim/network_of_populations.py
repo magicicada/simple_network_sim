@@ -414,15 +414,9 @@ def getInternalInfectiousContactsInNode(
         if numSuscept > 0:
             contacts = 0
             for ageInf in mixingMatrix[age]:
-                # TODO: Make sure this is not implemented in a slow way anymore after
-                #       https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
                 contacts += getInfectious(ageInf, currentInternalStateDict, infectiousStates) * mixingMatrix[ageInf][age]
 
             totalInAge = getTotalInAge(currentInternalStateDict, age)
-            # Now when we draw totalNewInfectionContacts from totalInAge with replacement, how many do we expect?
-            # For now, a simplifying assumption that there are *many more* individuals in totalInAge than there are
-            # totalNewInfectionContacts. So we don't have to deal with multiple infections for the same individual.
-            # TODO - address in future code update, raise issue for this
             if totalInAge > 0.0:
                 infectiousContacts[age] = contacts * (numSuscept / totalInAge) * contactsMultiplier
             else:

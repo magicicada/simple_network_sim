@@ -218,73 +218,31 @@ def _check_overlap(one, two):
             (f"Overlap in age ranges with {one} and {two}")
 
 
-# We use this to match an age range in the AgeRange class
-AGE_RE = re.compile(r'\[(\d+),\s*(\d+)\)')
-
-
 class AgeRange:
     """A helper class for an age range.
     
-    If b is None, it is assumed that a is a tuple holding the 
-    upper and lower values of the range or a string to be parsed.
-
-    The string can be one of the two formats:
-    [a,b) - that's an age range from a to b (not including b)
-    a+    - that means any age greater than a, equivalent to [a,MAX_AGE)
-
-    Otherwise, the age range is assumed to be [a, b), where a and b are positive integers.
+    The age_group parameter can be any string, but it is usually in the format [a,b) or 70+
     """
 
-    # A marker for no upper limit
-    MAX_AGE = 200
-
-    def __init__(self, a, b=None):
+    def __init__(self, age_group: str):
         """Initialise."""
-        if b is None:
-            if isinstance(a, tuple) and len(a) == 2:
-                self._lower = a[0]
-                self._upper = a[1]
-            else:
-                match = AGE_RE.match(a)
-                if match:
-                    self._lower = int(match.group(1))
-                    self._upper = int(match.group(2))
-                elif a[-1] == "+":
-                    self._lower = int(a[:-1])
-                    self._upper = AgeRange.MAX_AGE
-                else:
-                    raise Exception(f'Invalid age range specified: "{a}"')
-        else:
-            self._lower = int(a)
-            self._upper = int(b)
-
-        assert self._lower < self._upper, f'Invalid age range specified: [{self._lower},{self._upper})'
-        assert self._upper <= AgeRange.MAX_AGE, f"No one is {self._upper} years old"
-        assert self._lower >= 0, f"No one is {self._lower} years old"
-
-    def __contains__(self, age):
-        """Return true if age is inside this age range."""
-        if age < self._lower:
-            return False
-        return age < self._upper
+        self.age_group = age_group
 
     def __str__(self):
         """Return a string representation of the current AgeRange instance."""
-        if self._upper == AgeRange.MAX_AGE:
-            return f"{self._lower}+"
-        return f"[{self._lower},{self._upper})"
+        return self.age_group
 
-    def __eq__(self, other):
+    def __eq__(self, other: "AgeRange"):
         """Return true if "other" is the same as the current AgeRange instance."""
-        return self._lower == other._lower and self._upper == other._upper
+        return self.age_group == other.age_group
 
-    def __neq__(self, other):
+    def __neq__(self, other: "AgeRange"):
         """Return true if "other" is not the same as the current AgeRange instance."""
         return not self == other
 
     def __hash__(self):
         """Return a hash of the current AgeRange instance."""
-        return hash((self._lower, self._upper))
+        return hash(self.age_group)
 
 
 class MixingRow:
@@ -305,25 +263,20 @@ class MixingRow:
     AgeRange objects to numbers of interactions / person / day.
     """
 
-    def __init__(self, ages, interactions):
+    def __init__(self, ages: List[str], interactions: List[str]):
         """Initialise."""        
         self._entries = {}
         for age, interact in zip(ages, interactions):
             self._entries[age] = float(interact)
 
-    def __getitem__(self, age):
+    def __getitem__(self, age: str) -> float:
         """Return expected number of interactions.
         
         Return the expected number of interactions (per day) that someone from
         this MixingRow would have with someone with the given age, or age
         range.
         """
-        if isinstance(age, str) or isinstance(age, tuple):
-            return self._entries[AgeRange(age)]
-        for key, value in self._entries.items():
-            if age in key:
-                return value
-        raise Exception(f'Could not find {age} in MixingRow')
+        return self._entries[age]
 
     def __str__(self):
         """Return a string representing the current MixingRow instance."""
@@ -332,7 +285,7 @@ class MixingRow:
 
     def __iter__(self):
         """Iterate through age-interactions dictionary."""
-        return iter(str(age_range) for age_range in self._entries)
+        return iter(age_range for age_range in self._entries)
 
 
 class MixingMatrix:
@@ -356,18 +309,11 @@ class MixingMatrix:
     def __init__(self, mixing_table: pd.DataFrame):
         """Initialise."""
         self._matrix = {
-            AgeRange(group_name): MixingRow([AgeRange(target) for target in group["target"]], list(group["mixing"]))
+            group_name: MixingRow([target for target in group["target"]], list(group["mixing"]))
             for group_name, group in mixing_table.groupby("source")
         }
 
-        # Check for any overlap in the column headers
-        for i, one in enumerate(self._matrix.keys()):
-            for j, two in enumerate(self._matrix.keys()):
-                if i == j:
-                    continue
-                _check_overlap(one, two)
-
-    def __getitem__(self, age):
+    def __getitem__(self, age: str) -> MixingRow:
         """Return MixingRow for given age.
         
         Gets a MixingRow for the given age, which in turn can give the
@@ -376,12 +322,7 @@ class MixingMatrix:
         interactions that a person of age1 will have with a person of age2.
         Note that either age1 or age2 can be numbers, or age ranges.
         """
-        if isinstance(age, str) or isinstance(age, tuple):
-            return self._matrix[AgeRange(age)]
-        for key, value in self._matrix.items():
-            if age in key:
-                return value
-        raise Exception(f'Could not find {age} in MixingMatrix')
+        return self._matrix[age]
 
     def __str__(self):
         """Return a string representing the current MixingMatrix instance."""
@@ -393,4 +334,4 @@ class MixingMatrix:
         Iterator that iterates over the matrix keys (a key points to a row). The values returned by the iterator will
         all be strings, since that's how the public interface when indexing the matrix.
         """
-        return iter(str(age_range) for age_range in self._matrix)
+        return iter(age_range for age_range in self._matrix)
