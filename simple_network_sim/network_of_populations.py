@@ -1,4 +1,3 @@
-import copy
 import logging
 import math
 import random
@@ -183,21 +182,22 @@ def getTotalInAge(nodeState, ageTest):
 
 
 # CurrentlyInUse
-def getTotalInfectious(nodeState, infectiousStates):
+def getTotalInfectious(node: Dict[Tuple[Age, Compartment], float], infectiousStates: List[Compartment]) -> float:
     """Get the total number of infectious individuals regardless of age in the node.
 
-    :param nodeState: The disease status of the population stratified by age.
-    :type nodeState: A dictionary with a tuple of (age, state) as keys and the number of individuals
+    :param node: The disease status of the population stratified by age.
+    :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :param infectiousStates: States that are considered infectious
     :type infectiousStates: list of strings
     :return: The total number of infectious individuals.
     :rtype: float
     """
-    totalInfectedHere = 0.0
-    for age in getAges(nodeState):
-        totalInfectedHere += getInfectious(age, nodeState, infectiousStates)
-    return totalInfectedHere
+    total = 0.0
+    for (_, compartment), value in node.items():
+        if compartment in infectiousStates:
+            total += value
+    return total
 
 
 # CurrentlyInUse
@@ -232,17 +232,19 @@ def distributeContactsOverAges(nodeState, newInfections):
     """
     ageToSus = {}
     newInfectionsByAge = {}
+    totalSus = 0.0
     for age in getAges(nodeState):
-        ageToSus[age] = getSusceptibles(age, nodeState)
-    totalSus = getTotalSuscept(nodeState)
+        sus = getSusceptibles(age, nodeState)
+        ageToSus[age] = sus
+        totalSus += sus
     if totalSus < newInfections:
         logger.error("totalSus < incoming infectious (%s < %s) - adjusting to totalSus", totalSus, newInfections)
         newInfections = totalSus
-    for age in ageToSus:
+    for age, sus in ageToSus.items():
         if totalSus > 0:
-            newInfectionsByAge[age] = (float(ageToSus[age])/float(totalSus))*newInfections
+            newInfectionsByAge[age] = (sus / totalSus) * newInfections
         else:
-            newInfectionsByAge[age] = 0
+            newInfectionsByAge[age] = 0.0
     return newInfectionsByAge
 
 
@@ -263,7 +265,15 @@ def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier,
     :return: the number of new infections in each region.
     :rtype: A dictionary with the region as key and the number of new infections as the value.
     """
+    infectiousByNode: Dict[NodeName, float] = {}
+    totalByNode: Dict[NodeName, float] = {}
+    # Precompute this so that we avoid expensive calls inside the O(n^2) part of the algorithm as most as we can
+    for name, node in currentState.items():
+        infectiousByNode[name] = getTotalInfectious(node, infectiousStates)
+        totalByNode[name] = totalIndividuals(node)
     contactsByNode: Dict[NodeName, float] = {}
+    # Surprisingly, iterating over graph.edges is actually slower than going through the dicts and calling
+    # graph.predecessor when needed
     for receivingVertex in currentState:
         totalSusceptHere = getTotalSuscept(currentState[receivingVertex])
         contactsByNode[receivingVertex] = 0
@@ -272,12 +282,11 @@ def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier,
             for givingVertex in neighbours:
                 if givingVertex == receivingVertex:
                     continue
-                totalInfectedGiving = getTotalInfectious(currentState[givingVertex], infectiousStates)
+                totalInfectedGiving = infectiousByNode[givingVertex]
                 if totalInfectedGiving > 0:
                     weight = getWeight(graph, givingVertex, receivingVertex, movementMultiplier)
-
-                    fractionGivingInfected = totalInfectedGiving / totalIndividuals(currentState[givingVertex])
-                    fractionReceivingSus = totalSusceptHere / totalIndividuals(currentState[receivingVertex])
+                    fractionGivingInfected = totalInfectedGiving / totalByNode[givingVertex]
+                    fractionReceivingSus = totalSusceptHere / totalByNode[receivingVertex]
                     contactsByNode[receivingVertex] += weight * fractionGivingInfected * fractionReceivingSus
 
     return contactsByNode
