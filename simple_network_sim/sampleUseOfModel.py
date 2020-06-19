@@ -121,14 +121,14 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     
     :param args: argparse.Namespace
         args.logfile (pathlib.Path) is used to create a logfile if present
-        args.verbose and args.debug control logging level to sys.stderr
+        args.quiet and args.debug control logging level to sys.stderr
 
     This function can be called without args, in which case it configures the
     package logger to write WARNING and above to STDERR.
 
     When called with args, it uses args.logfile to determine if logs (by
     default, INFO and above) should be written to a file, and the path of
-    that file. args.verbose and args.debug are used to control reporting
+    that file. args.quiet and args.debug are used to control reporting
     level.
     """
     # Dictionary to define logging configuration
@@ -142,7 +142,7 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
         },
         "handlers": {
             "stderr": {
-                "level": "WARNING",
+                "level": "INFO",
                 "class": "logging.StreamHandler",
                 "formatter": "standard",
                 "stream": "ext://sys.stderr",
@@ -172,9 +172,9 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
         }
         logconf["loggers"][__package__]["handlers"].append("logfile")
 
-    # Set STDERR/logfile levels if args.verbose/args.debug specified
-    if args is not None and args.verbose:
-        logconf["handlers"]["stderr"]["level"] = "INFO"
+    # Set STDERR/logfile levels if args.quiet/args.debug specified
+    if args is not None and args.quiet:
+        logconf["handlers"]["stderr"]["level"] = "WARNING"
     elif args is not None and args.debug:
         logconf["handlers"]["stderr"]["level"] = "DEBUG"
         logconf["handlers"]["logfile"]["level"] = "DEBUG"
@@ -214,11 +214,11 @@ def build_args(argv):
         help="Path for logging output",
     )
     parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="verbose",
+        "-q",
+        "--quiet",
+        dest="quiet",
         action="store_true",
-        help="Provide verbose output to STDERR",
+        help="Prints only warnings to stderr",
     )
     parser.add_argument(
         "--debug", action="store_true", help="Provide debug output to STDERR"
