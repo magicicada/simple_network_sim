@@ -294,20 +294,20 @@ def test_doInternalInfectionProcess_between_ages():
 
 
 def test_doInternalInfectionProcessAllNodes_single_compartment():
-    states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
+    nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
     age_matrix = {"m": {"m": 0.2}}
 
-    infections = np.getInternalInfectiousContacts(states, age_matrix, 0, 1.0, ["I", "A"])
+    infections = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"])
 
     assert infections == {"region1": {"m": (300.0 / 400.0) * (0.2 * 100.0)}}
-    assert states == {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}  # unchanged
+    assert nodes == {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}  # unchanged
 
 
 def test_doInternalInfectionProcessAllNodes_large_num_infected_ignored():
-    states = {0: {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}}
+    nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
     age_matrix = {"m": {"m": 5.0}}
 
-    new_infected = np.getInternalInfectiousContacts(states, age_matrix, 0, 1.0, ["I", "A"])
+    new_infected = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"])
 
     assert new_infected == {"region1": {"m": (300.0 / 400.0) * (100.0 * 5.0)}}
 
@@ -414,18 +414,16 @@ def test_doBetweenInfectionAgeStructured():
     graph.add_node("r2")
     graph.add_edge("r1", "r2", weight=0.5)
 
-    states = {
-        0: {
-            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
-            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
-        }
+    nodes = {
+        "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+        "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
-    original_states = copy.deepcopy(states)
+    original_states = copy.deepcopy(nodes)
 
-    num_infections = np.getExternalInfectiousContacts(graph, states, 0, 1.0, ["I", "A"])
+    num_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"])
 
     assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 0.5 * 0.1 * 0.8}}
-    assert states == original_states
+    assert nodes == original_states
 
 
 def test_doBetweenInfectionAgeStructured_multiplier():
@@ -434,18 +432,16 @@ def test_doBetweenInfectionAgeStructured_multiplier():
     graph.add_node("r2")
     graph.add_edge("r1", "r2", weight=15)
 
-    states = {
-        0: {
-            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
-            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
-        }
+    nodes = {
+        "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+        "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
-    original_states = copy.deepcopy(states)
+    original_states = copy.deepcopy(nodes)
 
-    num_infections = np.getExternalInfectiousContacts(graph, states, 0, 0.3, ["I", "A"])
+    num_infections = np.getExternalInfectiousContacts(graph, nodes, 0.3, ["I", "A"])
 
     assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 15 * 0.3 * 0.1 * 0.8}}
-    assert states == original_states
+    assert nodes == original_states
 
 
 def test_doBetweenInfectionAgeStructured_delta_adjustment():
@@ -455,14 +451,12 @@ def test_doBetweenInfectionAgeStructured_delta_adjustment():
     graph.add_edge("r1", "r2", weight=15, delta_adjustment=0.3)
 
     states = {
-        0: {
-            "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
-            "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
-        }
+        "r1": {("m", "S"): 90.0, ("m", "E"): 0.0, ("m", "A"): 5.0, ("m", "I"): 5.0},
+        "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
     original_states = copy.deepcopy(states)
 
-    num_infections = np.getExternalInfectiousContacts(graph, states, 0, 0.5, ["I", "A"])
+    num_infections = np.getExternalInfectiousContacts(graph, states, 0.5, ["I", "A"])
 
     delta = 15 - (15 * 0.5)
     weight = 15 - (delta * 0.3)
@@ -477,18 +471,16 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
     graph.add_node("r2")
     graph.add_edge("r1", "r2", weight=60)
 
-    states = {
-        0: {
-            "r1": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0},
-            "r2": {("m", "S"): 30.0, ("m", "E"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0},
-        }
+    nodes = {
+        "r1": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0},
+        "r2": {("m", "S"): 30.0, ("m", "E"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0},
     }
-    original_states = copy.deepcopy(states)
+    original_states = copy.deepcopy(nodes)
 
-    new_infections = np.getExternalInfectiousContacts(graph, states, 0, 1.0, ["I", "A"])
+    new_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"])
 
     assert new_infections == {"r1": {"m": 0.0}, "r2": {"m": 30.0}}
-    assert states == original_states
+    assert nodes == original_states
 
 
 def test_distributeInfections_cap_infections():

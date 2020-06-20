@@ -1,7 +1,7 @@
 import logging
 import math
 import random
-from typing import Dict, Tuple, NamedTuple, List
+from typing import Dict, Tuple, NamedTuple, List, Set
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -33,13 +33,13 @@ class NetworkOfPopulation(NamedTuple):
 
 
 # CurrentlyInUse
-def countInfectiousAgeStructured(dictOfStates, time, infectiousStates):
+def countInfectiousAgeStructured(
+    nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
+    infectiousStates: List[Compartment]
+) -> float:
     """Count the number of infectious individuals in all nodes at some time.
 
-    :param dictOfStates: A time series of the disease states in each region stratified by age.
-    :type dictOfStates: A dictionary with time as keys and whose values are another dictionary with
-    the region as a key and the disease state as values. The states are a dictionary with a tuple
-    of (age, state) as keys and the number of individuals in that state as values.
+    :param nodes: A dictionary of nodes.
     :param time: The time within the simulation.
     :type time: int
     :param infectiousStates: States that are considered infectious
@@ -48,9 +48,9 @@ def countInfectiousAgeStructured(dictOfStates, time, infectiousStates):
     :rtype: float
     """
     total = 0
-    for node in dictOfStates[time]:
-        for age in getAges(dictOfStates[time][node]):
-            total += getInfectious(age, dictOfStates[time][node], infectiousStates)
+    for node in nodes.values():
+        for age in getAges(node):
+            total += getInfectious(age, node, infectiousStates)
     return total
 
 
@@ -112,16 +112,14 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
         progression = getInternalProgressionAllNodes(network.states[time], network.progression)
 
         internalContacts = getInternalInfectiousContacts(
-            network.states,
+            network.states[time],
             network.mixingMatrix,
-            time,
             multipliers.contact,
             network.infectiousStates,
         )
         externalContacts = getExternalInfectiousContacts(
             network.graph,
-            network.states,
-            time,
+            network.states[time],
             multipliers.movement,
             network.infectiousStates,
         )
@@ -129,7 +127,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
         network.states[time + 1] = createNextStep(progression, contacts, network.states[time], infectionProb)
 
-        timeSeriesInfection.append(countInfectiousAgeStructured(network.states, time, network.infectiousStates))
+        timeSeriesInfection.append(countInfectiousAgeStructured(network.states[time], network.infectiousStates))
 
     return timeSeriesInfection
 
@@ -147,7 +145,7 @@ def totalIndividuals(nodeState):
     return sum(nodeState.values())
 
 
-def getAges(node):
+def getAges(node: Dict[Tuple[Age, Compartment], float]) -> Set[Age]:
     """Get the set of ages from the node.
 
     :param node: The disease states of the population stratified by age.
@@ -175,9 +173,9 @@ def getTotalInAge(nodeState, ageTest):
     :rtype: int
     """
     total = 0
-    for (age, state) in nodeState:
+    for (age, _), value in nodeState.items():
         if age == ageTest:
-            total = total + nodeState[(age, state)]
+            total += value
     return total
 
 
@@ -278,8 +276,7 @@ def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier,
         totalSusceptHere = getTotalSuscept(currentState[receivingVertex])
         contactsByNode[receivingVertex] = 0
         if totalSusceptHere > 0:
-            neighbours = list(graph.predecessors(receivingVertex))
-            for givingVertex in neighbours:
+            for givingVertex in graph.predecessors(receivingVertex):
                 if givingVertex == receivingVertex:
                     continue
                 totalInfectedGiving = infectiousByNode[givingVertex]
@@ -309,7 +306,7 @@ def getWeight(graph, orig, dest, multiplier):
     :return: The final weight value
     :rtype: float
     """
-    edge = graph[orig][dest]
+    edge = graph.get_edge_data(orig, dest)
     if "weight" not in edge:
         logger.error("No weight available for edge %s,%s assuming 1.0", orig, dest)
         weight = 1.0
@@ -335,7 +332,7 @@ def getWeight(graph, orig, dest, multiplier):
 # overlap them using the same infrastructure code that we'll use for the internal version, when we add that
 # Reminder: I expect the weighted edges to be the number of *expected infectious* contacts (if the giver is infectious)
 #  We may need to multiply movement numbers by a probability of infection to achieve this.   
-def getExternalInfectiousContacts(graph, dictOfStates, currentTime, movementMultiplier, infectiousStates):
+def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousStates):
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
     node. The infections are distributed to each age group according to the number of susceptible
@@ -361,18 +358,10 @@ def getExternalInfectiousContacts(graph, dictOfStates, currentTime, movementMult
     """
     infectionsByNode = {}
 
-    incomingContacts = getIncomingInfectiousContactsByNode(
-        graph,
-        dictOfStates[currentTime],
-        movementMultiplier,
-        infectiousStates
-    )
+    incomingContacts = getIncomingInfectiousContactsByNode(graph, nodes, movementMultiplier, infectiousStates)
 
-    for vertex in incomingContacts:
-        infectionsByNode[vertex] = distributeContactsOverAges(
-            dictOfStates[currentTime][vertex],
-            incomingContacts[vertex]
-        )
+    for name, vertex in incomingContacts.items():
+        infectionsByNode[name] = distributeContactsOverAges(nodes[name], vertex)
 
     return infectionsByNode
 
@@ -426,7 +415,7 @@ def getInternalInfectiousContactsInNode(
 
 
 # CurrentlyInUse        
-def getInternalInfectiousContacts(dictOfStates, mixingMatrix, time, contactsMultiplier, infectiousStates):
+def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infectiousStates):
     """Calculate the new infections and stratify them by region and age.
 
     :param dictOfStates: A time series of the disease status in each region stratified by age.
@@ -450,13 +439,8 @@ def getInternalInfectiousContacts(dictOfStates, mixingMatrix, time, contactsMult
 
     contacts: Dict[NodeName, Dict[Age, float]] = {}
 
-    for node in dictOfStates[time]:
-        contacts[node] = getInternalInfectiousContactsInNode(
-            dictOfStates[time][node],
-            mixingMatrix,
-            contactsMultiplier,
-            infectiousStates,
-        )
+    for name, node in nodes.items():
+        contacts[name] = getInternalInfectiousContactsInNode(node, mixingMatrix, contactsMultiplier, infectiousStates)
 
     return contacts
 
@@ -541,9 +525,9 @@ def exposeRegions(infections, states):
     :type states: A dictionary with the region as a key and the value is a dictionary in the format
     {(age, state): number of individuals in this state}.
     """
-    for regionID in infections:
-        for age in infections[regionID]:
-            expose(age, infections[regionID][age], states[regionID])
+    for nodeName, node in infections.items():
+        for age, value in node.items():
+            expose(age, value, states[nodeName])
 
 
 def modelStatesToPandas(timeseries: Dict[int, Dict[str, Dict[Tuple[str, str], float]]]) -> pd.DataFrame:
