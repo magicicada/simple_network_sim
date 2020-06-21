@@ -9,6 +9,7 @@ import pandas as pd
 from matplotlib.colors import ListedColormap
 
 from simple_network_sim import loaders
+from simple_network_sim.common import Lazy
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
     current = network.initialState
     df = nodesToPandas(0, current)
+    logger.debug("Time (0/%s). Status: %s", timeHorizon, Lazy(lambda: df.groupby("state").total.sum().to_dict()))
     history.append(df)
     for time in range(timeHorizon):
         # we are building the interactions for time + 1, so that's the multiplier value we need to use
@@ -110,6 +112,12 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
 
         current = createNextStep(progression, contacts, current, infectionProb)
         df = nodesToPandas(time + 1, current)
+        logger.debug(
+            "Time (%s/%s). Status: %s",
+            time + 1,
+            timeHorizon,
+            Lazy(lambda: df.groupby("state").total.sum().to_dict())
+        )
         history.append(df)
 
     return pd.concat(history, copy=False, ignore_index=True)
@@ -706,6 +714,7 @@ def createNetworkOfPopulation(
             for compartment in compartments:
                 region[(age, compartment)] = 0
 
+    logger.info("Nodes: %s, Ages: %s, States: %s", len(state0), agesInInfectionMatrix, all_states)
     return NetworkOfPopulation(
         progression=progression,
         graph=graph,

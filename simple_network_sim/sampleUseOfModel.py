@@ -45,15 +45,17 @@ def main(argv):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
 
     results = runSimulation(network, args.time, args.trials, initialInfections)
+
+    logger.info("Writing output")
     plot_states = args.plot_states.split(",") if args.plot_states else None
     plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
     # TODO: replace the current .csv file that's saved as part of the results with api.write table. This was not done
     #       yet while we wait for the next data API version
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
     api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version="1")
+    api.close()
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
-    api.close()
 
 
 def runSimulation(
@@ -121,8 +123,8 @@ def saveResults(results, output_prefix, plot_states, plot_nodes):
     results.to_csv(f"{filename}.csv", index=False)
     ss.plotStates(results, states=plot_states, nodes=plot_nodes).savefig(f"{filename}.pdf", dpi=300)
 
-    logger.info("Read the dataframe from: %s.csv", filename)
-    logger.info("Open the visualisation from: %s.pdf", filename)
+    logger.info("DataFrame: %s.csv", filename)
+    logger.info("Visualization: %s.pdf", filename)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -186,7 +188,8 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
         logconf["handlers"]["stderr"]["level"] = "WARNING"
     elif args is not None and args.debug:
         logconf["handlers"]["stderr"]["level"] = "DEBUG"
-        logconf["handlers"]["logfile"]["level"] = "DEBUG"
+        if "logfile" in logconf["handlers"]:
+            logconf["handlers"]["logfile"]["level"] = "DEBUG"
 
     # Configure logger
     logging.config.dictConfig(logconf)
