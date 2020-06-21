@@ -25,15 +25,16 @@ def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_in
         data_api.read_table("human/infectious-compartments", version=1),
         data_api.read_table("human/infection-probability", version=1),
     )
-    np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
+    np.exposeRegions({region: {"[0,17)": num_infected}}, network.initialState)
 
-    initial_population = sum(_count_people_per_region(network.states[0]))
+    initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population) for state in network.states.values()])
+    populations = result.groupby("time").total.sum()
+    assert all([total == pytest.approx(initial_population) for node, total in populations.to_dict().items()])
 
     # the graph is unchanged
     assert nx.is_isomorphic(old_network.graph, network.graph)
@@ -59,16 +60,16 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
         data_api.read_table("human/infection-probability", version=1),
         pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
     )
-    np.exposeRegions({region: {"[0,17)": num_infected}}, network.states[0])
+    np.exposeRegions({region: {"[0,17)": num_infected}}, network.initialState)
 
-    initial_population = sum(_count_people_per_region(network.states[0]))
+    initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population)
-                for state in network.states.values()])
+    populations = result.groupby("time").total.sum()
+    assert all([total == pytest.approx(initial_population) for node, total in populations.to_dict().items()])
 
     # the graph is unchanged
     assert nx.is_isomorphic(old_network.graph, network.graph)
@@ -81,11 +82,7 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
             assert network.mixingMatrix[a][b] == old_network.mixingMatrix[a][b]
 
     # no spread across regions
-    for state in network.states.values():
-        for regionID, regionPop in state.items():
-            if regionID != region:
-                infected = sum(np.getInfectious(age, regionPop, ["I", "A"]) for age in np.getAges(regionPop))
-                assert infected == 0.0
+    assert result[(result.node != region) & (result.state.isin(network.infectiousStates))].total.sum() == 0.0
 
 
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
@@ -106,21 +103,19 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
         data_api.read_table("human/infection-probability", version=1),
         dampening,
     )
-    np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.states[0])
+    np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.initialState)
 
-    initial_population = sum(_count_people_per_region(network.states[0]))
+    initial_population = sum(_count_people_per_region(network.initialState))
 
-    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     # population remains constant
-    assert all([sum(_count_people_per_region(state)) == pytest.approx(initial_population)
-                for state in network.states.values()])
+    populations = result.groupby("time").total.sum()
+    assert all([total == pytest.approx(initial_population) for node, total in populations.to_dict().items()])
 
     # susceptibles are never infected
-    for state in network.states.values():
-        assert state["S08000016"][("[17,70)", "S")] == 31950 - num_infected
-        assert state["S08000016"][("[0,17)", "S")] == 31950
-        assert state["S08000016"][("70+", "S")] == 31950
+    for total in result[result.state == "S"].groupby("time").total.sum().to_list():
+        assert total == 3 * 31950 - num_infected
 
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
@@ -132,21 +127,16 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
         data_api.read_table("human/infectious-compartments", version=1),
         pd.DataFrame([{"Time": 0, "Value": 0.0}]),
     )
-    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.states[0])
+    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.initialState)
     susceptibles = 0.0
-    for region in network.states[0].values():
+    for region in network.initialState.values():
         for (age, state) in region.keys():
             if state == "S":
                 susceptibles += region[(age, state)]
 
-    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
-    new_susceptibles = 0.0
-    for region in network.states[max(network.states.keys())].values():
-        for (age, state) in region.keys():
-            if state == "S":
-                new_susceptibles += region[(age, state)]
-
+    new_susceptibles = result[(result.time == result.time.max()) & (result.state == "S")].total.sum()
     assert new_susceptibles == susceptibles
 
 
@@ -167,16 +157,18 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         data_api.read_table("human/infectious-compartments", version=1),
         pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
     )
-    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.states[0])
-    susceptibles = count_susceptibles(network.states[0])
+    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.initialState)
+    susceptibles = count_susceptibles(network.initialState)
 
-    np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
-    for time in network.states.keys():
-        if time < 25:
-            assert susceptibles == count_susceptibles(network.states[time])
-        else:
-            assert susceptibles != count_susceptibles(network.states[time])
+    # no infection before time 25
+    for total in result[(result.time < 25) & (result.state == "S")].groupby("time").total.sum().to_list():
+        assert total == susceptibles
+
+    # infections happen after time 25
+    for total in result[(result.time >= 25) & (result.state == "S")].groupby("time").total.sum().to_list():
+        assert total != susceptibles
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -573,7 +565,7 @@ def test_createNetworkOfPopulation(data_api):
 
     assert network.graph
     assert network.mixingMatrix
-    assert network.states
+    assert network.initialState
     assert network.progression
     assert network.movementMultipliers == {}
     assert set(network.infectiousStates) == {"I", "A"}
@@ -938,53 +930,6 @@ def test_getWeight_no_delta_adjustment():
     graph.add_edge("r1", "r2", weight=100.0)
 
     assert np.getWeight(graph, "r1", "r2", 0.5) == 50.0
-
-
-def test_model_states_to_pandas():
-    states = {0: {"hb1": {("70+", "S"): 21.0}}}
-    df = np.modelStatesToPandas(states)
-
-    pd.testing.assert_frame_equal(df, pd.DataFrame([{"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0}]))
-
-
-def test_model_states_to_pandas_multiple_times():
-    states = {0: {"hb1": {("70+", "S"): 21.0}}, 1: {"hb1": {("70+", "S"): 30.0}}}
-    df = np.modelStatesToPandas(states)
-
-    pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 1, "node": "hb1", "age": "70+", "state": "S", "total": 30.0},
-    ]))
-
-
-def test_model_states_to_pandas_multiple_states():
-    states = {0: {"hb1": {("70+", "S"): 21.0, ("70+", "E"): 10.0}}}
-    df = np.modelStatesToPandas(states)
-
-    pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb1", "age": "70+", "state": "E", "total": 10.0},
-    ]))
-
-
-def test_model_states_to_pandas_multiple_ages():
-    states = {0: {"hb1": {("70+", "S"): 21.0, ("[17,70)", "S"): 10.0}}}
-    df = np.modelStatesToPandas(states)
-
-    pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb1", "age": "[17,70)", "state": "S", "total": 10.0},
-    ]))
-
-
-def test_model_states_to_pandas_multiple_nodes():
-    states = {0: {"hb1": {("70+", "S"): 21.0}, "hb2": {("70+", "S"): 21.0}}}
-    df = np.modelStatesToPandas(states)
-
-    pd.testing.assert_frame_equal(df, pd.DataFrame([
-        {"time": 0, "node": "hb1", "age": "70+", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb2", "age": "70+", "state": "S", "total": 21.0},
-    ]))
 
 
 def test_plotStates_three_rows():

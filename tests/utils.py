@@ -56,3 +56,13 @@ def create_baseline(test_data, force_update=False):
         os.link(test_data, baseline)
         pytest.fail("Baseline image not found. We've created it. Running this test again should succeed")
     return baseline
+
+
+def calculateInfectiousOverTime(ts, infectiousStates):
+    """
+    Create a list of the number of infectious people over time
+
+    :param ts: pandas dataframe with the entire outbreak timeseries
+    :param infectiousStates: compartments considered infectious
+    """
+    return ts[ts.state.isin(infectiousStates)].groupby("time").sum().total.to_list()

@@ -24,34 +24,12 @@ class NetworkOfPopulation(NamedTuple):
     This type has all the internal data used by this model
     """
     progression: Dict[Age, Dict[Compartment, Dict[Compartment, float]]]
-    states: Dict[Time, Dict[NodeName, Dict[Tuple[Age, Compartment], float]]]
+    initialState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]
     graph: nx.DiGraph
     mixingMatrix: loaders.MixingMatrix
     movementMultipliers: Dict[Time, loaders.Multiplier]
     infectiousStates: List[Compartment]
     infectionProb: Dict[Time, float]
-
-
-# CurrentlyInUse
-def countInfectiousAgeStructured(
-    nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
-    infectiousStates: List[Compartment]
-) -> float:
-    """Count the number of infectious individuals in all nodes at some time.
-
-    :param nodes: A dictionary of nodes.
-    :param time: The time within the simulation.
-    :type time: int
-    :param infectiousStates: States that are considered infectious
-    :type infectiousStates: list of strings
-    :return: The total number of infectious individuals in all regions.
-    :rtype: float
-    """
-    total = 0
-    for node in nodes.values():
-        for age in getAges(node):
-            total += getInfectious(age, node, infectiousStates)
-    return total
 
 
 # NotCurrentlyInUse
@@ -101,35 +79,65 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
     :return: A time series of the size of the infectious population.
     :rtype: A list with the number of infectious people at each given time
     """
-    timeSeriesInfection = []
+    history = []
+
     multipliers = network.movementMultipliers.get(0, loaders.Multiplier(contact=1.0, movement=1.0))
     infectionProb = network.infectionProb[0]  # no default value, time zero must exist
+
+    current = network.initialState
+    df = nodesToPandas(0, current)
+    history.append(df)
     for time in range(timeHorizon):
         # we are building the interactions for time + 1, so that's the multiplier value we need to use
         multipliers = network.movementMultipliers.get(time + 1, multipliers)
         infectionProb = network.infectionProb.get(time + 1, infectionProb)
 
-        progression = getInternalProgressionAllNodes(network.states[time], network.progression)
+        progression = getInternalProgressionAllNodes(current, network.progression)
 
         internalContacts = getInternalInfectiousContacts(
-            network.states[time],
+            current,
             network.mixingMatrix,
             multipliers.contact,
             network.infectiousStates,
         )
         externalContacts = getExternalInfectiousContacts(
             network.graph,
-            network.states[time],
+            current,
             multipliers.movement,
             network.infectiousStates,
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
-        network.states[time + 1] = createNextStep(progression, contacts, network.states[time], infectionProb)
+        current = createNextStep(progression, contacts, current, infectionProb)
+        df = nodesToPandas(time + 1, current)
+        history.append(df)
 
-        timeSeriesInfection.append(countInfectiousAgeStructured(network.states[time], network.infectiousStates))
+    return pd.concat(history, copy=False, ignore_index=True)
 
-    return timeSeriesInfection
+
+def nodesToPandas(time: int, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]) -> pd.DataFrame:
+    """
+    Converts a dict of nodes into a pandas DataFrame
+
+    >>> nodesToPandas(0, {"nodea": {("70+", "S"): 10.0, ("70+", "E"): 15.0}, "nodeb": {("[17,70", "S"): 15.0}})  # doctest: +NORMALIZE_WHITESPACE
+        time   node     age state  total
+    0     0  nodea     70+     S   10.0
+    1     0  nodea     70+     E   15.0
+    2     0  nodeb  [17,70     S   15.0
+    >>> nodesToPandas(0, {})  # doctest: +NORMALIZE_WHITESPACE
+    Empty DataFrame
+    Columns: [time, node, age, state, total]
+    Index: []
+
+    :param time: time that will be inserted into every row
+    :param nodes: a dict of nodes
+    :return: a pandas dataframe representation of the nodes
+    """
+    rows = []
+    for name, node in nodes.items():
+        for (age, state), value in node.items():
+            rows.append([time, name, age, state, value])
+    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype({"time": "int16", "age":"category", "state": "category", "node": "category"}, copy=True)
 
 
 # CurrentlyInUse
@@ -530,27 +538,6 @@ def exposeRegions(infections, states):
             expose(age, value, states[nodeName])
 
 
-def modelStatesToPandas(timeseries: Dict[int, Dict[str, Dict[Tuple[str, str], float]]]) -> pd.DataFrame:
-    """Takes an instance of NetworkOfPopulations.states and transforms it into a pandas DataFrame.
-
-    :param timeseries: dict object with the state over the times
-    :type timeseries: A dictionary in the format
-    {time : {region: { (age, state): population size}}}
-    :return: a pandas dataframe in tabular format with the following columns:
-             - time
-             - node
-             - age
-             - state
-             - total
-    """
-    rows = []
-    for time, nodes in timeseries.items():
-        for nodeID, node in nodes.items():
-            for (age, state), value in node.items():
-                rows.append({"time": time, "node": nodeID, "age": age, "state": state, "total": value})
-    return pd.DataFrame(rows)
-
-
 def plotStates(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
     """
     Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
@@ -722,7 +709,7 @@ def createNetworkOfPopulation(
     return NetworkOfPopulation(
         progression=progression,
         graph=graph,
-        states={0: state0},
+        initialState=state0,
         mixingMatrix=mixingMatrix,
         movementMultipliers=movementMultipliers,
         infectiousStates=infectious_states,

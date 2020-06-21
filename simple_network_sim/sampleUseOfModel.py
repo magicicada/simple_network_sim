@@ -75,24 +75,33 @@ def runSimulation(
     :return: Averaged number of infection through time, through trials
     :rtype: list
     """
-    aggregated = None
-
-    for i in range(trials):
+    if trials <= 1:
+        # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
+        logger.info("Running simulation (1/1)")
         disposableNetwork = copy.deepcopy(network)
+        ss.exposeRegions(initialInfections[0], disposableNetwork.initialState)
+        return ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
+    else:
+        aggregated = None
 
-        ss.exposeRegions(initialInfections[i], disposableNetwork.states[0])
-        ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
-        indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(["time", "node", "age", "state"])
+        for i in range(trials):
+            logger.info("Running simulation (%s/%s)", i + 1, trials)
+            disposableNetwork = copy.deepcopy(network)
 
-        if aggregated is None:
-            aggregated = indexed
-        else:
-            aggregated.total += indexed.total
+            ss.exposeRegions(initialInfections[i], disposableNetwork.initialState)
+            indexed = ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time).set_index(
+                ["time", "node", "age", "state"]
+            )
 
-    averaged = aggregated.reset_index()
-    averaged.total /= trials
+            if aggregated is None:
+                aggregated = indexed
+            else:
+                aggregated.total += indexed.total
 
-    return averaged
+        averaged = aggregated.reset_index()
+        averaged.total /= trials
+
+        return averaged
 
 
 def saveResults(results, output_prefix, plot_states, plot_nodes):

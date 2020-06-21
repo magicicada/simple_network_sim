@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from simple_network_sim import common, network_of_populations as np
-from tests.utils import create_baseline
+from tests.utils import create_baseline, calculateInfectiousOverTime
 
 
 def _assert_baseline(result, force_update=False):
@@ -26,9 +26,9 @@ def test_basic_simulation(data_api):
         data_api.read_table("human/infectious-compartments", version=1),
         data_api.read_table("human/infection-probability", version=1),
     )
-    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
+    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
+    result = calculateInfectiousOverTime(np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200), network.infectiousStates)
 
     _assert_baseline(result)
 
@@ -43,9 +43,12 @@ def test_basic_simulation_with_dampening(data_api):
         data_api.read_table("human/infection-probability", version=1),
         data_api.read_table("human/movement-multipliers", version=1),
     )
-    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.states[0])
+    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200)
+    result = calculateInfectiousOverTime(
+        np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200),
+        network.infectiousStates,
+    )
 
     _assert_baseline(result)
 
@@ -67,9 +70,14 @@ def test_basic_simulation_100_runs(data_api):
         # This was added for backwards compatibility. Notice that ("m", "S") diminishes at each run.
         # TODO: make sure the states[0] is always reset after each run or that a new state is created before running
         #       exposeRegions
-        network.states[0][regions[0]][("[17,70)","E")] = 0
-        np.exposeRegions({regions[0]: {"[17,70)": 10.0}}, network.states[0])
-        runs.append(np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200))
+        network.initialState[regions[0]][("[17,70)", "E")] = 0
+        np.exposeRegions({regions[0]: {"[17,70)": 10.0}}, network.initialState)
+        result = calculateInfectiousOverTime(
+            np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200),
+            network.infectiousStates,
+        )
+        result.pop()  # TODO: due to historical reasons we have to ignore the last entry
+        runs.append(result)
     result = common.generateMeanPlot(runs)
 
     _assert_baseline(result)
