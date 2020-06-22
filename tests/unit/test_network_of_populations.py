@@ -323,7 +323,7 @@ def test_doIncomingInfectionsByNode_no_susceptibles():
         "r2": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -338,7 +338,7 @@ def test_doIncomingInfectionsByNode_no_connections():
         "r2": {("m", "S"): 100.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -354,7 +354,7 @@ def test_doIncomingInfectionsByNode_no_weight():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 1.0 * 0.1 * 0.8}
 
@@ -370,7 +370,7 @@ def test_doIncomingInfectionsByNode_weight_given():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.5 * 0.1 * 0.8}
 
@@ -386,7 +386,7 @@ def test_doIncomingInfectionsByNode_weight_delta_adjustment():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 0.5, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.5, ["I", "A"])
 
     weight = 10 - (5 * 0.75)
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": weight * 0.1 * 0.8}
@@ -403,7 +403,7 @@ def test_doIncomingInfectionsByNode_weight_multiplier():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 0.3, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.3, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 10 * 0.3 * 0.1 * 0.8}
 
