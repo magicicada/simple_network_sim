@@ -1,6 +1,5 @@
 import copy
 import random
-import tempfile
 
 import networkx as nx
 import pandas as pd
@@ -152,14 +151,13 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
 
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(data_api):
-    def count_susceptibes(state):
+    def count_susceptibles(state):
         susceptibles = 0.0
         for region in state.values():
             for (age, state) in region.keys():
                 if state == "S":
                     susceptibles += region[(age, state)]
         return susceptibles
-
 
     network = np.createNetworkOfPopulation(
         data_api.read_table("human/compartment-transition", version=1),
@@ -170,15 +168,15 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
     )
     np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.states[0])
-    susceptibles = count_susceptibes(network.states[0])
+    susceptibles = count_susceptibles(network.states[0])
 
     np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     for time in network.states.keys():
         if time < 25:
-            assert susceptibles == count_susceptibes(network.states[time])
+            assert susceptibles == count_susceptibles(network.states[time])
         else:
-            assert susceptibles != count_susceptibes(network.states[time])
+            assert susceptibles != count_susceptibles(network.states[time])
 
 
 def test_internalStateDiseaseUpdate_one_transition():
@@ -325,7 +323,7 @@ def test_doIncomingInfectionsByNode_no_susceptibles():
         "r2": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -340,7 +338,7 @@ def test_doIncomingInfectionsByNode_no_connections():
         "r2": {("m", "S"): 100.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -356,7 +354,7 @@ def test_doIncomingInfectionsByNode_no_weight():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 1.0 * 0.1 * 0.8}
 
@@ -372,7 +370,7 @@ def test_doIncomingInfectionsByNode_weight_given():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 1.0, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.5 * 0.1 * 0.8}
 
@@ -388,7 +386,7 @@ def test_doIncomingInfectionsByNode_weight_delta_adjustment():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 0.5, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.5, ["I", "A"])
 
     weight = 10 - (5 * 0.75)
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": weight * 0.1 * 0.8}
@@ -405,7 +403,7 @@ def test_doIncomingInfectionsByNode_weight_multiplier():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContacsByNode(graph, state, 0.3, ["I", "A"])
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.3, ["I", "A"])
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 10 * 0.3 * 0.1 * 0.8}
 

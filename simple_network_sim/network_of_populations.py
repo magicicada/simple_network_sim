@@ -64,9 +64,9 @@ def basicReportingFunction(dictOfStates):
     dictOfStringsByNodeAndState = {}
 #     Assumption: all nodes exist at time 0
     for node in dictOfStates[0]:
-       dictOfStringsByNodeAndState[node] = {}
-       for (age, state) in dictOfStates[0][node]:
-           dictOfStringsByNodeAndState[node][state] = []
+        dictOfStringsByNodeAndState[node] = {}
+        for (age, state) in dictOfStates[0][node]:
+            dictOfStringsByNodeAndState[node][state] = []
     for time in dictOfStates:
         for node in dictOfStates[time]:
             numByState = {}
@@ -75,7 +75,7 @@ def basicReportingFunction(dictOfStates):
                     numByState[state] = 0
                 numByState[state] = numByState[state] + dictOfStates[time][node][(age, state)]
             for state in numByState:
-               dictOfStringsByNodeAndState[node][state].append(numByState[state])
+                dictOfStringsByNodeAndState[node][state].append(numByState[state])
            
     logger.debug(dictOfStringsByNodeAndState)
     
@@ -246,7 +246,7 @@ def distributeContactsOverAges(nodeState, newInfections):
     return newInfectionsByAge
 
 
-def getIncomingInfectiousContacsByNode(graph, currentState, movementMultiplier, infectiousStates):
+def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier, infectiousStates):
     """Determine the number of new infections at each node of a graph based on incoming people
     from neighbouring nodes.
 
@@ -352,7 +352,7 @@ def getExternalInfectiousContacts(graph, dictOfStates, currentTime, movementMult
     """
     infectionsByNode = {}
 
-    incomingContacts = getIncomingInfectiousContacsByNode(
+    incomingContacts = getIncomingInfectiousContactsByNode(
         graph,
         dictOfStates[currentTime],
         movementMultiplier,
@@ -405,7 +405,8 @@ def getInternalInfectiousContactsInNode(
         if numSuscept > 0:
             contacts = 0
             for ageInf in mixingMatrix[age]:
-                # TODO: Make sure this is not implemented in a slow way anymore after https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
+                # TODO: Make sure this is not implemented in a slow way anymore after
+                #       https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/273
                 contacts += getInfectious(ageInf, currentInternalStateDict, infectiousStates) * mixingMatrix[ageInf][age]
 
             totalInAge = getTotalInAge(currentInternalStateDict, age)
@@ -665,19 +666,17 @@ def createNetworkOfPopulation(
     mixing_matrix_table: pd.DataFrame,
     infectious_states: pd.DataFrame,
     infection_prob: pd.DataFrame,
-    movement_multipliers_table: pd.DataFrame=None,
+    movement_multipliers_table: pd.DataFrame = None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
-    :param diseasesProgressionFn: The name of the file specifying the transition rates between
-    infected compartments.
-    :param populationFn: The name of the file that contains the population size in each region by
-    gender and age.
-    :param graphFn: The name of the file that contains the movements between regions.
-    :param ageInfectionMatrixFn: The name of the file containing the age infection matrix.
-    :param movementMultipliersFn: The file containing the movement multipliers. This may be None, in
+    :param compartment_transition_table: pd.Dataframe specifying the transition rates between infected compartments.
+    :param population_table: pd.Dataframe with the population size in each region by gender and age.
+    :param commutes_table: pd.Dataframe with the movements between regions.
+    :param mixing_matrix_table: pd.Dataframe with the age infection matrix.
+    :param movement_multipliers_table: pd.Dataframe with the movement multipliers. This may be None, in
     which case no multipliers are applied to the movements.
-    :param infectiousStates: States that are considered infectious
+    :param infectious_states: States that are considered infectious
     :param infection_prob: Probability that a given contact will result in an infection
     :return: The constructed network
     """
@@ -698,8 +697,10 @@ def createNetworkOfPopulation(
             for nextState in nextStates:
                 all_states.add(state)
                 all_states.add(nextState)
-                assert state == nextState or nextState != EXPOSED_STATE, "progression into exposed state is not allowed other than in self reference"
-    assert (set(infectious_states) - all_states) == set(), f"mismatched infectious states and states {infectious_states} {set(progression.keys())}"
+                assert state == nextState or nextState != EXPOSED_STATE, \
+                    "progression into exposed state is not allowed other than in self reference"
+    assert (set(infectious_states) - all_states) == set(), \
+        f"mismatched infectious states and states {infectious_states} {set(progression.keys())}"
 
     # people movement's graph
     graph = loaders.genGraphFromContactFile(commutes_table)
@@ -719,7 +720,8 @@ def createNetworkOfPopulation(
 
     # Checks across datasets
     assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"
-    assert agesInInfectionMatrix == {age for region in population.values() for age in region}, "infection matrix and population ages mismatch"
+    assert agesInInfectionMatrix == {age for region in population.values() for age in region}, \
+        "infection matrix and population ages mismatch"
     assert set(graph.nodes()) == set(population.keys()), "regions mismatch between graph and population"
 
     state0: Dict[str, Dict[Tuple[str, str], float]] = {}
