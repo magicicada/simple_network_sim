@@ -1,6 +1,5 @@
 import copy
 import random
-import tempfile
 
 import networkx as nx
 import pandas as pd
@@ -152,14 +151,13 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
 
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(data_api):
-    def count_susceptibes(state):
+    def count_susceptibles(state):
         susceptibles = 0.0
         for region in state.values():
             for (age, state) in region.keys():
                 if state == "S":
                     susceptibles += region[(age, state)]
         return susceptibles
-
 
     network = np.createNetworkOfPopulation(
         data_api.read_table("human/compartment-transition", version=1),
@@ -170,15 +168,15 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
     )
     np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.states[0])
-    susceptibles = count_susceptibes(network.states[0])
+    susceptibles = count_susceptibles(network.states[0])
 
     np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
 
     for time in network.states.keys():
         if time < 25:
-            assert susceptibles == count_susceptibes(network.states[time])
+            assert susceptibles == count_susceptibles(network.states[time])
         else:
-            assert susceptibles != count_susceptibes(network.states[time])
+            assert susceptibles != count_susceptibles(network.states[time])
 
 
 def test_internalStateDiseaseUpdate_one_transition():
