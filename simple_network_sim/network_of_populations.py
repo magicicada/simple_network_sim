@@ -478,11 +478,12 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
     exposed states.
     """
     newStates = {}
-    for (age, state), people in currentInternalStateDict.items():
-        outTransitions = diseaseProgressionProbs[age].get(state, {})
-        for nextState in outTransitions:
-            newStates.setdefault((age, nextState), 0.0)
-            newStates[(age, nextState)] += outTransitions[nextState] * people
+    for age, probs in diseaseProgressionProbs.items():
+        for nextState, transitions in probs.items():
+            nextValue = 0.0
+            for state, prob in transitions.items():
+                nextValue += currentInternalStateDict[(age, state)] * prob
+            newStates[(age, nextState)] = nextValue
     return newStates
 
 
@@ -675,8 +676,8 @@ def createNetworkOfPopulation(
     all_states = set()
     for states in progression.values():
         assert SUSCEPTIBLE_STATE not in states, "progression from susceptible state is not allowed"
-        for state, nextStates in states.items():
-            for nextState in nextStates:
+        for nextState, states in states.items():
+            for state in states:
                 all_states.add(state)
                 all_states.add(nextState)
                 assert state == nextState or nextState != EXPOSED_STATE, \

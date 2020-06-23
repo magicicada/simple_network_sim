@@ -173,7 +173,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
 
 def test_internalStateDiseaseUpdate_one_transition():
     current_state = {("o", "E"): 100.0, ("o", "A"): 0.0}
-    probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
+    probs = {"o": {"A": {"E": 0.4, "A": 1.0}, "E": {"E": 0.6}}}
 
     new_state = np.internalStateDiseaseUpdate(current_state, probs)
 
@@ -191,7 +191,7 @@ def test_internalStateDiseaseUpdate_no_transitions():
 
 def test_doInternalProgressionAllNodes_e_to_a_progession():
     states = {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}
-    probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
+    probs = {"o": {"A": {"E": 0.4, "A": 1.0}, "E": {"E": 0.6}}}
 
     progression = np.getInternalProgressionAllNodes(states, probs)
 

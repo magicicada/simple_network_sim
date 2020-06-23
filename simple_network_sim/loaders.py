@@ -23,17 +23,22 @@ def _checkAgeParameters(agesDictionary):
     :type agesDictionary: dictionary
     :return: agesDictionary
     """
-    all_compartments = None
-    for age, compartments in agesDictionary.items():
-        if all_compartments is None:
-            all_compartments = list(compartments.keys())
+    sources = None
+    for age, targets in agesDictionary.items():
+        sourceProbs = {}
+
+        for target, transitions in targets.items():
+            assert target in transitions.keys(), f"{age},{target} does not have self referencing key"
+            for source, prob in transitions.items():
+                sourceProbs.setdefault(source, 0.0)
+                sourceProbs[source] += prob
+
+        for target, totalProb in sourceProbs.items():
+            assert math.isclose(totalProb, 1.0), f"{age},{target} transitions do not add up to 1.0"
+        if sources is None:
+            sources = set(sourceProbs.keys())
         else:
-            assert all_compartments == list(compartments.keys()), f"compartments mismatch in {age}"
-        for compartment, transitions in compartments.items():
-            assert compartment in transitions.keys(), f"{age},{compartment} does not have self referencing key"
-            assert math.isclose(sum(transitions.values()), 1.0), f"{age},{compartment} transitions do not add up to 1.0"
-            for new_name, prob in transitions.items():
-                assert 0.0 <= prob <= 1.0, f"{age},{compartment},{new_name},{prob} not a valid probability"
+            assert set(sourceProbs.keys()) == sources, f"compartments mismatch in {age}"
 
     return agesDictionary
 
@@ -51,8 +56,8 @@ def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartmen
     agesDictionary = {}
     for row in table.to_dict(orient="row"):
         compartments = agesDictionary.setdefault(row["age"], {})
-        transitions = compartments.setdefault(row["src"], {})
-        transitions[row["dst"]] = float(row["rate"])
+        transitions = compartments.setdefault(row["dst"], {})
+        transitions[row["src"]] = float(row["rate"])
     return _checkAgeParameters(agesDictionary)
 
 
