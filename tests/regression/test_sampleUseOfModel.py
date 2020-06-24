@@ -11,25 +11,28 @@ from tests.utils import create_baseline
 
 
 def test_run_seeded(base_data_dir):
-    with tempfile.TemporaryDirectory() as dirname, \
-            tempfile.NamedTemporaryFile(delete=False) as metadata:
-        sampleUseOfModel.main(
-            ["-b", str(base_data_dir), "-m", str(metadata.name), "seeded", str(Path(dirname) / "test")]
-        )
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            sampleUseOfModel.main(
+                ["-c", str(base_data_dir / "config.yaml"), "seeded", str(tmpdir / "test")]
+            )
 
-        files = glob(os.path.join(dirname, "test*"))
-        assert len(files) == 2
-        assert len([f for f in files if f.endswith(".pdf")]) == 1
-        assert len([f for f in files if f.endswith(".csv")]) == 1
+            files = glob(str(tmpdir / "test*"))
+            assert len(files) == 1
+            assert len([f for f in files if f.endswith(".pdf")]) == 1
 
-        test_data = [f for f in files if f.endswith(".csv")][0]
-        baseline = create_baseline(test_data)
+            test_data = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
+            baseline = create_baseline(test_data)
 
-        test_df = pd.read_csv(test_data)
-        baseline_df = pd.read_csv(baseline)
+            test_df = pd.read_csv(test_data)
+            baseline_df = pd.read_csv(baseline)
 
-        pd.testing.assert_frame_equal(
-            test_df.set_index(["time", "node", "age", "state"]),
-            baseline_df.set_index(["time", "node", "age", "state"]),
-            check_like=True,
-        )
+            pd.testing.assert_frame_equal(
+                test_df.set_index(["time", "node", "age", "state"]),
+                baseline_df.set_index(["time", "node", "age", "state"]),
+                check_like=True,
+            )
+    finally:
+        # TODO; remove this once https://github.com/ScottishCovidResponse/data_pipeline_api/issues/12 is done
+        (base_data_dir / "access.log").unlink()

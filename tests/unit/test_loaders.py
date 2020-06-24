@@ -10,7 +10,7 @@ from simple_network_sim import loaders
 
 
 def test_readCompartmentRatesByAge(data_api):
-    result = loaders.readCompartmentRatesByAge(data_api.read_table("human/compartment-transition", version=1))
+    result = loaders.readCompartmentRatesByAge(data_api.read_table("human/compartment-transition"))
 
     assert result == {
         "70+": {
@@ -74,7 +74,7 @@ def test_readParametersAgeStructured_less_than_100_percent():
 
 
 def test_readPopulationAgeStructured(data_api):
-    population = loaders.readPopulationAgeStructured(data_api.read_table("human/population", version=1))
+    population = loaders.readPopulationAgeStructured(data_api.read_table("human/population"))
 
     expected = {
         "S08000015": {"[0,17)": 65307, "[17,70)": 245680, "70+": 58683},
@@ -149,7 +149,7 @@ def test_readNodeAttributesJSON(locations):
 def test_genGraphFromContactFile(base_data_dir, data_api):
     graph = nx.convert_matrix.from_pandas_edgelist(pd.read_csv(str(base_data_dir / "human" / "commutes" / "1" / "data.csv")), edge_attr=True, create_using=nx.DiGraph)
 
-    assert nx.is_isomorphic(loaders.genGraphFromContactFile(data_api.read_table("human/commutes", version=1)), graph)
+    assert nx.is_isomorphic(loaders.genGraphFromContactFile(data_api.read_table("human/commutes")), graph)
 
 
 def test_genGraphFromContactFile_negative_delta_adjustment():
@@ -170,7 +170,7 @@ def test_genGraphFromContactFile_negative_weight():
 
 
 def test_readMovementMultipliers(data_api):
-    ms = loaders.readMovementMultipliers(data_api.read_table("human/movement-multipliers", version=1))
+    ms = loaders.readMovementMultipliers(data_api.read_table("human/movement-multipliers"))
 
     assert ms == {
         50: loaders.Multiplier(movement=0.05, contact=0.05),
@@ -260,12 +260,12 @@ def test_AgeRange_different_ranges(range_a, range_b):
 
 
 def test_sampleMixingMatrix(data_api):
-    mm = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix", version=1))
+    mm = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix"))
     assert mm["[17,70)"]["[17,70)"] == 0.2
 
 
 def test_sampleMixingMatrix_iterate_keys(data_api):
-    matrix = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix", version=1))
+    matrix = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix"))
     assert set(matrix) == {"[0,17)", "[17,70)", "70+"}
     for key in matrix:
         assert matrix[key]
