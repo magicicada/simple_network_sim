@@ -170,7 +170,7 @@ optional arguments:
   --infected INFECTED   Number of infected people in each region/age group
                         (default: 100)
 ```
- 
+
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/README.md).
 
 ### Visualisation
@@ -211,6 +211,22 @@ optional arguments:
                         output/simple_network_sim/outbreak-timeseries)
 ```
 
+
+## Building the documentation
+
+To build a local version of the readthedocs site e.g. when working on the documentation.
+
+Add the following packages to your environment:
+
+- `sphinx`
+- `sphinx_rtd_theme`
+
+Then:
+
+```{shell}
+cd doc
+sphinx-build -b html -d build/doctrees source build/html
+```
 
 ## Continuous integration
 
