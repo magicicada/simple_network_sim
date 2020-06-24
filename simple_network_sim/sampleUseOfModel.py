@@ -45,15 +45,17 @@ def main(argv):
             initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
 
     results = runSimulation(network, args.time, args.trials, initialInfections)
+
+    logger.info("Writing output")
     plot_states = args.plot_states.split(",") if args.plot_states else None
     plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
     # TODO: replace the current .csv file that's saved as part of the results with api.write table. This was not done
     #       yet while we wait for the next data API version
     saveResults(results, args.output_prefix, plot_states, plot_nodes)
     api.write_table(results, "output/simple_network_sim/outbreak-timeseries", version="1")
+    api.close()
 
     logger.info("Took %.2fs to run the simulation.", time.time() - t0)
-    api.close()
 
 
 def runSimulation(
@@ -75,24 +77,33 @@ def runSimulation(
     :return: Averaged number of infection through time, through trials
     :rtype: list
     """
-    aggregated = None
-
-    for i in range(trials):
+    if trials <= 1:
+        # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
+        logger.info("Running simulation (1/1)")
         disposableNetwork = copy.deepcopy(network)
+        ss.exposeRegions(initialInfections[0], disposableNetwork.initialState)
+        return ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
+    else:
+        aggregated = None
 
-        ss.exposeRegions(initialInfections[i], disposableNetwork.states[0])
-        ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
-        indexed = ss.modelStatesToPandas(disposableNetwork.states).set_index(["time", "node", "age", "state"])
+        for i in range(trials):
+            logger.info("Running simulation (%s/%s)", i + 1, trials)
+            disposableNetwork = copy.deepcopy(network)
 
-        if aggregated is None:
-            aggregated = indexed
-        else:
-            aggregated.total += indexed.total
+            ss.exposeRegions(initialInfections[i], disposableNetwork.initialState)
+            indexed = ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time).set_index(
+                ["time", "node", "age", "state"]
+            )
 
-    averaged = aggregated.reset_index()
-    averaged.total /= trials
+            if aggregated is None:
+                aggregated = indexed
+            else:
+                aggregated.total += indexed.total
 
-    return averaged
+        averaged = aggregated.reset_index()
+        averaged.total /= trials
+
+        return averaged
 
 
 def saveResults(results, output_prefix, plot_states, plot_nodes):
@@ -112,8 +123,8 @@ def saveResults(results, output_prefix, plot_states, plot_nodes):
     results.to_csv(f"{filename}.csv", index=False)
     ss.plotStates(results, states=plot_states, nodes=plot_nodes).savefig(f"{filename}.pdf", dpi=300)
 
-    logger.info("Read the dataframe from: %s.csv", filename)
-    logger.info("Open the visualisation from: %s.pdf", filename)
+    logger.info("DataFrame: %s.csv", filename)
+    logger.info("Visualization: %s.pdf", filename)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -121,14 +132,14 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     
     :param args: argparse.Namespace
         args.logfile (pathlib.Path) is used to create a logfile if present
-        args.verbose and args.debug control logging level to sys.stderr
+        args.quiet and args.debug control logging level to sys.stderr
 
     This function can be called without args, in which case it configures the
     package logger to write WARNING and above to STDERR.
 
     When called with args, it uses args.logfile to determine if logs (by
     default, INFO and above) should be written to a file, and the path of
-    that file. args.verbose and args.debug are used to control reporting
+    that file. args.quiet and args.debug are used to control reporting
     level.
     """
     # Dictionary to define logging configuration
@@ -142,7 +153,7 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
         },
         "handlers": {
             "stderr": {
-                "level": "WARNING",
+                "level": "INFO",
                 "class": "logging.StreamHandler",
                 "formatter": "standard",
                 "stream": "ext://sys.stderr",
@@ -172,12 +183,13 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
         }
         logconf["loggers"][__package__]["handlers"].append("logfile")
 
-    # Set STDERR/logfile levels if args.verbose/args.debug specified
-    if args is not None and args.verbose:
-        logconf["handlers"]["stderr"]["level"] = "INFO"
+    # Set STDERR/logfile levels if args.quiet/args.debug specified
+    if args is not None and args.quiet:
+        logconf["handlers"]["stderr"]["level"] = "WARNING"
     elif args is not None and args.debug:
         logconf["handlers"]["stderr"]["level"] = "DEBUG"
-        logconf["handlers"]["logfile"]["level"] = "DEBUG"
+        if "logfile" in logconf["handlers"]:
+            logconf["handlers"]["logfile"]["level"] = "DEBUG"
 
     # Configure logger
     logging.config.dictConfig(logconf)
@@ -214,11 +226,11 @@ def build_args(argv):
         help="Path for logging output",
     )
     parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="verbose",
+        "-q",
+        "--quiet",
+        dest="quiet",
         action="store_true",
-        help="Provide verbose output to STDERR",
+        help="Prints only warnings to stderr",
     )
     parser.add_argument(
         "--debug", action="store_true", help="Provide debug output to STDERR"

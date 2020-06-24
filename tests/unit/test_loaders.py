@@ -14,28 +14,28 @@ def test_readCompartmentRatesByAge(data_api):
 
     assert result == {
         "70+": {
-            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
-            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
-            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
-            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
-            "R": {"R": pytest.approx(1.0)},
-            "D": {"D": pytest.approx(1.0)},
+            "E": {"E": pytest.approx(0.573)},
+            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
+            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
+            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
+            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
+            "H": {"I": pytest.approx(0.0495), "H": pytest.approx(0.9)},
         },
         "[17,70)": {
-            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
-            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
-            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
-            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
-            "R": {"R": pytest.approx(1.0)},
-            "D": {"D": pytest.approx(1.0)},
+            "E": {"E": pytest.approx(0.573)},
+            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
+            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
+            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
+            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
+            "H": {"H": pytest.approx(0.9), "I": pytest.approx(0.0495)},
         },
         "[0,17)": {
-            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
-            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
-            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
-            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
-            "R": {"R": pytest.approx(1.0)},
-            "D": {"D": pytest.approx(1.0)},
+            "E": {"E": pytest.approx(0.573)},
+            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
+            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
+            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
+            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
+            "H": {"I": pytest.approx(0.0495), "H": pytest.approx(0.9)},
         },
     }
 
@@ -230,75 +230,23 @@ def test_readInfectionProbability_invalid_prob(prob):
 
 def test_AgeRange():
     a = loaders.AgeRange("[10,20)")
-    assert 10 in a
-    assert 15 in a
-    assert 20 not in a
-
-    b = loaders.AgeRange(10, 20)
-    assert a == b
-    assert 10 in b
-    assert 20 not in b
-
-    c = loaders.AgeRange((10,20))
-    assert b == c
-
-    d = loaders.AgeRange("70+")
-    assert 99 in d
-    assert 69 not in d
-
-    with pytest.raises(Exception) as e_info:
-        a = loaders.AgeRange(20,30)
-        b = loaders.AgeRange(25,35)
-        loaders._check_overlap(a, b)
-    assert e_info.value.args[0] == f"Overlap in age ranges with {a} and {b}"
-    with pytest.raises(Exception) as e_info:
-        a = loaders.AgeRange("70+")
-        b = loaders.AgeRange("[65,75)")
-        loaders._check_overlap(a, b)
-    assert e_info.value.args[0] == f"Overlap in age ranges with {a} and {b}"
+    assert a.age_group == "[10,20)"
 
 
-@pytest.mark.parametrize("invalid_range", ["[10,300)", "200+", "[10,10)", "[10,5)"])
-def test_AgeRange_invalid_range_str(invalid_range):
-    with pytest.raises(AssertionError):
-        loaders.AgeRange(invalid_range)
+def test_AgeRange_hash():
+    a = loaders.AgeRange("[10,20)")
+    assert hash(a) == hash(a.age_group)
 
 
-@pytest.mark.parametrize("invalid_range", [(10, 300), (10, 10), (10, 5), (-10, 20)])
-def test_AgeRange_invalid_range_tuple(invalid_range):
-    with pytest.raises(AssertionError):
-        loaders.AgeRange(invalid_range)
-    with pytest.raises(AssertionError):
-        loaders.AgeRange(*invalid_range)
+def test_AgeRange_equal():
+    assert loaders.AgeRange("[10,20)") == loaders.AgeRange("[10,20)")
+    assert not loaders.AgeRange("[10,20)") == loaders.AgeRange("[10,21)")
 
 
-@pytest.mark.parametrize("wrong_value", ["invalid", "(0,10)", "[0,10]", "[a,b)", "[-10,20)"])
-def test_AgeRange_wrong_format_str(wrong_value):
-    with pytest.raises(Exception) as e_info:
-        loaders.AgeRange(wrong_value)
-    assert e_info.value.args[0] == f'Invalid age range specified: "{wrong_value}"'
-
-
-@pytest.mark.parametrize("wrong_value", [10, (20,)])
-def test_AgeRange_wrong_format_other(wrong_value):
-    with pytest.raises(Exception) as e_info:
-        loaders.AgeRange(wrong_value)
-
-
-@pytest.mark.parametrize("range_a,range_b", [((0, 10), "[0,10)"), ("[0,10)", "[0,10)"), ("70+", "70+"), ("70+", "[70,200)"), ("70+", (70, 200))])
-def test_AgeRange_equivalent_ranges(range_a, range_b):
-    a = loaders.AgeRange(range_a)
-    b = loaders.AgeRange(range_b)
-
-    assert hash(a) == hash(b)
-    assert a == b
-    assert not (a != b)
-
-
-def test_AgeRange_equivalent_ranges_params():
-    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange(0, 10)) and loaders.AgeRange(0, 10) == loaders.AgeRange(0, 10)
-    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange((0, 10))) and loaders.AgeRange(0, 10) == loaders.AgeRange((0, 10))
-    assert hash(loaders.AgeRange(0, 10)) == hash(loaders.AgeRange("[0,10)")) and loaders.AgeRange(0, 10) == loaders.AgeRange("[0, 10)")
+def test_AgeRange_str():
+    age = "[10,20)"
+    a = loaders.AgeRange(age)
+    assert str(a) is age
 
 
 @pytest.mark.parametrize("range_a,range_b", [((0, 10), "[0,11)"), ("[1,10)", "[0,10)"), ("71+", "70+"), ("70+", "[70,199)"), ("70+", (70, 199))])
@@ -311,29 +259,9 @@ def test_AgeRange_different_ranges(range_a, range_b):
     assert not (a == b)
 
 
-@pytest.mark.parametrize("range,expected", [((0, 10), "[0,10)"), ("[0,10)", "[0,10)"), ("70+", "70+"), ((70, 200), "70+")])
-def test_AgeRange_to_str(range, expected):
-    assert str(loaders.AgeRange(range)) == expected
-
-
-def test_invalidMixingMatrixFilesOverlappingRanges():
-    df = pd.DataFrame([
-        {"source": "[0,20)", "target": "[0,20)", "mixing": 0.1},
-        {"source": "[0,20)", "target": "[15,30)", "mixing": 0.05},
-        {"source": "[15,30)", "target": "[0,20)", "mixing": 0.2},
-        {"source": "[15,30)", "target": "[15,30)", "mixing": 0.2},
-    ])
-    with pytest.raises(Exception) as e_info:
-        loaders.MixingMatrix(df)
-    assert e_info.value.args[0] == "Overlap in age ranges with [0,20) and [15,30)"
-
-
 def test_sampleMixingMatrix(data_api):
     mm = loaders.MixingMatrix(data_api.read_table("human/mixing-matrix", version=1))
-    assert mm[28][57] == 0.2
-    assert mm["[17,70)"][75] == 0.2
-    assert mm[(17,70)][75] == 0.2
-    assert mm[(17,70)][(0,17)] == 0.2
+    assert mm["[17,70)"]["[17,70)"] == 0.2
 
 
 def test_sampleMixingMatrix_iterate_keys(data_api):
@@ -352,14 +280,14 @@ def test_sampleMixingMatrix_iterate_keys_one_element():
 
 
 def test_MixingRow_iterate_over_keys():
-    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+    row = loaders.MixingRow(["[0,17)", "[17,70)", "70+"], ["0.2", "0.03", "0.1"])
     assert list(row) == ["[0,17)", "[17,70)", "70+"]
     for key in row:
         assert row[key] in [0.2, 0.03, 0.1]
 
 
 def test_MixingRow_iterate_access_key():
-    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+    row = loaders.MixingRow(["[0,17)", "[17,70)", "70+"], ["0.2", "0.03", "0.1"])
 
     assert row["[0,17)"] == 0.2
     assert row["[17,70)"] == 0.03
@@ -367,6 +295,6 @@ def test_MixingRow_iterate_access_key():
 
 
 def test_MixingRow_str():
-    row = loaders.MixingRow(map(loaders.AgeRange, ["[0,17)", "[17,70)", "70+"]), ["0.2", "0.03", "0.1"])
+    row = loaders.MixingRow(["[0,17)", "[17,70)", "70+"], ["0.2", "0.03", "0.1"])
 
     assert str(row) == "[[0,17): 0.2, [17,70): 0.03, 70+: 0.1]"

@@ -28,4 +28,8 @@ def test_run_seeded(base_data_dir):
         test_df = pd.read_csv(test_data)
         baseline_df = pd.read_csv(baseline)
 
-        pd.testing.assert_frame_equal(test_df, baseline_df)
+        pd.testing.assert_frame_equal(
+            test_df.set_index(["time", "node", "age", "state"]),
+            baseline_df.set_index(["time", "node", "age", "state"]),
+            check_like=True,
+        )

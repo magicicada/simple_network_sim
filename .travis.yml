@@ -14,7 +14,7 @@ matrix:
         - conda create --name simple_network_sim --file spec-file.txt
         - conda activate simple_network_sim
       script:
-        - pytest --cov=simple_network_sim
+        - pytest --cov=simple_network_sim --doctest-modules simple_network_sim tests
       after_success:
         - coverage xml
         - bash <(curl -s https://codecov.io/bash)
