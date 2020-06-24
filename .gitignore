@@ -19,6 +19,9 @@ data/*
 !data_pipeline_inputs/**
 !tests/test_data/**
 
+# Do ignore output files
+tests/test_data/data_pipeline_inputs/output/**
+
 # IDE
 .idea
 *.sw[po]
