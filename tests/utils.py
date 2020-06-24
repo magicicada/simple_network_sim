@@ -27,7 +27,7 @@ def compare_mpl_plots(fig, force_update=False):
     if not os.path.isfile(baseline) or force_update:
         fig.savefig(baseline)
         pytest.fail("Baseline image not found. We've created it. Running this test again should succeed")
-    with tempfile.NamedTemporaryFile(mode="wb+", suffix=".png") as fp:
+    with tempfile.NamedTemporaryFile(mode="wb+", suffix=".png", delete=False) as fp:
         fig.savefig(fp.name)
         assert compare_images(baseline, fp.name, tol=2) is None, "Images don't match"
 
