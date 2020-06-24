@@ -1,10 +1,8 @@
 """This module contains functions and classes to read and check input files."""
 
-import csv
 import json
 import math
-import re
-from typing import Dict, TextIO, NamedTuple, List
+from typing import Dict, NamedTuple, List
 
 import networkx as nx
 import pandas as pd
@@ -23,22 +21,18 @@ def _checkAgeParameters(agesDictionary):
     :type agesDictionary: dictionary
     :return: agesDictionary
     """
-    sources = None
-    for age, targets in agesDictionary.items():
-        sourceProbs = {}
 
-        for target, transitions in targets.items():
-            assert target in transitions.keys(), f"{age},{target} does not have self referencing key"
-            for source, prob in transitions.items():
-                sourceProbs.setdefault(source, 0.0)
-                sourceProbs[source] += prob
-
-        for target, totalProb in sourceProbs.items():
-            assert math.isclose(totalProb, 1.0), f"{age},{target} transitions do not add up to 1.0"
-        if sources is None:
-            sources = set(sourceProbs.keys())
+    all_compartments = None
+    for age, compartments in agesDictionary.items():
+        if all_compartments is None:
+            all_compartments = list(compartments.keys())
         else:
-            assert set(sourceProbs.keys()) == sources, f"compartments mismatch in {age}"
+            assert all_compartments == list(compartments.keys()), f"compartments mismatch in {age}"
+        for compartment, transitions in compartments.items():
+            assert compartment in transitions.keys(), f"{age},{compartment} does not have self referencing key"
+            assert math.isclose(sum(transitions.values()), 1.0), f"{age},{compartment} transitions do not add up to 1.0"
+            for new_name, prob in transitions.items():
+                assert 0.0 <= prob <= 1.0, f"{age},{compartment},{new_name},{prob} not a valid probability"
 
     return agesDictionary
 
@@ -56,8 +50,8 @@ def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartmen
     agesDictionary = {}
     for row in table.to_dict(orient="row"):
         compartments = agesDictionary.setdefault(row["age"], {})
-        transitions = compartments.setdefault(row["dst"], {})
-        transitions[row["src"]] = float(row["rate"])
+        transitions = compartments.setdefault(row["src"], {})
+        transitions[row["dst"]] = float(row["rate"])
     return _checkAgeParameters(agesDictionary)
 
 
@@ -67,7 +61,7 @@ def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age,
 
     Population is labelled by node ID, sex and age. Sex is currently ignored.
     
-    :param fp: Population data
+    :param table: Population data
     :return: Nested dict with age-stratified population in each node
     """
     dictOfPops = {}
@@ -114,7 +108,7 @@ def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     Pairs of nodes are listed in the file by source, destination, weight and adjustment.
 
     :param commutes: Weighted edge list.
-    :type pd.DataFrame: pandas DataFrame.
+    :type commutes: pandas DataFrame.
     :return: `networkx.classes.digraph.DiGraph` object representing the graph.
     """
     G = nx.convert_matrix.from_pandas_edgelist(commutes, edge_attr=True, create_using=nx.DiGraph)
@@ -219,8 +213,7 @@ def _check_overlap(one, two):
     :param two:
     :type two: simple_network_sim.loaders.AgeRange
     """
-    assert one._upper <= two._lower or two._upper <= one._lower, \
-            (f"Overlap in age ranges with {one} and {two}")
+    assert one._upper <= two._lower or two._upper <= one._lower, f"Overlap in age ranges with {one} and {two}"
 
 
 class AgeRange:
@@ -304,8 +297,8 @@ class MixingMatrix:
     `mm = MixingMatrix(api.read_table("human/mixing-matrix")`
     `print(mm[28][57])` Prints the expected number of interactions a 28 year old
     would have with a 57 year old in a day
-    `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in the
-    age range [30-40) would have with someone aged 70 or older
+    `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in
+    the age range [30-40) would have with someone aged 70 or older
     in any given day.
 
     :param mixing_table: Raw DataFrame from the data API. The expected columns are: source, target and mixing (value).
