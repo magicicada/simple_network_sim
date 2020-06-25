@@ -1,2 +1,36 @@
 data_directory: data_pipeline_inputs
 fail_on_hash_mismatch: true
+
+read:
+ - where:
+     data_product: human/compartment-transition
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/population
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/commutes
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/mixing-matrix
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/infectious-compartments
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/infection-probability
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/movement-multipliers
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/initial-infections
+   use:
+     version: 1.0.0
