@@ -46,12 +46,13 @@ def main(argv):
         results = runSimulation(network, args.time, args.trials, initialInfections)
 
         logger.info("Writing output")
-        plot_states = args.plot_states.split(",") if args.plot_states else None
-        plot_nodes = args.plot_nodes.split(",") if args.plot_nodes else None
-        saveResults(results, args.output_prefix, plot_states, plot_nodes)
         store.write_table("output/simple_network_sim/outbreak-timeseries", results)
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
+        logger.info(
+            "Use `python -m simple_network_sim.network_of_populations.visualisation -h` to find out how to take "
+            "a peak what you just ran. You will need use the access-<hash>.yaml file that was created by this run."
+        )
 
 
 def runSimulation(
@@ -101,24 +102,6 @@ def runSimulation(
 
         return averaged
 
-
-def saveResults(results, output_prefix, plot_states, plot_nodes):
-    """Save result from simulation to csv (raw results) and pdf (plot per node).
-
-    :param results: Results from simulation
-    :type results: pd.DataFrame
-    :param output_prefix: Prefix for output file
-    :type output_prefix: str
-    :param plot_states: plots one curve per state listed (None means all states)
-    :type plot_states: list (of disease states).
-    :param plot_nodes: creates one plot per node listed (None means all nodes)
-    :type plot_nodes: list (of region names).
-    """
-    filename = f"{output_prefix}-{int(time.time())}"
-
-    ss.plotStates(results, states=plot_states, nodes=plot_nodes).savefig(f"{filename}.pdf", dpi=300)
-
-    logger.info("Visualization: %s.pdf", filename)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -230,18 +213,6 @@ def build_args(argv):
         "--debug", action="store_true", help="Provide debug output to STDERR"
     )
     parser.add_argument(
-        "--plot-nodes",
-        default=None,
-        metavar="nodes,[nodes,...]",
-        help="Comma-separated list of nodes to plot. All nodes will be plotted if not provided."
-    )
-    parser.add_argument(
-        "--plot-states",
-        default=None,
-        metavar="states,[states,...]",
-        help="Comma-separated list of states to plot. All states will be plotted if not provided."
-    )
-    parser.add_argument(
         "-c",
         "--data-pipeline-config",
         default="config.yaml",
@@ -269,11 +240,6 @@ def build_args(argv):
         type=int,
         help="Number of infected people in each region/age group",
     )
-    randomCmd.add_argument(
-        "output_prefix",
-        type=str,
-        help="Prefix used when exporting the dataframe and plot",
-    )
 
     # Parameters when using the seeded infection approach
     seededCmd = sp.add_parser(
@@ -283,11 +249,6 @@ def build_args(argv):
     )
     seededCmd.add_argument(
         "--trials", default=1, type=int, help="Number of experiments to run"
-    )
-    seededCmd.add_argument(
-        "output_prefix",
-        type=str,
-        help="Prefix use when exporting the dataframe and plot",
     )
 
     return parser.parse_args(argv)

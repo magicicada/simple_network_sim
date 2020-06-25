@@ -19,7 +19,7 @@ def compare_mpl_plots(fig, force_update=False):
                          baseline image will be updated, so you can easily iterate over the way you want the plotting
                          function called
     """
-    test_name = os.environ["PYTEST_CURRENT_TEST"].replace(" (call)", "").replace("::", "__")
+    test_name = os.environ["PYTEST_CURRENT_TEST"].replace(" (call)", "").replace("::", "__").replace(".py", "")
     test_dir = os.path.dirname(test_name)
     test_name = os.path.basename(test_name)
     baseline = os.path.join(test_dir, "mpl_images", test_name) + ".png"
