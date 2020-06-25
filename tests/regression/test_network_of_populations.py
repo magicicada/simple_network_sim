@@ -19,12 +19,12 @@ def _assert_baseline(result, force_update=False):
 
 def test_basic_simulation(data_api):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition", version=1),
-        data_api.read_table("human/population", version=1),
-        data_api.read_table("human/commutes", version=1),
-        data_api.read_table("human/mixing-matrix", version=1),
-        data_api.read_table("human/infectious-compartments", version=1),
-        data_api.read_table("human/infection-probability", version=1),
+        data_api.read_table("human/compartment-transition"),
+        data_api.read_table("human/population"),
+        data_api.read_table("human/commutes"),
+        data_api.read_table("human/mixing-matrix"),
+        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/infection-probability"),
     )
     np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
@@ -35,13 +35,13 @@ def test_basic_simulation(data_api):
 
 def test_basic_simulation_with_dampening(data_api):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition", version=1),
-        data_api.read_table("human/population", version=1),
-        data_api.read_table("human/commutes", version=1),
-        data_api.read_table("human/mixing-matrix", version=1),
-        data_api.read_table("human/infectious-compartments", version=1),
-        data_api.read_table("human/infection-probability", version=1),
-        data_api.read_table("human/movement-multipliers", version=1),
+        data_api.read_table("human/compartment-transition"),
+        data_api.read_table("human/population"),
+        data_api.read_table("human/commutes"),
+        data_api.read_table("human/mixing-matrix"),
+        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/movement-multipliers"),
     )
     np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
@@ -55,12 +55,12 @@ def test_basic_simulation_with_dampening(data_api):
 
 def test_basic_simulation_100_runs(data_api):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition", version=1),
-        data_api.read_table("human/population", version=1),
-        data_api.read_table("human/commutes", version=1),
-        data_api.read_table("human/mixing-matrix", version=1),
-        data_api.read_table("human/infectious-compartments", version=1),
-        data_api.read_table("human/infection-probability", version=1),
+        data_api.read_table("human/compartment-transition"),
+        data_api.read_table("human/population"),
+        data_api.read_table("human/commutes"),
+        data_api.read_table("human/mixing-matrix"),
+        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/infection-probability"),
     )
 
     runs = []

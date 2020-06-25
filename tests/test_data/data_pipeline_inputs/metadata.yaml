@@ -1,0 +1,40 @@
+-
+  data_product: human/compartment-transition
+  version: 1.0.0
+  extension: csv
+  filename: human/compartment-transition/1/data.csv
+-
+  data_product: human/population
+  version: 1.0.0
+  extension: csv
+  filename: human/population/1/data.csv
+-
+  data_product: human/commutes
+  version: 1.0.0
+  extension: csv
+  filename: human/commutes/1/data.csv
+-
+  data_product: human/mixing-matrix
+  version: 1.0.0
+  extension: csv
+  filename: human/mixing-matrix/1/data.csv
+-
+  data_product: human/infectious-compartments
+  version: 1.0.0
+  extension: csv
+  filename: human/infectious-compartments/1/data.csv
+-
+  data_product: human/infection-probability
+  version: 1.0.0
+  extension: csv
+  filename: human/infection-probability/1/data.csv
+-
+  data_product: human/movement-multipliers
+  version: 1.0.0
+  extension: csv
+  filename: human/movement-multipliers/1/data.csv
+-
+  data_product: human/initial-infections
+  version: 1.0.0
+  extension: csv
+  filename: human/initial-infections/1/data.csv

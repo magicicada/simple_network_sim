@@ -12,12 +12,15 @@ __pycache__/
 *.pdf
 data/*
 .DS_Store
+data_pipeline_inputs/output/*
+tests/test_data/data_pipeline_inputs/output/**
+access*log
 
 # Do not ignore sample inputs
 !sample_input_files/*
 !sample_output_files/*
-!data_pipeline_inputs/**
-!tests/test_data/**
+!data_pipeline_inputs/human/**
+!tests/test_data/data_pipeline_inputs/human/**
 
 # Do ignore output files
 tests/test_data/data_pipeline_inputs/output/**

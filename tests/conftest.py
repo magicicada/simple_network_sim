@@ -1,21 +1,24 @@
-import csv
 import tempfile
-
 from pathlib import Path
 
 import pytest
+from simple_network_sim.data import Datastore
 
 # Path to directory containing test files for fixtures
-from data_pipeline_api.api import API
-from data_pipeline_api.file_system_data_access import FileSystemDataAccess
-
 FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
 
 
 @pytest.fixture
 def data_api(base_data_dir):
-    with tempfile.NamedTemporaryFile(delete=False) as metadata:
-        yield API(FileSystemDataAccess(base_data_dir, metadata.name))
+    try:
+        with Datastore(str(base_data_dir / "config.yaml")) as store:
+            yield store
+    finally:
+        # TODO; remove this once https://github.com/ScottishCovidResponse/data_pipeline_api/issues/12 is done
+        try:
+            (base_data_dir / "access.log").unlink()
+        except FileNotFoundError:
+            pass
 
 
 @pytest.fixture
