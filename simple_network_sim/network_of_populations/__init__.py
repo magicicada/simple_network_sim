@@ -2,7 +2,7 @@ import logging
 import random
 import numpy as np
 import scipy.stats as stats
-from typing import Dict, Tuple, NamedTuple, List, Set
+from typing import Dict, Tuple, NamedTuple, List, Set, Optional
 
 import networkx as nx
 import pandas as pd
@@ -86,7 +86,15 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
-        current = createNextStep(progression, contacts, current, infectionProb)
+        current = createNextStep(
+            progression,
+            contacts,
+            current,
+            infectionProb,
+            network.stochastic,
+            network.random_state
+        )
+
         df = nodesToPandas(time + 1, current)
         logger.debug(
             "Time (%s/%s). Status: %s",
@@ -259,7 +267,7 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :param totalSusceptibles: Total number of susceptible people in all age groups
     :type totalSusceptibles: float
     :param newContacts: The number of new contacts to be distributed across age ranges.
-    :type newContacts: int
+    :type newContacts: float
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
     :param random_state: Random number generator used for the model
@@ -268,6 +276,8 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
     if stochastic:
+        assert isinstance(newContacts, int)
+
         ageProbabilities = np.array(list(ageToSusceptibles.values())) / totalSusceptibles
         allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities, random_state=random_state)
 
@@ -367,7 +377,8 @@ def _computeInfectiousCommutes(weight, fractionGivingInfected, fractionReceiving
     :rtype: A dictionary with the region as key and the number of new infections as the value.
     """
     if stochastic:
-        contacts = stats.binom.rvs(int(weight), fractionReceivingSus, random_state=random_state)
+        # weight can be fractional because of the movement multiplier, round it
+        contacts = stats.binom.rvs(int(round(weight)), fractionReceivingSus, random_state=random_state)
         contacts = stats.binom.rvs(contacts, fractionGivingInfected, random_state=random_state)
         return contacts
     else:
@@ -538,6 +549,10 @@ def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, s
     :rtype: float
     """
     if stochastic:
+        assert isinstance(infectious, int) or infectious.is_integer()
+        assert isinstance(totalInAge, int) or totalInAge.is_integer()
+        assert isinstance(susceptibles, int) or susceptibles.is_integer()
+
         numberOfContacts = stats.poisson.rvs(contacts, size=int(infectious), random_state=random_state)
         numberOfContacts = numberOfContacts[numberOfContacts > 0]  # If 0, the rvs calls fails, but mathematically is 0
         numberOfContacts = stats.hypergeom.rvs(int(totalInAge), int(susceptibles), numberOfContacts, random_state=random_state)
@@ -629,7 +644,7 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
     :param age: Current state
     :type age: str
     :param people: Number of people in current age, state
-    :type people: int
+    :type people: float
     :param outTransitions: Transition probabilities out of the current age, state,
     to next potential ones
     :type outTransitions: dict where keys are next available stages and values
@@ -648,6 +663,8 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
     if stochastic:
         if state == SUSCEPTIBLE_STATE:
             return
+
+        assert isinstance(people, int) or people.is_integer()
 
         outRepartitions = stats.multinomial.rvs(people, list(outTransitions.values()), random_state=random_state)
         outRepartitions = dict(zip(outTransitions.keys(), outRepartitions))
@@ -851,6 +868,8 @@ def createNextStep(
     infectiousContacts: Dict[NodeName, Dict[Age, float]],
     currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
     infectionProb: float,
+    stochastic: bool,
+    random_state: Optional[np.random.Generator]
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """Update the current state of each regions population by allowing infected individuals
     to progress to the next infection stage and infecting susceptible individuals. The state is not
@@ -861,6 +880,8 @@ def createNextStep(
     :param infectiousContacts: The number of contacts per region per age.
     :param currState: The current state for every region.
     :param infectionProb: the expected rate at which contacts will transmit the diseases
+    :param stochastic: Whether to run the model in a stochastic or deterministic mode
+    :param random_state: Random number generator used for the model
     :return: The new state of the regions.
     """
 
@@ -885,21 +906,31 @@ def createNextStep(
     for name, node in infectiousContacts.items():
         for age, infectiousContacts in node.items():
             susceptible = nextStep[name][(age, SUSCEPTIBLE_STATE)]
-            exposed = _calculateExposed(susceptible, infectiousContacts, infectionProb)
+            exposed = _calculateExposed(susceptible, infectiousContacts, infectionProb, stochastic, random_state)
             expose(age, exposed, nextStep[name])
 
     return nextStep
 
 
-def _calculateExposed(susceptible: float, contacts: float, infectionProb: float):
-    """
-    :param susceptible: number (float) of susceptible individuals
-    :param contacts: number (float) of exposed individuals
-    :param infectionProb: probability (float) that a given contact will result in infection
+def _calculateExposed(
+    susceptible: float,
+    contacts: float,
+    infectionProb: float,
+    stochastic: bool,
+    random_state: Optional[np.random.Generator]
+):
+    """From the number of contacts (between infectious and susceptible) people, compute
+    the number of actual infectious contacts. Two modes:
+    1) Deterministic
+    Adjusts the contacts (see explanation below), then multiply by infection probability
+    2) Stochastic
+    Adjusts the contacts (see explanation below), then sample from a binomial distribution
+    with n=adjustedContacts, p=infectionProb.
 
-    When modelling infections in k people from a susceptible population of size n, we sample
+    When using k contacts from a susceptible population of size n, we sample
     these k people WITH replacement, as in several infections can target the same person.
-    This will decrease the exposed number for small values of k, n.
+    This will decrease the exposed number for small values of k, n. This is not sampled
+    stochastically as it seems no such distribution exists.
 
     E[Number of different people chosen when picking k in a population of size n, with replacement]
     = sum_{i=1,...,n} P(person i is chosen at least once)
@@ -908,6 +939,12 @@ def _calculateExposed(susceptible: float, contacts: float, infectionProb: float)
     = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
     = sum_{i=1,...,n} (1 - (1 - P(person i is chosen once))^k)
     = n * (1 - (1 - 1 / n)^k)
+
+    :param susceptible: number (float) of susceptible individuals
+    :param contacts: number (float) of exposed individuals
+    :param infectionProb: probability (float) that a given contact will result in infection
+    :param stochastic: Whether to run the model in a stochastic or deterministic mode
+    :param random_state: Random number generator used for the model
     """
     if susceptible > 1.:
         probaNeverChosen = (1 - (1 / susceptible)) ** contacts
@@ -920,7 +957,13 @@ def _calculateExposed(susceptible: float, contacts: float, infectionProb: float)
         # exposed < susceptible is always true.
         adjustedContacts = contacts
 
-    return min(adjustedContacts * infectionProb, susceptible)
+    if stochastic:
+        # AdjustedContacts can be non integer because of the adjustment, round it
+        infectiousContacts = stats.binom.rvs(int(round(adjustedContacts)), infectionProb, random_state=random_state)
+    else:
+        infectiousContacts = adjustedContacts * infectionProb
+
+    return min(infectiousContacts, susceptible)
 
 
 def getSusceptibles(age, currentInternalStateDict):
