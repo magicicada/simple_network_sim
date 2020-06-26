@@ -108,7 +108,6 @@ def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     Pairs of nodes are listed in the file by source, destination, weight and adjustment.
 
     :param commutes: Weighted edge list.
-    :type commutes: pandas DataFrame.
     :return: `networkx.classes.digraph.DiGraph` object representing the graph.
     """
     G = nx.convert_matrix.from_pandas_edgelist(commutes, edge_attr=True, create_using=nx.DiGraph)
