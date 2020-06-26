@@ -12,27 +12,19 @@ from tests.utils import create_baseline
 
 def test_run_seeded(base_data_dir):
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
-            sampleUseOfModel.main(
-                ["-c", str(base_data_dir / "config.yaml"), "seeded", str(tmpdir / "test")]
-            )
+        sampleUseOfModel.main(["-c", str(base_data_dir / "config.yaml"), "seeded"])
 
-            files = glob(str(tmpdir / "test*"))
-            assert len(files) == 1
-            assert len([f for f in files if f.endswith(".pdf")]) == 1
+        test_data = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
+        baseline = create_baseline(test_data)
 
-            test_data = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
-            baseline = create_baseline(test_data)
+        test_df = pd.read_csv(test_data)
+        baseline_df = pd.read_csv(baseline)
 
-            test_df = pd.read_csv(test_data)
-            baseline_df = pd.read_csv(baseline)
-
-            pd.testing.assert_frame_equal(
-                test_df.set_index(["time", "node", "age", "state"]),
-                baseline_df.set_index(["time", "node", "age", "state"]),
-                check_like=True,
-            )
+        pd.testing.assert_frame_equal(
+            test_df.set_index(["time", "node", "age", "state"]),
+            baseline_df.set_index(["time", "node", "age", "state"]),
+            check_like=True,
+        )
     finally:
         # TODO; remove this once https://github.com/ScottishCovidResponse/data_pipeline_api/issues/12 is done
         (base_data_dir / "access.log").unlink()

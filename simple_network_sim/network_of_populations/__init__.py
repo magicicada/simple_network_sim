@@ -1,12 +1,9 @@
 import logging
-import math
 import random
 from typing import Dict, Tuple, NamedTuple, List, Set
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
-from matplotlib.colors import ListedColormap
 
 from simple_network_sim import loaders
 from simple_network_sim.common import Lazy
@@ -31,40 +28,6 @@ class NetworkOfPopulation(NamedTuple):
     movementMultipliers: Dict[Time, loaders.Multiplier]
     infectiousStates: List[Compartment]
     infectionProb: Dict[Time, float]
-
-
-# NotCurrentlyInUse
-# this takes a dictionary of states at times at nodes, and returns a string
-# reporting the number of people in each state at each node at each time.
-# aggregates by age 
-def basicReportingFunction(dictOfStates):
-    reportString = ""
-    dictOfStringsByNodeAndState = {}
-#     Assumption: all nodes exist at time 0
-    for node in dictOfStates[0]:
-        dictOfStringsByNodeAndState[node] = {}
-        for (age, state) in dictOfStates[0][node]:
-            dictOfStringsByNodeAndState[node][state] = []
-    for time in dictOfStates:
-        for node in dictOfStates[time]:
-            numByState = {}
-            for (age, state) in dictOfStates[time][node]:
-                if state not in numByState:
-                    numByState[state] = 0
-                numByState[state] = numByState[state] + dictOfStates[time][node][(age, state)]
-            for state in numByState:
-                dictOfStringsByNodeAndState[node][state].append(numByState[state])
-           
-    logger.debug(dictOfStringsByNodeAndState)
-    
-    for node in dictOfStringsByNodeAndState:
-        for state in dictOfStringsByNodeAndState[node]:
-            localList = dictOfStringsByNodeAndState[node][state]
-            localString = ""
-            for elem in localList:
-                localString = localString + "," + str(elem)
-            reportString = reportString+"\n" + str(node) + "," + str(state) + localString
-    return reportString
 
 
 # CurrentlyInUse
@@ -547,77 +510,6 @@ def exposeRegions(infections, states):
             expose(age, value, states[nodeName])
 
 
-def plotStates(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
-    """
-    Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
-    graphs are all Number of People x Time
-
-    :param df: pandas DataFrame with node, time, state and total columns
-    :param nodes: creates one plot per nodes listed (None means all nodes)
-    :param df: pandas DataFrame with nodes, time, state and total columns
-    :type df: pandas DataFrame
-    :param nodes: creates one plot per node listed (None means all nodes)
-    :type nodes: list (of region names).
-    :param states: plots one curve per state listed (None means all states)
-    :type states: list (of disease states).
-    :param ncol: number of columns (the number of rows will be calculated to fit all graphs)
-    :type ncol: int
-    :param sharey: set to true if all plots should have the same y-axis
-    :type sharey: bool
-    :param figsize: select the size of each individual plot
-    :type figsize:
-    :param cmap: color map to use
-    :type cmap:
-    :return: returns a matplotlib figure
-    :rtype: matplotlib figure
-    """
-    if nodes is None:
-        nodes = df.node.unique().tolist()
-    if states is None:
-        states = df.state.unique().tolist()
-    if cmap is None:
-        cmap = ListedColormap(["#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#E69F00"])
-    nrow = math.ceil(len(nodes) / ncol)
-    if figsize is None:
-        if nrow >= 3:
-            figsize = (20, 20)
-        elif nrow == 2:
-            figsize = (20, 10)
-        else:
-            figsize = (20, 5)
-
-    if not nodes:
-        raise ValueError("nodes cannot be an empty list")
-    if not states:
-        raise ValueError("states cannot be an empty list")
-
-    # pre filter by states
-    df = df[df.state.isin(states)]
-
-    fig, axes = plt.subplots(nrow, ncol, squeeze=False, constrained_layout=True, sharey=sharey, figsize=figsize)
-
-    count = 0
-    ax = None
-    for i in range(nrow):
-        for j in range(ncol):
-            if count < len(nodes):
-                node = nodes[count]
-                count += 1
-                grouped = df[df.node == node].groupby(["time", "state"]).sum()
-                indexed = grouped.reset_index().pivot(index="time", columns="state", values="total")
-
-                ax = axes[i, j]
-                indexed.plot(ax=ax, legend=False, title=node, cmap=cmap)
-                ax.set_ylabel("Number of People")
-                ax.set_xlabel("Time")
-
-    assert ax is not None, "ax was never assigned"
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper right")
-
-    return fig
-
-
 def getInfectious(age, currentInternalStateDict, infectiousStates):
     """Calculate the total number of individuals in infectious states in an age range.
 
@@ -858,12 +750,3 @@ def randomlyInfectRegions(network, regions, age_groups, infected):
             infections[regionID][age] = infected
 
     return infections
-
-
-# NotCurrentlyInUse
-def nodeUpdate(graph, dictOfStates, time, headString):
-    print('\n\n===== BEGIN update 1 at time ' + str(time) + '=========' + headString)
-    for node in list(graph.nodes()):
-        print('Node ' + str(node) + " E-A-I at mature " + str(dictOfStates[time][node][('m', 'E')]) + " " +
-              str(dictOfStates[time][node][('m', 'A')]) + " " + str(dictOfStates[time][node][('m', 'I')]))
-    print('===== END update 1 at time ' + str(time) + '=========')

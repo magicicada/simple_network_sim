@@ -4,10 +4,8 @@ import random
 import networkx as nx
 import pandas as pd
 import pytest
-from matplotlib.testing.compare import compare_images
 
 from simple_network_sim import network_of_populations as np
-from tests.utils import compare_mpl_plots
 
 
 def _count_people_per_region(state):
@@ -930,72 +928,6 @@ def test_getWeight_no_delta_adjustment():
     graph.add_edge("r1", "r2", weight=100.0)
 
     assert np.getWeight(graph, "r1", "r2", 0.5) == 50.0
-
-
-def test_plotStates_three_rows():
-    simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb5", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb6", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb7", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
-        {"time": 1, "node": "hb5", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb6", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb7", "state": "S", "total": 10.0},
-    ])
-    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
-
-
-def test_plotStates_two_rows():
-    simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
-    ])
-    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
-
-
-def test_plotStates_single_row():
-    simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
-    ])
-    compare_mpl_plots(np.plotStates(pd.DataFrame(simple)))
-
-
-def test_plotStates_empty_node():
-    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
-    with pytest.raises(ValueError):
-        np.plotStates(pd.DataFrame(simple), nodes=[])
-
-
-def test_plotStates_empty_states():
-    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
-    with pytest.raises(ValueError):
-        np.plotStates(pd.DataFrame(simple), states=[])
-
-
-def test_plotStates_empty_missing_column():
-    simple = pd.DataFrame([{"node": "hb1", "state": "S", "total": 15.0}])
-    with pytest.raises(ValueError):
-        np.plotStates(pd.DataFrame(simple), states=[])
 
 
 @pytest.mark.parametrize("regions", [2, 4])

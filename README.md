@@ -99,26 +99,25 @@ resulting file before creating a PR. The second time you run your test in this s
 
 ## Usage
 
+### Running the model
+
 To run a example case, enter the following at the command prompt:
 
 ```{shell}
-python -m simple_network_sim.sampleUseOfModel random afilename.pdf
+python -m simple_network_sim.sampleUseOfModel seeded
 ```
 
-that will pick random nodes to infect at each iteration. If you prefer to pass a seed file, you can do the following:
-
-```{shell}
-python -m simple_network_sim.sampleUseOfModel seeded sample_input_files/initial_infection.csv afilename.pdf
-```
+that will use the files in `data_pipeline_inputs` and will generate an output
+inside that same directory. An `access-<hash>.yaml` file will be generated with
+all the files used.
 
 Use the help command to see a description of all the parameters
 
 ```{shell}
-pyhon -m simple_network_sim.sampleUseOfModel -h
-usage: sampleUseOfModel.py [-h]
-                           [--compartment-transition COMPARTMENT_TRANSITION]
-                           [--population POPULATION] [--commutes COMMUTES]
-                           [--mixing-matrix MIXING_MATRIX] [--time TIME]
+python -m simple_network_sim.sampleUseOfModel -h
+usage: sampleUseOfModel.py [-h] [--use-movement-multipliers] [--time TIME]
+                           [-l LOGFILE] [-q] [--debug]
+                           [-c DATA_PIPELINE_CONFIG]
                            {random,seeded} ...
 
 Uses the deterministic network of populations model to simulation the disease
@@ -131,48 +130,36 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --compartment-transition COMPARTMENT_TRANSITION
-                        Epidemiological rate parameters for movement within
-                        the compartmental model. (default: sample_input_files/compartmentTransitionByAge.csv)
-  --population POPULATION
-                        This file contains age-and-sex-stratified population
-                        numbers by geographic unit. (default: sample_input_files/sample_hb2019_pop_est_2018_row_based.csv)
-  --commutes COMMUTES   This contains origin-destination flow data during
-                        peacetime for health boards (default: sample_input_files/sample_scotHB_commute_moves_wu01.csv)
-  --mixing-matrix MIXING_MATRIX
-                        This is a sample square matrix of mixing - each column
-                        and row header is an age category. (default: sample_input_files/simplified_age_infection_matrix.csv)
-  --movement-multipliers MOVEMENT_MULTIPLIERS
-                        By using this parameter you can adjust dampening or
-                        heightening people movement through time (default: None)
+  --use-movement-multipliers
+                        By enabling this parameter you can adjust dampening or
+                        heightening people movement through time (default:
+                        False)
   --time TIME           The number of time steps to take for each simulation
                         (default: 200)
+  -l LOGFILE, --logfile LOGFILE
+                        Path for logging output (default: None)
+  -q, --quiet           Prints only warnings to stderr (default: False)
+  --debug               Provide debug output to STDERR (default: False)
+  -c DATA_PIPELINE_CONFIG, --data-pipeline-config DATA_PIPELINE_CONFIG
+                        Base directory with the input paramters (default:
+                        config.yaml)
 ```
 
 Each command has its own set of specific parameters
 
 ```{shell}
 python -m simple_network_sim.sampleUseOfModel seeded -h
-usage: sampleUseOfModel.py seeded [-h] [--trials TRIALS] input output
-
-positional arguments:
-  input            File name with the seed region seeds
-  output           Name of the PDF file that will be created with the
-                   visualisation
+usage: sampleUseOfModel.py seeded [-h] [--trials TRIALS]
 
 optional arguments:
   -h, --help       show this help message and exit
   --trials TRIALS  Number of experiments to run (default: 1)
 ```
 ```{shell}
+python -m simple_network_sim.sampleUseOfModel random -h
 usage: sampleUseOfModel.py random [-h] [--regions REGIONS]
                                   [--age-groups AGE_GROUPS [AGE_GROUPS ...]]
                                   [--trials TRIALS] [--infected INFECTED]
-                                  output
-
-positional arguments:
-  output                Name of the PDF file that will be created with the
-                        visualisation
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -185,6 +172,45 @@ optional arguments:
 ```
  
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/README.md).
+
+### Visualisation
+
+You can visualise a previous run with the visualisation command. Eg.:
+
+```shell
+python -m simple_network_sim.network_of_populations.visualisation access-381ab6b4169c0357261103a7d52fc93b495e9af5.yaml
+```
+
+These are the parameters you can pass the visualisation command:
+
+```shell
+python -m simple_network_sim.network_of_populations.visualisation  --help
+usage: visualisation.py [-h] [--nodes nodes,[nodes,...]]
+                        [--states states,[states,...]] [--share-y]
+                        [--data-product DATA_PRODUCT]
+                        access_log_path
+
+Reads
+
+positional arguments:
+  access_log_path       Path to a access log file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --nodes nodes,[nodes,...]
+                        Comma-separated list of nodes to plot. All nodes will
+                        be plotted if not provided. (default: None)
+  --states states,[states,...]
+                        Comma-separated list of states to plot. All states
+                        will be plotted if not provided. (default: None)
+  --share-y             Toggle this flag if you want all y-axis to be shared
+                        (default: False)
+  --data-product DATA_PRODUCT
+                        Use this to select which output file to read, in case
+                        more than one is available (default:
+                        output/simple_network_sim/outbreak-timeseries)
+```
+
 
 ## Continuous integration
 
