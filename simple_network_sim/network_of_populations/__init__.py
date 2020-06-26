@@ -31,6 +31,7 @@ class NetworkOfPopulation(NamedTuple):
     infectiousStates: List[Compartment]
     infectionProb: Dict[Time, float]
     stochastic: bool
+    random_state: np.random.Generator
 
 
 # CurrentlyInUse
@@ -60,21 +61,28 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
         multipliers = network.movementMultipliers.get(time + 1, multipliers)
         infectionProb = network.infectionProb.get(time + 1, infectionProb)
 
-        progression = getInternalProgressionAllNodes(current, network.progression, network.stochastic)
+        progression = getInternalProgressionAllNodes(
+            current,
+            network.progression,
+            network.stochastic,
+            network.random_state
+        )
 
         internalContacts = getInternalInfectiousContacts(
             current,
             network.mixingMatrix,
             multipliers.contact,
             network.infectiousStates,
-            network.stochastic
+            network.stochastic,
+            network.random_state
         )
         externalContacts = getExternalInfectiousContacts(
             network.graph,
             current,
             multipliers.movement,
             network.infectiousStates,
-            network.stochastic
+            network.stochastic,
+            network.random_state
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
@@ -199,7 +207,7 @@ def getTotalSuscept(nodeState):
 
 
 # CurrentlyInUse
-def distributeContactsOverAges(nodeState, newContacts, stochastic):
+def distributeContactsOverAges(nodeState, newContacts, stochastic, random_state):
     """Distribute the number of new contacts across a region. This function distributes
     newContacts among the susceptibles according to the relative size of each age group. Note:
     fractional people will come out of this.
@@ -211,6 +219,8 @@ def distributeContactsOverAges(nodeState, newContacts, stochastic):
     :type newContacts: int
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of new infections in each age group.
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
@@ -226,14 +236,14 @@ def distributeContactsOverAges(nodeState, newContacts, stochastic):
         newContacts = totalSus
 
     if totalSus > 0:
-        newInfectionsByAge = _distributeContactsOverAges(ageToSus, totalSus, newContacts, stochastic)
+        newInfectionsByAge = _distributeContactsOverAges(ageToSus, totalSus, newContacts, stochastic, random_state)
     else:
         newInfectionsByAge = {age: 0. for age in ageToSus}
 
     return newInfectionsByAge
 
 
-def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContacts, stochastic):
+def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContacts, stochastic, random_state):
     """Distribute the number of new contacts across a region. This function distributes
     newContacts among the susceptibles according to the relative size of each age group.
     Two versions are possible:
@@ -252,19 +262,28 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :type newContacts: int
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of new infections in each age group.
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
     if stochastic:
         ageProbabilities = np.array(list(ageToSusceptibles.values())) / totalSusceptibles
-        allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities)
+        allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities, random_state=random_state)
 
         return dict(zip(ageToSusceptibles.keys(), allocationsByAge))
     else:
         return {age: (sus / totalSusceptibles) * newContacts for age, sus in ageToSusceptibles.items()}
 
 
-def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier, infectiousStates, stochastic):
+def getIncomingInfectiousContactsByNode(
+    graph,
+    currentState,
+    movementMultiplier,
+    infectiousStates,
+    stochastic,
+    random_state
+):
     """Determine the number of new infections at each node of a graph based on incoming people
     from neighbouring nodes.
 
@@ -280,6 +299,8 @@ def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier,
     :type infectiousStates: list of strings
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: the number of new infections in each region.
     :rtype: A dictionary with the region as key and the number of new infections as the value.
     """
@@ -311,13 +332,14 @@ def getIncomingInfectiousContactsByNode(graph, currentState, movementMultiplier,
                         weight,
                         fractionGivingInfected,
                         fractionReceivingSus,
-                        stochastic
+                        stochastic,
+                        random_state
                     )
 
     return contactsByNode
 
 
-def _computeInfectiousCommutes(weight, fractionGivingInfected, fractionReceivingSus, stochastic):
+def _computeInfectiousCommutes(weight, fractionGivingInfected, fractionReceivingSus, stochastic, random_state):
     """Transforms the weights (commutes) into potentially infectious commutes, that
     originate from infectious people, and target susceptible people. Two modes:
     1) Deterministic
@@ -339,11 +361,15 @@ def _computeInfectiousCommutes(weight, fractionGivingInfected, fractionReceiving
     :type fractionReceivingSus: float
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: the number of new infections in each region.
     :rtype: A dictionary with the region as key and the number of new infections as the value.
     """
     if stochastic:
-        return stats.binom.rvs(stats.binom.rvs(int(weight), fractionReceivingSus), fractionGivingInfected)
+        contacts = stats.binom.rvs(int(weight), fractionReceivingSus, random_state=random_state)
+        contacts = stats.binom.rvs(contacts, fractionGivingInfected, random_state=random_state)
+        return contacts
     else:
         return weight * fractionGivingInfected * fractionReceivingSus
 
@@ -386,7 +412,7 @@ def getWeight(graph, orig, dest, multiplier):
 
 
 # CurrentlyInUse
-def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousStates, stochastic):
+def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousStates, stochastic, random_state):
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
     node. The infections are distributed to each age group according to the number of susceptible
@@ -406,6 +432,8 @@ def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousSt
     :type infectiousStates: list of strings
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of new infections in each region stratified by age.
     :rtype: A dictionary with the region as a key and a dictionary of {age: number of new
     infections} as values.
@@ -417,11 +445,12 @@ def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousSt
         nodes,
         movementMultiplier,
         infectiousStates,
-        stochastic
+        stochastic,
+        random_state
     )
 
     for name, vertex in incomingContacts.items():
-        infectionsByNode[name] = distributeContactsOverAges(nodes[name], vertex, stochastic)
+        infectionsByNode[name] = distributeContactsOverAges(nodes[name], vertex, stochastic, random_state)
 
     return infectionsByNode
 
@@ -432,7 +461,8 @@ def getInternalInfectiousContactsInNode(
     mixingMatrix,
     contactsMultiplier,
     infectiousStates,
-    stochastic
+    stochastic,
+    random_state
 ):
     """Calculate the new infections due to mixing within the region and stratify them by age.
 
@@ -449,6 +479,8 @@ def getInternalInfectiousContactsInNode(
     :type infectiousStates: list of strings
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of new infections stratified by age.
     :rtype: A dictionary of {age: number of new infections}
     """
@@ -468,13 +500,14 @@ def getInternalInfectiousContactsInNode(
                     infectious,
                     susceptibles,
                     totalInAge,
-                    stochastic
+                    stochastic,
+                    random_state
                 )
 
     return infectiousContacts
 
 
-def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, stochastic):
+def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, stochastic, random_state):
     """From raw contacts (between any two people in different age groups), filters
     only those contacts that originated from an infectious person and received
     by a susceptible person. The contact did not yet lead to a new infection,
@@ -499,19 +532,22 @@ def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, s
     :type totalInAge: float
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of potentially infectious contacts.
     :rtype: float
     """
     if stochastic:
-        numberOfContacts = stats.poisson.rvs(contacts, size=int(infectious))
+        numberOfContacts = stats.poisson.rvs(contacts, size=int(infectious), random_state=random_state)
         numberOfContacts = numberOfContacts[numberOfContacts > 0]  # If 0, the rvs calls fails, but mathematically is 0
-        return np.sum(stats.hypergeom.rvs(int(totalInAge), int(susceptibles), numberOfContacts))
+        numberOfContacts = stats.hypergeom.rvs(int(totalInAge), int(susceptibles), numberOfContacts, random_state=random_state)
+        return np.sum(numberOfContacts)
     else:
         return infectious * contacts * (susceptibles / totalInAge)
 
 
 # CurrentlyInUse        
-def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infectiousStates, stochastic):
+def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infectiousStates, stochastic, random_state):
     """Calculate the new infections and stratify them by region and age.
 
     :param nodes: The disease status in each region stratified by age.
@@ -528,6 +564,8 @@ def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infec
     :type infectiousStates: list of strings
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of exposed in each region stratified by age.
     :rtype: A dictionary containing the region as a key and a dictionary of {age: number of
     exposed} as a value.
@@ -541,14 +579,15 @@ def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infec
             mixingMatrix,
             contactsMultiplier,
             infectiousStates,
-            stochastic
+            stochastic,
+            random_state
         )
 
     return contacts
 
 
 # CurrentlyInUse
-def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs, stochastic):
+def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs, stochastic, random_state):
     """Returns the status of exposed individuals, moving them into the next disease state with a
     probability defined in the given progression matrix.
 
@@ -561,6 +600,8 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
     {age : {disease state 1: {disease state 2: probability of progressing from state 1 to state 2}}}
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: the numbers in each exposed state stratified by age
     :rtype: A dictionary of { (age: state) : number in this state}. Note this only contains
     exposed states.
@@ -569,12 +610,12 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
 
     for (age, state), people in currentInternalStateDict.items():
         outTransitions = diseaseProgressionProbs[age].get(state, {})
-        _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, stochastic)
+        _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, stochastic, random_state)
 
     return newStates
 
 
-def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, stochastic):
+def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, stochastic, random_state):
     """Returns the status of exposed individuals, moving them into the next disease state with a
     probability defined in the given progression matrix. Two modes available:
     1) Deterministic mode
@@ -596,6 +637,10 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
     :param newStates: Distribution of people in next states
     :type newStates: dict where keys are disease states and values are number of
     people in each state.
+    :param stochastic: Use the model in stochastic mode?
+    :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: the numbers in each exposed state stratified by age
     :rtype: A dictionary of { (age: state) : number in this state}. Note this only contains
     exposed states.
@@ -604,7 +649,7 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
         if state == SUSCEPTIBLE_STATE:
             return
 
-        outRepartitions = stats.multinomial.rvs(people, list(outTransitions.values()))
+        outRepartitions = stats.multinomial.rvs(people, list(outTransitions.values()), random_state=random_state)
         outRepartitions = dict(zip(outTransitions.keys(), outRepartitions))
 
         for nextState, nextStateCases in outRepartitions.items():
@@ -617,7 +662,7 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
 
 
 # CurrentlyInUse
-def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs, stochastic):
+def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs, stochastic, random_state):
     """Given the size of the population in each exposed state, calculate the numbers that progress
     the next disease state based on the progression matrix.
 
@@ -630,6 +675,8 @@ def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs, stochast
     {age : {disease state 1: {disease state 2: probability of progressing from state 1 to state 2}}}
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :type stochastic: bool
+    :param random_state: Random number generator used for the model
+    :type random_state: np.random.Generator, None
     :return: The number of individuals that have progressed into each exposed stage, stratified by
     region and age.
     :rtype: A dictionary with region as keys and a dictionary of { (age: state) : number in this
@@ -638,7 +685,13 @@ def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs, stochast
     """
     progression = {}
     for regionID, currRegion in currStates.items():
-        progression[regionID] = internalStateDiseaseUpdate(currRegion, diseaseProgressionProbs, stochastic)
+        progression[regionID] = internalStateDiseaseUpdate(
+            currRegion,
+            diseaseProgressionProbs,
+            stochastic,
+            random_state
+        )
+
     return progression
 
 
@@ -710,6 +763,8 @@ def createNetworkOfPopulation(
     infectious_states: pd.DataFrame,
     infection_prob: pd.DataFrame,
     movement_multipliers_table: pd.DataFrame = None,
+    stochastic: bool = False,
+    random_seed: int = 123
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -721,6 +776,8 @@ def createNetworkOfPopulation(
     which case no multipliers are applied to the movements.
     :param infectious_states: States that are considered infectious
     :param infection_prob: Probability that a given contact will result in an infection
+    :param stochastic: Use stochastic mode for the model
+    :param random_seed: Random number generator seed used for stochastic mode
     :return: The constructed network
     """
     infection_prob = loaders.readInfectionProbability(infection_prob)
@@ -784,7 +841,8 @@ def createNetworkOfPopulation(
         movementMultipliers=movementMultipliers,
         infectiousStates=infectious_states,
         infectionProb=infection_prob,
-        stochastic=False
+        stochastic=stochastic,
+        random_state=np.random.default_rng(random_seed)
     )
 
 

@@ -172,7 +172,7 @@ def test_internalStateDiseaseUpdate_one_transition():
     current_state = {("o", "E"): 100.0, ("o", "A"): 0.0}
     probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
 
-    new_state = np.internalStateDiseaseUpdate(current_state, probs, stochastic=False)
+    new_state = np.internalStateDiseaseUpdate(current_state, probs, False, None)
 
     assert new_state == {("o", "E"): 60.0, ("o", "A"): 40.0}
 
@@ -181,7 +181,7 @@ def test_internalStateDiseaseUpdate_no_transitions():
     current_state = {("o", "E"): 100.0, ("o", "A"): 0.0}
     probs = {"o": {"E": {"E": 1.0}, "A": {"A": 1.0}}}
 
-    new_state = np.internalStateDiseaseUpdate(current_state, probs, stochastic=False)
+    new_state = np.internalStateDiseaseUpdate(current_state, probs, False, None)
 
     assert new_state == {("o", "E"): 100.0, ("o", "A"): 0.0}
 
@@ -190,7 +190,7 @@ def test_doInternalProgressionAllNodes_e_to_a_progression():
     states = {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}
     probs = {"o": {"E": {"A": 0.4, "E": 0.6}, "A": {"A": 1.0}}}
 
-    progression = np.getInternalProgressionAllNodes(states, probs, stochastic=False)
+    progression = np.getInternalProgressionAllNodes(states, probs, False, None)
 
     assert progression == {"region1": {("o", "E"): 60.0, ("o", "A"): 40.0}}
     assert states == {"region1": {("o", "E"): 100.0, ("o", "A"): 0.0}}  # unchanged
@@ -205,7 +205,7 @@ def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic
     current_state = {("m", "S"): susceptible, ("m", "A"): asymptomatic, ("m", "I"): infectious}
     age_matrix = {"m": {"m": contact_rate}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, dampening, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, dampening, ["I", "A"], False, None)
 
     probability_of_susceptible = susceptible / (susceptible + infectious + asymptomatic)
     contacts = contact_rate * (asymptomatic + infectious)
@@ -216,7 +216,7 @@ def test_doInternalInfectionProcess_empty_age_group():
     current_state = {("m", "S"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == 0.0
 
@@ -225,7 +225,7 @@ def test_doInternalInfectionProcess_no_contact():
     current_state = {("m", "S"): 500.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.0}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == 0.0
 
@@ -234,7 +234,7 @@ def test_doInternalInfectionProcess_no_susceptibles():
     current_state = {("m", "S"): 0.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == 0.0
 
@@ -243,7 +243,7 @@ def test_doInternalInfectionProcess_no_infectious():
     current_state = {("m", "S"): 300.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == 0.0
 
@@ -260,7 +260,7 @@ def test_doInternalInfectionProcess_only_A_and_I_count_as_infectious():
     }
     age_matrix = {"m": {"m": 0.2}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == 0.0
 
@@ -276,7 +276,7 @@ def test_doInternalInfectionProcess_between_ages():
     }
     age_matrix = {"m": {"m": 0.2, "o": 0.5}, "o": {"o": 0.3, "m": 0.5}}
 
-    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected["m"] == (20.0 / 470.0) * ((450.0 * 0.2) + (300.0 * 0.5))
     assert new_infected["o"] == (15.0 / 315.0) * ((300.0 * 0.3) + (450.0 * 0.5))
@@ -286,7 +286,7 @@ def test_doInternalInfectionProcessAllNodes_single_compartment():
     nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
     age_matrix = {"m": {"m": 0.2}}
 
-    infections = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False)
+    infections = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert infections == {"region1": {"m": (300.0 / 400.0) * (0.2 * 100.0)}}
     assert nodes == {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}  # unchanged
@@ -296,7 +296,7 @@ def test_doInternalInfectionProcessAllNodes_large_num_infected_ignored():
     nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
     age_matrix = {"m": {"m": 5.0}}
 
-    new_infected = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False)
+    new_infected = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False, None)
 
     assert new_infected == {"region1": {"m": (300.0 / 400.0) * (100.0 * 5.0)}}
 
@@ -312,7 +312,7 @@ def test_doIncomingInfectionsByNode_no_susceptibles():
         "r2": {("m", "S"): 0.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False, None)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -327,7 +327,7 @@ def test_doIncomingInfectionsByNode_no_connections():
         "r2": {("m", "S"): 100.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 5.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False, None)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.0}
 
@@ -343,7 +343,7 @@ def test_doIncomingInfectionsByNode_no_weight():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False, None)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 1.0 * 0.1 * 0.8}
 
@@ -359,7 +359,7 @@ def test_doIncomingInfectionsByNode_weight_given():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 1.0, ["I", "A"], False, None)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 0.5 * 0.1 * 0.8}
 
@@ -375,7 +375,7 @@ def test_doIncomingInfectionsByNode_weight_delta_adjustment():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.5, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.5, ["I", "A"], False, None)
 
     weight = 10 - (5 * 0.75)
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": weight * 0.1 * 0.8}
@@ -392,7 +392,7 @@ def test_doIncomingInfectionsByNode_weight_multiplier():
         "r2": {("m", "S"): 80.0, ("m", "E"): 0.0, ("m", "A"): 10.0, ("m", "I"): 10.0},
     }
 
-    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.3, ["I", "A"], False)
+    totalIncomingInfectionsByNode = np.getIncomingInfectiousContactsByNode(graph, state, 0.3, ["I", "A"], False, None)
 
     assert totalIncomingInfectionsByNode == {"r1": 0.0, "r2": 10 * 0.3 * 0.1 * 0.8}
 
@@ -409,7 +409,7 @@ def test_doBetweenInfectionAgeStructured():
     }
     original_states = copy.deepcopy(nodes)
 
-    num_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"], stochastic=False)
+    num_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"], False, None)
 
     assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 0.5 * 0.1 * 0.8}}
     assert nodes == original_states
@@ -427,7 +427,7 @@ def test_doBetweenInfectionAgeStructured_multiplier():
     }
     original_states = copy.deepcopy(nodes)
 
-    num_infections = np.getExternalInfectiousContacts(graph, nodes, 0.3, ["I", "A"], stochastic=False)
+    num_infections = np.getExternalInfectiousContacts(graph, nodes, 0.3, ["I", "A"], False, None)
 
     assert num_infections == {"r1": {"m": 0.0}, "r2": {"m": 15 * 0.3 * 0.1 * 0.8}}
     assert nodes == original_states
@@ -445,7 +445,7 @@ def test_doBetweenInfectionAgeStructured_delta_adjustment():
     }
     original_states = copy.deepcopy(states)
 
-    num_infections = np.getExternalInfectiousContacts(graph, states, 0.5, ["I", "A"], stochastic=False)
+    num_infections = np.getExternalInfectiousContacts(graph, states, 0.5, ["I", "A"], False, None)
 
     delta = 15 - (15 * 0.5)
     weight = 15 - (delta * 0.3)
@@ -466,7 +466,7 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
     }
     original_states = copy.deepcopy(nodes)
 
-    new_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"], stochastic=False)
+    new_infections = np.getExternalInfectiousContacts(graph, nodes, 1.0, ["I", "A"], False, None)
 
     assert new_infections == {"r1": {"m": 0.0}, "r2": {"m": 30.0}}
     assert nodes == original_states
@@ -475,7 +475,7 @@ def test_doBetweenInfectionAgeStructured_caps_number_of_infections():
 def test_distributeInfections_cap_infections():
     state = {("m", "S"): 20.0}
 
-    infections = np.distributeContactsOverAges(state, 100, stochastic=False)
+    infections = np.distributeContactsOverAges(state, 100, False, None)
 
     assert infections == {"m": 20.0}
 
@@ -483,7 +483,7 @@ def test_distributeInfections_cap_infections():
 def test_distributeInfections_single_age_always_gets_full_infections():
     state = {("m", "S"): 20.0}
 
-    infections = np.distributeContactsOverAges(state, 10, stochastic=False)
+    infections = np.distributeContactsOverAges(state, 10, False, None)
 
     assert infections == {"m": 10.0}
 
@@ -491,7 +491,7 @@ def test_distributeInfections_single_age_always_gets_full_infections():
 def test_distributeInfections_infect_proportional_to_susceptibles_in_age_group():
     state = {("m", "S"): 20.0, ("o", "S"): 30.0, ("y", "S"): 40.0}
 
-    infections = np.distributeContactsOverAges(state, 60, stochastic=False)
+    infections = np.distributeContactsOverAges(state, 60, False, None)
 
     assert infections == {"m": (20.0 / 90.0) * 60, "o": (30.0 / 90.0) * 60, "y": (40.0 / 90.0) * 60}
 

@@ -77,9 +77,8 @@ def runSimulation(
     if trials <= 1:
         # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
         logger.info("Running simulation (1/1)")
-        disposableNetwork = copy.deepcopy(network)
-        ss.exposeRegions(initialInfections[0], disposableNetwork.initialState)
-        return ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
+        ss.exposeRegions(initialInfections[0], network.initialState)
+        return ss.basicSimulationInternalAgeStructure(network, max_time)
     else:
         aggregated = None
 
@@ -216,7 +215,7 @@ def build_args(argv):
         "-c",
         "--data-pipeline-config",
         default="config.yaml",
-        help="Base directory with the input paramters",
+        help="Base directory with the input parameters",
     )
 
     sp = parser.add_subparsers(dest="cmd", required=True)
