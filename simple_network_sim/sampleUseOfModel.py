@@ -103,7 +103,6 @@ def runSimulation(
         return averaged
 
 
-
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
     """Configure package-level logger instance.
     
@@ -216,7 +215,7 @@ def build_args(argv):
         "-c",
         "--data-pipeline-config",
         default="config.yaml",
-        help="Base directory with the input paramters",
+        help="Base directory with the input parameters",
     )
 
     sp = parser.add_subparsers(dest="cmd", required=True)

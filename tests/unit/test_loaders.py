@@ -1,6 +1,4 @@
-import io
 import json
-import tempfile
 
 import networkx as nx
 import pandas as pd
@@ -14,28 +12,28 @@ def test_readCompartmentRatesByAge(data_api):
 
     assert result == {
         "70+": {
-            "E": {"E": pytest.approx(0.573)},
-            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
-            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
-            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
-            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
-            "H": {"I": pytest.approx(0.0495), "H": pytest.approx(0.9)},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
         "[17,70)": {
-            "E": {"E": pytest.approx(0.573)},
-            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
-            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
-            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
-            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
-            "H": {"H": pytest.approx(0.9), "I": pytest.approx(0.0495)},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
         "[0,17)": {
-            "E": {"E": pytest.approx(0.573)},
-            "A": {"E": pytest.approx(0.427), "A": pytest.approx(0.803)},
-            "I": {"A": pytest.approx(0.0197), "I": pytest.approx(0.67)},
-            "R": {"A": pytest.approx(0.1773), "I": pytest.approx(0.264), "H": pytest.approx(0.058), "R": pytest.approx(1.0)},
-            "D": {"I": pytest.approx(0.0165), "H": pytest.approx(0.042), "D": pytest.approx(1.0)},
-            "H": {"I": pytest.approx(0.0495), "H": pytest.approx(0.9)},
+            "E": {"E": pytest.approx(0.573), "A": pytest.approx(0.427)},
+            "A": {"A": pytest.approx(0.803), "I": pytest.approx(0.0197), "R": pytest.approx(0.1773)},
+            "I": {"I": pytest.approx(0.67), "D": pytest.approx(0.0165), "H": pytest.approx(0.0495), "R": pytest.approx(0.264)},
+            "H": {"H": pytest.approx(0.9), "D": pytest.approx(0.042), "R": pytest.approx(0.058)},
+            "R": {"R": pytest.approx(1.0)},
+            "D": {"D": pytest.approx(1.0)},
         },
     }
 
