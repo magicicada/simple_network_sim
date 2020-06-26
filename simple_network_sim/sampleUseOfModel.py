@@ -77,8 +77,9 @@ def runSimulation(
     if trials <= 1:
         # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
         logger.info("Running simulation (1/1)")
-        ss.exposeRegions(initialInfections[0], network.initialState)
-        return ss.basicSimulationInternalAgeStructure(network, max_time)
+        disposableNetwork = copy.deepcopy(network)
+        ss.exposeRegions(initialInfections[0], disposableNetwork.initialState)
+        return ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
     else:
         aggregated = None
 
@@ -100,7 +101,6 @@ def runSimulation(
         averaged.total /= trials
 
         return averaged
-
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
