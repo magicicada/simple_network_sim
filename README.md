@@ -214,9 +214,7 @@ optional arguments:
 
 ## Building the documentation
 
-To build a local version of the readthedocs site e.g. when working on the documentation.
-
-Add the following packages to your environment:
+To build a local version of the readthedocs site (e.g. when working on the documentation) add the following packages to your environment:
 
 - `sphinx`
 - `sphinx_rtd_theme`
