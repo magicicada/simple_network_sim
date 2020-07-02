@@ -34,3 +34,15 @@ read:
      data_product: human/initial-infections
    use:
      version: 1.0.0
+ - where:
+     data_product: human/trials
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/stochastic-mode
+   use:
+     version: 1.0.0
+ - where:
+     data_product: human/random-state
+   use:
+     version: 1.0.0

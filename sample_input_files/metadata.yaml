@@ -46,3 +46,21 @@
   extension: csv
   filename: human/initial-infections/1/data.csv
   verified_hash: 574e68a10d9d40cd1ab0132e68d417ec0166d19b
+-
+  data_product: human/trials
+  version: 1.0.0
+  extension: csv
+  filename: human/trials/1/data.csv
+  verified_hash: 33d97bfd0e2c92f5002a9d1cd62a7a822fd57d0f
+-
+  data_product: human/stochastic-mode
+  version: 1.0.0
+  extension: csv
+  filename: human/stochastic-mode/1/data.csv
+  verified_hash: a8ff97c16baf5143f1154c26b9519d046ba144a5
+-
+  data_product: human/random-seed
+  version: 1.0.0
+  extension: csv
+  filename: human/random-seed/1/data.csv
+  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6

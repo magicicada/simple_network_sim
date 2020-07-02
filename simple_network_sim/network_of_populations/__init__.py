@@ -1,5 +1,6 @@
 import logging
 import random
+import copy
 import numpy as np
 import scipy.stats as stats
 from typing import Dict, Tuple, NamedTuple, List, Set, Optional
@@ -30,29 +31,31 @@ class NetworkOfPopulation(NamedTuple):
     movementMultipliers: Dict[Time, loaders.Multiplier]
     infectiousStates: List[Compartment]
     infectionProb: Dict[Time, float]
+    initialInfections: Dict[NodeName, Dict[Age, float]]
+    trials: int
     stochastic: bool
-    random_state: np.random.Generator
+    randomState: np.random.Generator
 
 
 # CurrentlyInUse
-def basicSimulationInternalAgeStructure(network, timeHorizon):
+def basicSimulationInternalAgeStructure(
+    network: NetworkOfPopulation,
+    timeHorizon: int,
+    initialInfections: Dict[NodeName, Dict[Age, float]]
+) -> pd.DataFrame:
     """Run the simulation of a disease progressing through a network of regions.
 
-    :param network: This is a NetworkOfPopulation instance which will have the states field modified
-    by this function.
-    :type network: A NetworkOfPopulation object.
-    :param timeHorizon: How many times to run the simulation. Each new time means a new entry to the
-    network.states dict
-    :type timeHorizon: int
+    :param network: This is a NetworkOfPopulation instance which will have the states field modified by this function.
+    :param timeHorizon: How many times to run the simulation. Each new time means a new entry to the network.states dict
+    :param initialInfections: Initial infections of the disease
     :return: A time series of the size of the infectious population.
-    :rtype: A list with the number of infectious people at each given time
     """
     history = []
 
     multipliers = network.movementMultipliers.get(0, loaders.Multiplier(contact=1.0, movement=1.0))
     infectionProb = network.infectionProb[0]  # no default value, time zero must exist
 
-    current = network.initialState
+    current = createExposedRegions(initialInfections, network.initialState)
     df = nodesToPandas(0, current)
     logger.debug("Time (0/%s). Status: %s", timeHorizon, Lazy(lambda: df.groupby("state").total.sum().to_dict()))
     history.append(df)
@@ -65,7 +68,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
             current,
             network.progression,
             network.stochastic,
-            network.random_state
+            network.randomState
         )
 
         internalContacts = getInternalInfectiousContacts(
@@ -74,7 +77,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
             multipliers.contact,
             network.infectiousStates,
             network.stochastic,
-            network.random_state
+            network.randomState
         )
         externalContacts = getExternalInfectiousContacts(
             network.graph,
@@ -82,7 +85,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
             multipliers.movement,
             network.infectiousStates,
             network.stochastic,
-            network.random_state
+            network.randomState
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
@@ -92,7 +95,7 @@ def basicSimulationInternalAgeStructure(network, timeHorizon):
             current,
             infectionProb,
             network.stochastic,
-            network.random_state
+            network.randomState
         )
 
         df = nodesToPandas(time + 1, current)
@@ -732,20 +735,22 @@ def mergeContacts(*args):
     return exposedTotal
 
 
-def exposeRegions(infections, states):
-    """Update the state of a region, adding new infections. This function modifies the state
-    parameter.
+def createExposedRegions(
+    infections: Dict[NodeName, Dict[Age, float]],
+    states: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]
+) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
+    """Creates a new the state of a region, adding the new infections.
 
     :param infections: The number of infections per region per age
-    :type infections: A dictionary with region as keys and a dictionary in the format
-    {age: the number of infections} as values.
     :param states: The current state for every region is not modified
-    :type states: A dictionary with the region as a key and the value is a dictionary in the format
-    {(age, state): number of individuals in this state}.
+    :return: A dictionary containing the merged number of exposed
     """
+    exposedStates = copy.deepcopy(states)
     for nodeName, node in infections.items():
         for age, value in node.items():
-            expose(age, value, states[nodeName])
+            expose(age, value, exposedStates[nodeName])
+
+    return exposedStates
 
 
 def getInfectious(age, currentInternalStateDict, infectiousStates):
@@ -779,9 +784,11 @@ def createNetworkOfPopulation(
     mixing_matrix_table: pd.DataFrame,
     infectious_states: pd.DataFrame,
     infection_prob: pd.DataFrame,
+    initial_infections: pd.DataFrame,
+    trials: pd.DataFrame,
     movement_multipliers_table: pd.DataFrame = None,
-    stochastic: bool = False,
-    random_seed: int = 123
+    stochastic_mode: pd.DataFrame = None,
+    random_seed: pd.DataFrame = None
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -793,13 +800,20 @@ def createNetworkOfPopulation(
     which case no multipliers are applied to the movements.
     :param infectious_states: States that are considered infectious
     :param infection_prob: Probability that a given contact will result in an infection
-    :param stochastic: Use stochastic mode for the model
+    :param initial_infections: Initial infections of the population at time 0
+    :param trials: Number of trials for the model
+    :param stochastic_mode: Use stochastic mode for the model
     :param random_seed: Random number generator seed used for stochastic mode
     :return: The constructed network
     """
     infection_prob = loaders.readInfectionProbability(infection_prob)
 
     infectious_states = loaders.readInfectiousStates(infectious_states)
+    initial_infections = loaders.readInitialInfections(initial_infections)
+    trials = loaders.readTrials(trials)
+    stochastic_mode = loaders.readStochasticMode(stochastic_mode)
+    random_seed = loaders.readRandomSeed(random_seed)
+
     # diseases progression matrix
     progression = loaders.readCompartmentRatesByAge(compartment_transition_table)
 
@@ -858,8 +872,10 @@ def createNetworkOfPopulation(
         movementMultipliers=movementMultipliers,
         infectiousStates=infectious_states,
         infectionProb=infection_prob,
-        stochastic=stochastic,
-        random_state=np.random.default_rng(random_seed)
+        initialInfections=initial_infections,
+        trials=trials,
+        stochastic=stochastic_mode,
+        randomState=np.random.default_rng(random_seed)
     )
 
 
