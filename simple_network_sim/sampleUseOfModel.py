@@ -6,7 +6,7 @@ import time
 
 import pandas as pd
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from . import data
 from . import network_of_populations as ss
@@ -40,7 +40,7 @@ def main(argv):
         results = runSimulation(network, args.time)
 
         logger.info("Writing output")
-        store.write_table("output/simple_network_sim/outbreak-timeseries", results)
+        store.write_table("output/simple_network_sim/outbreak-timeseries", results[0])
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
         logger.info(
@@ -52,35 +52,20 @@ def main(argv):
 def runSimulation(
     network: ss.NetworkOfPopulation,
     max_time: int,
-) -> pd.DataFrame:
+) -> List[pd.DataFrame]:
     """Run pre-created network
 
     :param network: object representing the network of populations
     :param max_time: Maximum time for simulation
-    :return: Averaged number of infection through time, through trials
+    :return: Averaged number of infection through time, for all trial
     """
-    if network.trials <= 1:
-        # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
-        logger.info("Running simulation (1/1)")
-        return ss.basicSimulationInternalAgeStructure(network, max_time, network.initialInfections)
-    else:
-        aggregated = None
+    results = []
+    for i in range(network.trials):
+        logger.info("Running simulation (%s/%s)", i + 1, network.trials)
+        result = ss.basicSimulationInternalAgeStructure(network, max_time, network.initialInfections)
+        results.append(result)
 
-        for i in range(network.trials):
-            logger.info("Running simulation (%s/%s)", i + 1, network.trials)
-            indexed = ss.basicSimulationInternalAgeStructure(network, max_time, network.initialInfections).set_index(
-                ["time", "node", "age", "state"]
-            )
-
-            if aggregated is None:
-                aggregated = indexed
-            else:
-                aggregated.total += indexed.total
-
-        averaged = aggregated.reset_index()
-        averaged.total /= network.trials
-
-        return averaged
+    return results
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
