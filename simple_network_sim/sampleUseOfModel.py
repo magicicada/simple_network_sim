@@ -7,6 +7,7 @@ import time
 import pandas as pd
 from pathlib import Path
 from typing import Optional, List
+from functools import reduce
 
 from . import data
 from . import network_of_populations as ss
@@ -38,9 +39,10 @@ def main(argv):
         )
 
         results = runSimulation(network, args.time)
+        aggregated = aggregateResults(results)
 
         logger.info("Writing output")
-        store.write_table("output/simple_network_sim/outbreak-timeseries", results[0])
+        store.write_table("output/simple_network_sim/outbreak-timeseries", aggregated)
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
         logger.info(
@@ -57,7 +59,7 @@ def runSimulation(
 
     :param network: object representing the network of populations
     :param max_time: Maximum time for simulation
-    :return: Averaged number of infection through time, for all trial
+    :return: Result runs for all trials of the simulation
     """
     results = []
     for i in range(network.trials):
@@ -66,6 +68,21 @@ def runSimulation(
         results.append(result)
 
     return results
+
+
+def aggregateResults(results: List[pd.DataFrame]) -> pd.DataFrame:
+    """Aggregate results from runs
+
+    :param results: result runs from runSimulation
+    :return: Averaged number of infection through time, for all trial
+    """
+    if len(results) == 1:
+        return results[0]
+    else:
+        results = [result.set_index(["time", "node", "age", "state"]).total for result in results]
+        average = reduce(lambda x, y: x.add(y), results) / len(results)
+
+        return average.reset_index()
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
