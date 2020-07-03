@@ -194,13 +194,82 @@ def readInfectionProbability(df: pd.DataFrame) -> Dict[int, float]:
             raise ValueError("can't have negative time")
         value = float(row["Value"])
         if value < 0.0 or value > 1.0 or math.isnan(value):
-            raise ValueError("infection probabilty must be between 0 and 1")
+            raise ValueError("infection probability must be between 0 and 1")
         probs[time] = value
 
     if not has_time_zero:
         raise ValueError("the infection probability needs to be present since the time 0")
 
     return probs
+
+
+def readRandomSeed(df: pd.DataFrame) -> int:
+    """
+    Transforms the dataframe from the data API into a bool usable inside the model
+
+    :param df: a dataframe containing the random seed
+    :return: a value of using the random seed as an int
+    """
+    if df is None:
+        return 0
+
+    assert len(df) == 1
+    assert df.columns == ["Value"]
+
+    for row in df.to_dict(orient="row"):
+        seed = row["Value"]
+
+        if not isinstance(seed, int):
+            raise ValueError("Seed must be an int")
+
+        if seed < 0:
+            raise ValueError("Seed must be positive")
+
+        return seed
+
+
+def readTrials(df: pd.DataFrame) -> int:
+    """
+    Transforms the dataframe from the data API into a bool int inside the model
+
+    :param df: The dataframe containing the number of trials
+    :return: the number of trials to run
+    """
+    assert len(df) == 1
+    assert df.columns == ["Value"]
+
+    for row in df.to_dict(orient="row"):
+        trials = row["Value"]
+
+        if not isinstance(trials, int):
+            raise ValueError("trials must be an int")
+
+        if trials < 1:
+            raise ValueError("trials must be > 0")
+
+        return trials
+
+
+def readStochasticMode(df: pd.DataFrame) -> bool:
+    """
+    Transforms the dataframe from the data API into a bool usable inside the model
+
+    :param df: a dataframe with the stochastic mode
+    :return: a value of using the stochastic mode as a bool
+    """
+    if df is None:
+        return False
+
+    assert len(df) == 1
+    assert df.columns == ["Value"]
+
+    for row in df.to_dict(orient="row"):
+        stochastic_mode = row["Value"]
+
+        if not isinstance(stochastic_mode, bool):
+            raise ValueError("stochastic_mode must be bool")
+
+        return bool(stochastic_mode)
 
 
 def _check_overlap(one, two):

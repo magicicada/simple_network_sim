@@ -1,5 +1,4 @@
 import argparse
-import copy
 import logging
 import logging.config
 import sys
@@ -8,9 +7,10 @@ import time
 import pandas as pd
 from pathlib import Path
 from typing import Optional, List
+from functools import reduce
 
 from . import data
-from . import network_of_populations as ss, loaders
+from . import network_of_populations as ss
 
 # Default logger, used if module not called as __main__
 logger = logging.getLogger(__name__)
@@ -31,22 +31,18 @@ def main(argv):
             store.read_table("human/mixing-matrix"),
             store.read_table("human/infectious-compartments"),
             store.read_table("human/infection-probability"),
+            store.read_table("human/initial-infections"),
+            store.read_table("human/trials"),
             store.read_table("human/movement-multipliers") if args.use_movement_multipliers else None,
+            store.read_table("human/stochastic-mode"),
+            store.read_table("human/random-seed"),
         )
 
-        initialInfections = []
-        if args.cmd == "seeded":
-            initialInfections.append(
-                loaders.readInitialInfections(store.read_table("human/initial-infections"))
-            )
-        elif args.cmd == "random":
-            for _ in range(args.trials):
-                initialInfections.append(ss.randomlyInfectRegions(network, args.regions, args.age_groups, args.infected))
-
-        results = runSimulation(network, args.time, args.trials, initialInfections)
+        results = runSimulation(network, args.time)
+        aggregated = aggregateResults(results)
 
         logger.info("Writing output")
-        store.write_table("output/simple_network_sim/outbreak-timeseries", results)
+        store.write_table("output/simple_network_sim/outbreak-timeseries", aggregated)
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
         logger.info(
@@ -58,49 +54,35 @@ def main(argv):
 def runSimulation(
     network: ss.NetworkOfPopulation,
     max_time: int,
-    trials: int,
-    initialInfections: List,
-) -> pd.DataFrame:
+) -> List[pd.DataFrame]:
     """Run pre-created network
 
     :param network: object representing the network of populations
-    :type network: A NetworkOfPopulation object
     :param max_time: Maximum time for simulation
-    :type max_time: int
-    :param trials: Number of simulation trials
-    :type trials: int
-    :param initialInfections: List of initial infection. If seeded, only one
-    :type initialInfections: list
-    :return: Averaged number of infection through time, through trials
-    :rtype: list
+    :return: Result runs for all trials of the simulation
     """
-    if trials <= 1:
-        # The averaging logic is slow and wastes a bunch of memory, skip it if we don't need it
-        logger.info("Running simulation (1/1)")
-        disposableNetwork = copy.deepcopy(network)
-        ss.exposeRegions(initialInfections[0], disposableNetwork.initialState)
-        return ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time)
+    results = []
+    for i in range(network.trials):
+        logger.info("Running simulation (%s/%s)", i + 1, network.trials)
+        result = ss.basicSimulationInternalAgeStructure(network, max_time, network.initialInfections)
+        results.append(result)
+
+    return results
+
+
+def aggregateResults(results: List[pd.DataFrame]) -> pd.DataFrame:
+    """Aggregate results from runs
+
+    :param results: result runs from runSimulation
+    :return: Averaged number of infection through time, for all trial
+    """
+    if len(results) == 1:
+        return results[0]
     else:
-        aggregated = None
+        results = [result.set_index(["time", "node", "age", "state"]).total for result in results]
+        average = reduce(lambda x, y: x.add(y), results) / len(results)
 
-        for i in range(trials):
-            logger.info("Running simulation (%s/%s)", i + 1, trials)
-            disposableNetwork = copy.deepcopy(network)
-
-            ss.exposeRegions(initialInfections[i], disposableNetwork.initialState)
-            indexed = ss.basicSimulationInternalAgeStructure(disposableNetwork, max_time).set_index(
-                ["time", "node", "age", "state"]
-            )
-
-            if aggregated is None:
-                aggregated = indexed
-            else:
-                aggregated.total += indexed.total
-
-        averaged = aggregated.reset_index()
-        averaged.total /= trials
-
-        return averaged
+        return average.reset_index()
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
@@ -216,38 +198,6 @@ def build_args(argv):
         "--data-pipeline-config",
         default="config.yaml",
         help="Base directory with the input parameters",
-    )
-
-    sp = parser.add_subparsers(dest="cmd", required=True)
-
-    # Parameters when using the random infection approach
-    randomCmd = sp.add_parser(
-        "random",
-        help="Randomly pick regions to infect",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    randomCmd.add_argument("--regions", default=1, help="Number of regions to infect")
-    randomCmd.add_argument(
-        "--age-groups", nargs="+", default=["[17,70)"], help="Age groups to infect"
-    )
-    randomCmd.add_argument(
-        "--trials", default=100, type=int, help="Number of experiments to run"
-    )
-    randomCmd.add_argument(
-        "--infected",
-        default=100,
-        type=int,
-        help="Number of infected people in each region/age group",
-    )
-
-    # Parameters when using the seeded infection approach
-    seededCmd = sp.add_parser(
-        "seeded",
-        help="Use a seed file with infected regions",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    seededCmd.add_argument(
-        "--trials", default=1, type=int, help="Number of experiments to run"
     )
 
     return parser.parse_args(argv)

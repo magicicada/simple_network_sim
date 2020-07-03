@@ -25,10 +25,14 @@ def test_basic_simulation(data_api):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
-    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
-    result = calculateInfectiousOverTime(np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200), network.infectiousStates)
+    result = calculateInfectiousOverTime(
+        np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10.0}}),
+        network.infectiousStates
+    )
 
     _assert_baseline(result)
 
@@ -41,12 +45,13 @@ def test_basic_simulation_with_dampening(data_api):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
         data_api.read_table("human/movement-multipliers"),
     )
-    np.exposeRegions({"S08000016": {"[17,70)": 10.0}}, network.initialState)
 
     result = calculateInfectiousOverTime(
-        np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200),
+        np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10.0}}),
         network.infectiousStates,
     )
 
@@ -61,19 +66,17 @@ def test_basic_simulation_100_runs(data_api):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
 
     runs = []
     rand = random.Random(1)
     for _ in range(100):
         regions = rand.choices(list(network.graph.nodes()), k=1)
-        # This was added for backwards compatibility. Notice that ("m", "S") diminishes at each run.
-        # TODO: make sure the states[0] is always reset after each run or that a new state is created before running
-        #       exposeRegions
-        network.initialState[regions[0]][("[17,70)", "E")] = 0
-        np.exposeRegions({regions[0]: {"[17,70)": 10.0}}, network.initialState)
+        assert network.initialState[regions[0]][("[17,70)", "E")] == 0
         result = calculateInfectiousOverTime(
-            np.basicSimulationInternalAgeStructure(network=network, timeHorizon=200),
+            np.basicSimulationInternalAgeStructure(network, 200, {regions[0]: {"[17,70)": 10.0}}),
             network.infectiousStates,
         )
         result.pop()  # TODO: due to historical reasons we have to ignore the last entry

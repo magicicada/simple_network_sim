@@ -22,13 +22,14 @@ def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_in
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
-    np.exposeRegions({region: {"[0,17)": num_infected}}, network.initialState)
 
     initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network, 50, {region: {"[0,17)": num_infected}})
 
     # population remains constant
     populations = result.groupby("time").total.sum()
@@ -55,14 +56,15 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
         pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
     )
-    np.exposeRegions({region: {"[0,17)": num_infected}}, network.initialState)
 
     initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network, 50, {region: {"[0,17)": num_infected}})
 
     # population remains constant
     populations = result.groupby("time").total.sum()
@@ -98,13 +100,14 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
         dampening,
     )
-    np.exposeRegions({"S08000016": {"[17,70)": num_infected}}, network.initialState)
 
     initial_population = sum(_count_people_per_region(network.initialState))
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network, 50, {"S08000016": {"[17,70)": num_infected}})
 
     # population remains constant
     populations = result.groupby("time").total.sum()
@@ -123,18 +126,20 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         pd.DataFrame([{"Time": 0, "Value": 0.0}]),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
-    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.initialState)
     susceptibles = 0.0
     for region in network.initialState.values():
         for (age, state) in region.keys():
             if state == "S":
                 susceptibles += region[(age, state)]
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    people_to_infect = 30
+    result = np.basicSimulationInternalAgeStructure(network, 50, {"S08000024": {"[0,17)": people_to_infect}})
 
     new_susceptibles = result[(result.time == result.time.max()) & (result.state == "S")].total.sum()
-    assert new_susceptibles == susceptibles
+    assert new_susceptibles + people_to_infect == susceptibles
 
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(data_api):
@@ -153,11 +158,13 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
-    np.exposeRegions({"S08000024": {"[0,17)": 30}}, network.initialState)
-    susceptibles = count_susceptibles(network.initialState)
+    people_to_infect = 30
+    susceptibles = count_susceptibles(network.initialState) - people_to_infect
 
-    result = np.basicSimulationInternalAgeStructure(network=network, timeHorizon=50)
+    result = np.basicSimulationInternalAgeStructure(network, 50, {"S08000024": {"[0,17)": people_to_infect}})
 
     # no infection before time 25
     for total in result[(result.time < 25) & (result.state == "S")].groupby("time").total.sum().to_list():
@@ -522,32 +529,38 @@ def test_expose_change_only_desired_age():
 def test_exposeRegion_distributes_multiple_ages():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0, ("o", "S"): 10.0, ("o", "E"): 0.0}}
 
-    np.exposeRegions({"region1": {"m": 5.0, "o": 5.0}}, state)
+    exposed_state = np.createExposedRegions({"region1": {"m": 5.0, "o": 5.0}}, state)
 
-    assert state == {"region1": {("m", "S"): 10.0, ("m", "E"): 5.0, ("o", "S"): 5.0, ("o", "E"): 5.0}}
+    assert exposed_state == {"region1": {("m", "S"): 10.0, ("m", "E"): 5.0, ("o", "S"): 5.0, ("o", "E"): 5.0}}
 
 
 def test_exposeRegion_requires_probabilities_fails_if_age_group_does_not_exist():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
     with pytest.raises(KeyError):
-        np.exposeRegions({"region1": {"m": 10.0, "o": 0.0}}, state)
+        np.createExposedRegions({"region1": {"m": 10.0, "o": 0.0}}, state)
 
 
 def test_exposeRegion_multiple_regions():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
-    np.exposeRegions({"region1": {"m": 10.0}, "region2": {"m": 10.0}}, state)
+    exposed_state = np.createExposedRegions({"region1": {"m": 10.0}, "region2": {"m": 10.0}}, state)
 
-    assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 5.0, ("m", "E"): 10.0}}
+    assert exposed_state == {
+        "region1": {("m", "S"): 5.0, ("m", "E"): 10.0},
+        "region2": {("m", "S"): 5.0, ("m", "E"): 10.0}
+    }
 
 
 def test_exposeRegion_only_desired_region():
     state = {"region1": {("m", "S"): 15.0, ("m", "E"): 0.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
 
-    np.exposeRegions({"region1": {"m": 10.0}}, state)
+    exposed_state = np.createExposedRegions({"region1": {"m": 10.0}}, state)
 
-    assert state == {"region1": {("m", "S"): 5.0, ("m", "E"): 10.0}, "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}}
+    assert exposed_state == {
+        "region1": {("m", "S"): 5.0, ("m", "E"): 10.0},
+        "region2": {("m", "S"): 15.0, ("m", "E"): 0.0}
+    }
 
 
 def test_createNetworkOfPopulation(data_api):
@@ -558,6 +571,8 @@ def test_createNetworkOfPopulation(data_api):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
 
     assert network.graph
@@ -567,6 +582,8 @@ def test_createNetworkOfPopulation(data_api):
     assert network.movementMultipliers == {}
     assert set(network.infectiousStates) == {"I", "A"}
     assert network.infectionProb == {0: 1.0}
+    assert network.initialInfections == {"S08000016": {"[17,70)": 100}}
+    assert network.trials == 1
 
 
 def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
@@ -578,6 +595,8 @@ def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
             data_api.read_table("human/mixing-matrix"),
             pd.DataFrame([{"Compartment": "INVALID"}]),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -591,6 +610,8 @@ def test_createNetworkOfPopulation_invalid_infection_probability(data_api, time,
             data_api.read_table("human/mixing-matrix"),
             data_api.read_table("human/infectious-compartments"),
             pd.DataFrame([{"Time": time, "Value": prob}]),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -612,6 +633,8 @@ def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -633,6 +656,8 @@ def test_createNetworkOfPopulation_age_mismatch_matrix_internal(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -654,6 +679,8 @@ def test_createNetworkOfPopulation_age_mismatch_population(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -675,6 +702,8 @@ def test_createNetworkOfPopulation_age_mismatch_progression(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -695,6 +724,8 @@ def test_createNetworkOfPopulation_region_mismatch(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -720,6 +751,8 @@ def test_createNetworkOfPopulation_susceptible_in_progression(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -745,6 +778,8 @@ def test_createNetworkOfPopulation_transition_to_exposed(data_api):
             mixingMatrix,
             data_api.read_table("human/infectious-compartments"),
             data_api.read_table("human/infection-probability"),
+            data_api.read_table("human/initial-infections"),
+            data_api.read_table("human/trials"),
         )
 
 
@@ -873,7 +908,8 @@ def test_getInfectious():
 
 
 def test_getInfectious_with_a2():
-    states = {("70+", "S"): 10, ("70+", "E"): 20, ("70+", "I"): 7, ("70+", "A"): 11, ("70+", "A2"): 5, ("[17,70)", "S"): 15}
+    states = {("70+", "S"): 10, ("70+", "E"): 20, ("70+", "I"): 7,
+              ("70+", "A"): 11, ("70+", "A2"): 5, ("[17,70)", "S"): 15}
 
     assert np.getInfectious("70+", states, ["I", "A", "A2"]) == 23.0
 
@@ -940,6 +976,8 @@ def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
         data_api.read_table("human/mixing-matrix"),
         data_api.read_table("human/infectious-compartments"),
         data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
     )
 
     random.seed(3)

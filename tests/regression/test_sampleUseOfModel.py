@@ -1,9 +1,3 @@
-import os
-import tempfile
-
-from glob import glob
-from pathlib import Path
-
 import pandas as pd
 
 from simple_network_sim import sampleUseOfModel
@@ -12,7 +6,7 @@ from tests.utils import create_baseline
 
 def test_run_seeded(base_data_dir):
     try:
-        sampleUseOfModel.main(["-c", str(base_data_dir / "config.yaml"), "seeded"])
+        sampleUseOfModel.main(["-c", str(base_data_dir / "config.yaml")])
 
         test_data = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
         baseline = create_baseline(test_data)

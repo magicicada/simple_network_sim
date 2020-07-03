@@ -226,6 +226,81 @@ def test_readInfectionProbability_invalid_prob(prob):
         loaders.readInfectionProbability(pd.DataFrame([{"Time": 0, "Value": prob}]))
 
 
+def test_readRandomSeed():
+    df = pd.DataFrame([123], columns=["Value"])
+
+    assert loaders.readRandomSeed(df) == 123
+
+
+def test_readRandomSeed_bad_shape():
+    with pytest.raises(AssertionError):
+        loaders.readRandomSeed(pd.DataFrame())
+
+    with pytest.raises(AssertionError):
+        loaders.readRandomSeed(pd.DataFrame([0, 4, 30], columns=["Value"]))
+
+    with pytest.raises(AssertionError):
+        loaders.readRandomSeed(pd.DataFrame([0], columns=["Bad name"]))
+
+
+def test_readInfectionProbability_invalid_seed():
+    with pytest.raises(ValueError):
+        loaders.readRandomSeed(pd.DataFrame([1.2], columns=["Value"]))
+
+    with pytest.raises(ValueError):
+        loaders.readRandomSeed(pd.DataFrame([-1], columns=["Value"]))
+
+
+def test_readTrials():
+    df = pd.DataFrame([1000], columns=["Value"])
+
+    assert loaders.readTrials(df) == 1000
+
+
+def test_readTrials_bad_shape():
+    with pytest.raises(AssertionError):
+        loaders.readTrials(pd.DataFrame())
+
+    with pytest.raises(AssertionError):
+        loaders.readTrials(pd.DataFrame([0, 4, 30], columns=["Value"]))
+
+    with pytest.raises(AssertionError):
+        loaders.readTrials(pd.DataFrame([0], columns=["Bad name"]))
+
+
+def test_readTrials_invalid_trials():
+    with pytest.raises(ValueError):
+        loaders.readTrials(pd.DataFrame([1.2], columns=["Value"]))
+
+    with pytest.raises(ValueError):
+        loaders.readTrials(pd.DataFrame([-1], columns=["Value"]))
+
+
+def test_readStochasticMode():
+    df = pd.DataFrame([True], columns=["Value"])
+
+    assert loaders.readStochasticMode(df) is True
+
+
+def test_readStochasticMode_bad_shape():
+    with pytest.raises(AssertionError):
+        loaders.readStochasticMode(pd.DataFrame())
+
+    with pytest.raises(AssertionError):
+        loaders.readStochasticMode(pd.DataFrame([True, False, True], columns=["Value"]))
+
+    with pytest.raises(AssertionError):
+        loaders.readStochasticMode(pd.DataFrame([0], columns=["Bad name"]))
+
+
+def test_readStochasticMode_invalid_trials():
+    with pytest.raises(ValueError):
+        loaders.readStochasticMode(pd.DataFrame(["True"], columns=["Value"]))
+
+    with pytest.raises(ValueError):
+        loaders.readStochasticMode(pd.DataFrame([10], columns=["Value"]))
+
+
 def test_AgeRange():
     a = loaders.AgeRange("[10,20)")
     assert a.age_group == "[10,20)"
