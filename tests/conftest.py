@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -29,3 +30,14 @@ def base_data_dir():
 @pytest.fixture
 def locations():
     yield FIXTURE_DIR / "sampleNodeLocations.json"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def teardown_remove_data():
+    """Remove test output created during testing.
+
+    Datasets defined in data_pipeline_inputs/config.yaml can't be handled with
+    pytest's tmp_path, so are cleaned up here.
+    """
+    yield
+    shutil.rmtree(FIXTURE_DIR / "data_pipeline_inputs" / "output")
