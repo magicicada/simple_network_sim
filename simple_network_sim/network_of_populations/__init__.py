@@ -249,7 +249,7 @@ def distributeContactsOverAges(nodeState, newContacts, stochastic, random_state)
     if totalSus > 0:
         newInfectionsByAge = _distributeContactsOverAges(ageToSus, totalSus, newContacts, stochastic, random_state)
     else:
-        newInfectionsByAge = {age: 0. for age in ageToSus}
+        newInfectionsByAge = {age: 0 for age in ageToSus}
 
     return newInfectionsByAge
 
@@ -279,7 +279,7 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
     if stochastic:
-        assert isinstance(newContacts, int)
+        assert isinstance(newContacts, int) or newContacts.is_integer()
 
         ageProbabilities = np.array(list(ageToSusceptibles.values())) / totalSusceptibles
         allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities, random_state=random_state)

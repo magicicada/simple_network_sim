@@ -1,6 +1,7 @@
 import json
 import random
 import tempfile
+import pandas
 
 import pytest
 
@@ -52,6 +53,29 @@ def test_basic_simulation_with_dampening(data_api):
 
     result = calculateInfectiousOverTime(
         np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10.0}}),
+        network.infectiousStates,
+    )
+
+    _assert_baseline(result)
+
+
+def test_basic_simulation_stochastic(data_api):
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition"),
+        data_api.read_table("human/population"),
+        data_api.read_table("human/commutes"),
+        data_api.read_table("human/mixing-matrix"),
+        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/infection-probability"),
+        data_api.read_table("human/initial-infections"),
+        data_api.read_table("human/trials"),
+        data_api.read_table("human/movement-multipliers"),
+        pandas.DataFrame([True], columns=["Value"]),
+        pandas.DataFrame([123], columns=["Value"])
+    )
+
+    result = calculateInfectiousOverTime(
+        np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10}}),
         network.infectiousStates,
     )
 
