@@ -78,4 +78,4 @@ https://repo.anaconda.com/pkgs/main/linux-64/mkl_random-1.1.1-py37h0573a6f_0.con
 https://repo.anaconda.com/pkgs/main/linux-64/numpy-1.18.5-py37ha1c710e_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/pandas-1.0.3-py37h0573a6f_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/scipy-1.5.0-py37h0b6359f_0.conda
-https://conda.anaconda.org/scottishcovidresponse/noarch/data_pipeline_api-0.1.0-py_0.tar.bz2
+https://conda.anaconda.org/scottishcovidresponse/noarch/data_pipeline_api-0.2.0-py_0.tar.bz2
