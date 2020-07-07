@@ -3,7 +3,7 @@ import random
 import copy
 import numpy as np
 import scipy.stats as stats
-from typing import Dict, Tuple, NamedTuple, List, Set, Optional
+from typing import Dict, Tuple, NamedTuple, List, Optional
 
 import networkx as nx
 import pandas as pd
@@ -148,19 +148,18 @@ def totalIndividuals(nodeState):
     return sum(nodeState.values())
 
 
-def getAges(node: Dict[Tuple[Age, Compartment], float]) -> Set[Age]:
+def getAges(node: Dict[Tuple[Age, Compartment], float]) -> List[Age]:
     """Get the set of ages from the node.
 
     :param node: The disease states of the population stratified by age.
     :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :return: The unique collection of ages.
-    :rtype: Set[str]
     """
     ages = set()
     for (age, state) in node:
         ages.add(age)
-    return ages
+    return sorted(list(ages))
 
 
 # CurrentlyInUse

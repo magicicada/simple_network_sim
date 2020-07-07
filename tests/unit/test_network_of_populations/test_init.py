@@ -884,15 +884,15 @@ def test_createNetworkOfPopulation_transition_to_exposed(data_api):
 
 
 def test_getAges_multiple_ages():
-    assert np.getAges({("[0,17)", "S"): 10, ("70+", "S"): 10}) == {"[0,17)", "70+"}
+    assert np.getAges({("[0,17)", "S"): 10, ("70+", "S"): 10}) == ["70+", "[0,17)"]
 
 
 def test_getAges_repeated_ages():
-    assert np.getAges({("[0,17)", "S"): 10, ("[0,17)", "S"): 10}) == {"[0,17)"}
+    assert np.getAges({("[0,17)", "S"): 10, ("[0,17)", "S"): 10}) == ["[0,17)"]
 
 
 def test_getAges_empty():
-    assert np.getAges({}) == set()
+    assert np.getAges({}) == list()
 
 
 @pytest.mark.parametrize("progression,exposed,currentState", [
