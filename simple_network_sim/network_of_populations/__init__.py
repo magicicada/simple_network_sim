@@ -19,6 +19,8 @@ Compartment = str
 NodeName = str
 Time = int
 
+RESULT_DTYPES = {"time": "int16", "age": "category", "state": "category", "node": "category"}
+
 
 class NetworkOfPopulation(NamedTuple):
     """
@@ -132,7 +134,7 @@ def nodesToPandas(time: int, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment],
     for name, node in nodes.items():
         for (age, state), value in node.items():
             rows.append([time, name, age, state, value])
-    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype({"time": "int16", "age":"category", "state": "category", "node": "category"}, copy=True)
+    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype(RESULT_DTYPES, copy=True)
 
 
 # CurrentlyInUse
