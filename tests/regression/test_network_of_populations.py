@@ -70,8 +70,8 @@ def test_basic_simulation_stochastic(data_api):
         data_api.read_table("human/initial-infections"),
         data_api.read_table("human/trials"),
         data_api.read_table("human/movement-multipliers"),
-        pandas.DataFrame([True], columns=["Value"]),
-        pandas.DataFrame([123], columns=["Value"])
+        data_api.read_table("human/stochastic-mode"),
+        data_api.read_table("human/random-seed")
     )
 
     result = calculateInfectiousOverTime(
