@@ -104,11 +104,11 @@ resulting file before creating a PR. The second time you run your test in this s
 To run a example case, enter the following at the command prompt:
 
 ```{shell}
-python -m simple_network_sim.sampleUseOfModel seeded
+python -m simple_network_sim.sampleUseOfModel
 ```
 
-that will use the files in `data_pipeline_inputs` and will generate an output
-inside that same directory. An `access-<hash>.yaml` file will be generated with
+that will use the files in `sample_input_files` and will generate an output
+inside `sample_output_files`. An `access-<hash>.yaml` file will be generated with
 all the files used.
 
 Use the help command to see a description of all the parameters
@@ -118,15 +118,9 @@ python -m simple_network_sim.sampleUseOfModel -h
 usage: sampleUseOfModel.py [-h] [--use-movement-multipliers] [--time TIME]
                            [-l LOGFILE] [-q] [--debug]
                            [-c DATA_PIPELINE_CONFIG]
-                           {random,seeded} ...
+                           ...
 
-Uses the deterministic network of populations model to simulation the disease
-progression
-
-positional arguments:
-  {random,seeded}
-    random              Randomly pick regions to infect
-    seeded              Use a seed file with infected regions
+Uses the network of populations model to simulation the disease progression
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -143,32 +137,6 @@ optional arguments:
   -c DATA_PIPELINE_CONFIG, --data-pipeline-config DATA_PIPELINE_CONFIG
                         Base directory with the input paramters (default:
                         config.yaml)
-```
-
-Each command has its own set of specific parameters
-
-```{shell}
-python -m simple_network_sim.sampleUseOfModel seeded -h
-usage: sampleUseOfModel.py seeded [-h] [--trials TRIALS]
-
-optional arguments:
-  -h, --help       show this help message and exit
-  --trials TRIALS  Number of experiments to run (default: 1)
-```
-```{shell}
-python -m simple_network_sim.sampleUseOfModel random -h
-usage: sampleUseOfModel.py random [-h] [--regions REGIONS]
-                                  [--age-groups AGE_GROUPS [AGE_GROUPS ...]]
-                                  [--trials TRIALS] [--infected INFECTED]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --regions REGIONS     Number of regions to infect (default: 1)
-  --age-groups AGE_GROUPS [AGE_GROUPS ...]
-                        Age groups to infect (default: ['[17,70)'])
-  --trials TRIALS       Number of experiments to run (default: 100)
-  --infected INFECTED   Number of infected people in each region/age group
-                        (default: 100)
 ```
 
 Descriptions of the data files used can be found in the [data dictionary](sample_input_files/README.md).

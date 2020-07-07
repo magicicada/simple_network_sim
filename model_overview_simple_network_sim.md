@@ -55,15 +55,17 @@ For each time step:
 
 
 **Inputs**
-Our aim is to have as much of the specification of model parameters as possible in input files rather than within the core code of the mode. 
+Our aim is to have as much of the specification of model parameters as possible in input files rather than within the core code of the model. 
 
 Current inputs:
 * age-structured population information for each node
-* weighted edges between nodes (we expect weights to be number of contacts per day). This file also has an adjustment factor for the movement multiplier
+* weighted edges between nodes (we expect weights to be number of contacts per day)
 * movement multiplier - used to dampen or heighten the original weights between nodes over time
+* contact multiplier - used to dampen or heighten the original contact between age groups over time
 * epidemiological parameter file
-* age-mixing matrix
+* age-mixing matrix - counts the number of intra-node daily contacts between age groups 
 * locations for nodes - currently only used when generating geographically-local edges in the nodes-as-individuals version
+* Infection probability - how probable is a potentially infectious contact to lead to an infection
 
 
 *We suggest consulting the README and the sample_input_files folder at the [GitHub repo](https://github.com/ScottishCovidResponse/simple_network_sim) for examples of input files and how to use them.*
