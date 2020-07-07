@@ -63,13 +63,21 @@ conda list --explicit > spec-file.txt
 
 ## Tests
 
+Simple network sim has regression tests and unit tests. Regression tests ensure that changes to the code do not alter overall functionality in a simulated use case, compared with previous versions of the software. Unit tests ensure that individual components of the software (e.g. functions) work as intended. The current test regime does not check if model outputs are "correct" or "valid", merely that the software is working as expected.
+
+### Test data
+
+Test data is stored in `tests/test_data` and mirrors the structure of `sample_input_files/` - these files are not used in automated tests but provided to allow users to run simple network sim from the command line (`sample_output_files/` are also not part of automated testing). [Baseline test data](###Approach-to-regression-testing) is stored in `tests/regression/data`.
+
+### Running the tests
+
 After activating your conda environment, execute the following command:
 
 ```{shell}
 pytest --cov=simple_network_sim tests
 ```
 
-### Regression testing
+### Approach to regression testing
 
 Our approach updating regression test data is based on matplotlib's `matplotlib.testing.decorators.image_comparison`.
 The functions `tests.utils.compare_mpl_plots` and `tests.utils.create_baseline` are used to maintain the regression
