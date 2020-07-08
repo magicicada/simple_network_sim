@@ -8,17 +8,26 @@ from simple_network_sim.data import Datastore
 FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
 
 
-@pytest.fixture
-def data_api(base_data_dir):
+def _data_api(base_data_dir, config):
     try:
-        with Datastore(str(base_data_dir / "config.yaml")) as store:
+        with Datastore(str(base_data_dir / config)) as store:
             yield store
     finally:
-        # TODO; remove this once https://github.com/ScottishCovidResponse/data_pipeline_api/issues/12 is done
+        # TODO; remove this once https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/505 is in prod
         try:
             (base_data_dir / "access.log").unlink()
         except FileNotFoundError:
             pass
+
+
+@pytest.fixture
+def data_api(base_data_dir):
+    yield from _data_api(base_data_dir, "config.yaml")
+
+
+@pytest.fixture
+def data_api_stochastic(base_data_dir):
+    yield from _data_api(base_data_dir, "config_stochastic.yaml")
 
 
 @pytest.fixture

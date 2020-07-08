@@ -3,7 +3,7 @@ import random
 import copy
 import numpy as np
 import scipy.stats as stats
-from typing import Dict, Tuple, NamedTuple, List, Set, Optional
+from typing import Dict, Tuple, NamedTuple, List, Optional
 
 import networkx as nx
 import pandas as pd
@@ -18,6 +18,8 @@ Age = str
 Compartment = str
 NodeName = str
 Time = int
+
+RESULT_DTYPES = {"time": "int16", "age": "category", "state": "category", "node": "category"}
 
 
 class NetworkOfPopulation(NamedTuple):
@@ -132,7 +134,7 @@ def nodesToPandas(time: int, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment],
     for name, node in nodes.items():
         for (age, state), value in node.items():
             rows.append([time, name, age, state, value])
-    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype({"time": "int16", "age":"category", "state": "category", "node": "category"}, copy=True)
+    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype(RESULT_DTYPES, copy=True)
 
 
 # CurrentlyInUse
@@ -148,19 +150,18 @@ def totalIndividuals(nodeState):
     return sum(nodeState.values())
 
 
-def getAges(node: Dict[Tuple[Age, Compartment], float]) -> Set[Age]:
+def getAges(node: Dict[Tuple[Age, Compartment], float]) -> List[Age]:
     """Get the set of ages from the node.
 
     :param node: The disease states of the population stratified by age.
     :type node: A dictionary with a tuple of (age, state) as keys and the number of individuals
     in that state as values.
     :return: The unique collection of ages.
-    :rtype: Set[str]
     """
     ages = set()
     for (age, state) in node:
         ages.add(age)
-    return ages
+    return sorted(list(ages))
 
 
 # CurrentlyInUse
@@ -249,7 +250,7 @@ def distributeContactsOverAges(nodeState, newContacts, stochastic, random_state)
     if totalSus > 0:
         newInfectionsByAge = _distributeContactsOverAges(ageToSus, totalSus, newContacts, stochastic, random_state)
     else:
-        newInfectionsByAge = {age: 0. for age in ageToSus}
+        newInfectionsByAge = {age: 0 for age in ageToSus}
 
     return newInfectionsByAge
 
@@ -279,7 +280,7 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
     if stochastic:
-        assert isinstance(newContacts, int)
+        assert isinstance(newContacts, int) or newContacts.is_integer()
 
         ageProbabilities = np.array(list(ageToSusceptibles.values())) / totalSusceptibles
         allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities, random_state=random_state)

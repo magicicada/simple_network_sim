@@ -1,6 +1,7 @@
 import json
 import random
 import tempfile
+import pandas as pd
 
 import pytest
 
@@ -15,6 +16,12 @@ def _assert_baseline(result, force_update=False):
 
     with open(baseline_filename) as fp:
         assert result == pytest.approx(json.load(fp))
+
+
+def _assert_baseline_dataframe(result, force_update=False):
+    with tempfile.NamedTemporaryFile(mode="w") as fp:
+        baseline_filename = create_baseline(fp.name, force_update=force_update)
+        pd.testing.assert_frame_equal(result, pd.read_csv(baseline_filename, dtype=np.RESULT_DTYPES))
 
 
 def test_basic_simulation(data_api):
@@ -56,6 +63,26 @@ def test_basic_simulation_with_dampening(data_api):
     )
 
     _assert_baseline(result)
+
+
+def test_basic_simulation_stochastic(data_api_stochastic):
+    network = np.createNetworkOfPopulation(
+        data_api_stochastic.read_table("human/compartment-transition"),
+        data_api_stochastic.read_table("human/population"),
+        data_api_stochastic.read_table("human/commutes"),
+        data_api_stochastic.read_table("human/mixing-matrix"),
+        data_api_stochastic.read_table("human/infectious-compartments"),
+        data_api_stochastic.read_table("human/infection-probability"),
+        data_api_stochastic.read_table("human/initial-infections"),
+        data_api_stochastic.read_table("human/trials"),
+        data_api_stochastic.read_table("human/movement-multipliers"),
+        data_api_stochastic.read_table("human/stochastic-mode"),
+        data_api_stochastic.read_table("human/random-seed")
+    )
+
+    result = np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10}})
+
+    _assert_baseline_dataframe(result)
 
 
 def test_basic_simulation_100_runs(data_api):

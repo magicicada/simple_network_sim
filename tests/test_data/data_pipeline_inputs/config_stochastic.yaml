@@ -16,4 +16,4 @@ read:
 - where:
     data_product: human/stochastic-mode
   use:
-    filename: human/stochastic-mode/deterministic/1/data.csv
+    filename: human/stochastic-mode/stochastic/1/data.csv
