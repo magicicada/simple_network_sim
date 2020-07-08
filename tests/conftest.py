@@ -37,7 +37,14 @@ def teardown_remove_data():
     """Remove test output created during testing.
 
     Datasets defined in data_pipeline_inputs/config.yaml can't be handled with
-    pytest's tmp_path, so are cleaned up here.
+    pytest's tmp_path, so are cleaned up here. Change these locations as necessary
+    when the config file changes.
     """
     yield
     shutil.rmtree(FIXTURE_DIR / "data_pipeline_inputs" / "output")
+    # Tests may drop access*.yaml files in the fixtures directory
+    for logpath in (FIXTURE_DIR / "data_pipeline_inputs").glob("access*.yaml"):
+        shutil.rmtree(logpath)
+    # Tests may drop access*.log files in the fixtures directory
+    for logpath in (FIXTURE_DIR / "data_pipeline_inputs").glob("access*.log"):
+        shutil.rmtree(logpath)
