@@ -97,3 +97,14 @@ Same as above, but includes the A_2 compartment
 
 A list with seed nodes, where the outbreak will start for a given simulation.
 This table contains both the region ID and number of infected people.
+
+## human/stochastic-mode/1/data.csv
+
+Whether to use the stochastic or deterministic version of the model. A
+production run will usually be stochastic, but the deterministic run can be
+useful during development.
+
+## human/random-seed/1/data.csv
+
+The seed to be used by the model during the stochastic run. This is ignored for
+deterministic runs.

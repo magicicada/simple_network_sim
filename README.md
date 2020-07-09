@@ -115,9 +115,14 @@ To run a example case, enter the following at the command prompt:
 python -m simple_network_sim.sampleUseOfModel
 ```
 
-that will use the files in `sample_input_files` and will generate an output
-inside `sample_output_files`. An `access-<hash>.yaml` file will be generated with
-all the files used.
+That will use the config.yaml file in the root directory. That file lists all
+the parameters needed by the model. That will point to the
+`sample_input_files`, which contains a set of sample files to run the model.
+The real data requires downloading it from the data pipeline API (that step is
+not yet ready).
+
+Look at [sample_input_files/README.md](sample_input_files/README.md) for a
+summary of the contents of the files.
 
 Use the help command to see a description of all the parameters
 
