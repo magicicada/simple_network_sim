@@ -208,7 +208,7 @@ sphinx-build -b html -d build/doctrees source build/html
 
 ## Static analysis
 
-[Automated static analysis results](https://app.codacy.com/gh/ScottishCovidResponse/simple_network_sim/issues/index) are available - these should be interpreted with caution and the importance of each issue must be assessed individually. We do not make use of the overall "quality standards" features of codacy at this time as they are pretty arbitrary.
+[Automated static analysis results](https://app.codacy.com/gh/ScottishCovidResponse/simple_network_sim/issues/index) are available - these should be interpreted with caution and the importance of each issue must be assessed individually. The setup is to use pylint with a [configuration file](.pylintrc). This is the default plus we ignore C0103 (variable names) and C0301 (line lengths). We do not make use of the overall "quality standards" features of codacy at this time as they are pretty arbitrary.
 
 ## License
 
