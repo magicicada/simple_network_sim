@@ -179,7 +179,50 @@ def readInfectiousStates(infectious_states: pd.DataFrame) -> List[Compartment]:
     return list(infectious_states.Compartment)
 
 
-def readInfectionProbability(df: pd.DataFrame) -> Dict[datetime.date, float]:
+def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
+    """
+    Transforms the API output of parameters into the internal representation: a dict
+    :param parameters: pandas DataFrame with the raw data from the API
+    :return: a dict of inference parameters
+    """
+    if parameters.size == 0:
+        return {}
+
+    if "Parameter" not in parameters.columns:
+        raise ValueError(f"'Parameter' column should be in ABCSMC parameters")
+
+    if "Value" not in parameters.columns:
+        raise ValueError(f"'Value' column should be in ABCSMC parameters")
+
+    parameters = parameters.set_index("Parameter").Value.to_dict()
+
+    parameters["n_smc_steps"] = int(parameters["n_smc_steps"])
+    parameters["n_particles"] = int(parameters["n_particles"])
+    parameters["thresholds"] = [float(x) for x in parameters["thresholds"].split(",")]
+
+    return parameters
+
+
+def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transforms the API output of target into the internal representation: a pd.DataFrame
+    :param historical_deaths: pandas DataFrame with the raw data from the API
+    :return: a pd.DataFrame of historical deaths by HB
+    """
+    if historical_deaths.size == 0:
+        raise ValueError(f"With an empty target no inference can take place")
+
+    historical_deaths = historical_deaths.set_index("Week beginning")
+
+    if len(historical_deaths.columns) != 14:
+        raise ValueError(f"The historical deaths should contain a column for every HB")
+
+    historical_deaths.index = pd.to_datetime(historical_deaths.index)
+
+    return historical_deaths
+
+
+def readInfectionProbability(df: pd.DataFrame) -> Dict[int, float]:
     """
     Transforms the dataframe from the data API into a dict usable inside the model
 

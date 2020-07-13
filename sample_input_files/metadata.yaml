@@ -6,6 +6,12 @@
   filename: human/compartment-transition/1/data.h5
   verified_hash: edc81258b41eca4c234701d6de23132937ad77a2
 -
+  data_product: human/compartment-transition
+  version: 2.0.0
+  extension: csv
+  filename: human/compartment-transition/2/data.csv
+  verified_hash: 09c4396f3bfe3724d2c1e12b86fb90aece718b35
+-
   data_product: human/population
   component: population
   version: 1.0.0
@@ -33,6 +39,12 @@
   extension: h5
   filename: human/infectious-compartments/1/data.h5
   verified_hash: 6b0adf70a01072ba5a2d54ef35a7b93fc2454cae
+-
+  data_product: human/infectious-compartments
+  version: 2.0.0
+  extension: csv
+  filename: human/infectious-compartments/2/data.csv
+  verified_hash: b0ccd3ef92d1d2bf3a7dd3d8c3eba6e3cc8c0042
 -
   data_product: human/infection-probability
   component: infection-probability
@@ -82,3 +94,15 @@
   extension: h5
   filename: human/random-seed/1/data.h5
   verified_hash: c471116ae478124d19493c7ebdf497f039e931f8
+-
+  data_product: human/abcsmc-parameters
+  version: 1.0.0
+  extension: csv
+  filename: human/abcsmc-parameters/1/data.csv
+  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6
+-
+  data_product: human/historical-deaths
+  version: 1.0.0
+  extension: csv
+  filename: human/historical-deaths/1/data.csv
+  verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743
