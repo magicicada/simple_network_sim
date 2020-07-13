@@ -2,7 +2,7 @@ language: generic
 
 matrix:
   include:
-    - name: "Conda Python with spec-file"
+    - name: "Test simple network sim"
       install:
         - sudo apt-get update && sudo apt-get install -y wget
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -18,3 +18,16 @@ matrix:
       after_success:
         - coverage xml
         - bash <(curl -s https://codecov.io/bash)
+    - name: "Test extractors"
+      install:
+        - sudo apt-get update && sudo apt-get install -y wget
+        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+        - bash miniconda.sh -b -p $HOME/miniconda
+        - source "$HOME/miniconda/etc/profile.d/conda.sh"
+        - hash -r
+        - conda config --set always_yes yes --set changeps1 no
+        - conda update -q conda
+        - conda env create -f extractors/environment.yml extractors
+        - conda activate extractors
+      script:
+        - pytest --cov=extractors --doctest-modules extractors
