@@ -856,7 +856,7 @@ def createNetworkOfPopulation(
         "infection matrix and population ages mismatch"
     disconnected_nodes = set(population.keys()) - set(graph.nodes())
     if disconnected_nodes:
-        logger.warning("These nodes are disconnected from the graph: %s", disconnected_nodes)
+        logger.warning("These nodes have no contacts in the current network: %s", disconnected_nodes)
 
     state0: Dict[str, Dict[Tuple[str, str], float]] = {}
     for node in list(graph.nodes()):
