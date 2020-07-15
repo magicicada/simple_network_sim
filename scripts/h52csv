@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e -o pipefail
+
+if [ -z "$1" ]; then
+    dir=sample_input_files
+else
+    dir=$1
+fi
+
+find sample_input_files/ -name '*.csv' -a -not -path '*output*' -print0 | while IFS= read -r -d $'\0' h5; do
+    csv=${h5/.h5/.csv}
+    echo Converting $h5 to $csv
+    python -m simple_network_sim.hdf5_to_csv "$h5" "$csv"
+done
