@@ -1,4 +1,8 @@
 Parameter,Value
-n_smc_steps,5
+n_smc_steps,3
 n_particles,5
-thresholds,"100, 75, 50, 25, 10"
+infection_probability_shape,2.
+infection_probability_kernel_sigma,0.1
+initial_infections_stddev,0.2
+initial_infections_stddev_min,10.
+initial_infections_kernel_sigma,5.

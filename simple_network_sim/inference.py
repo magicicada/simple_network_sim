@@ -50,26 +50,27 @@ class InferredVariable(ABC):
 
 class InferredInfectionProbability(InferredVariable):
 
-    def __init__(self, value: float, mean: float, location: float, random_state: np.random.Generator):
+    def __init__(self, value: float, mean: float, shape: float, kernel_sigma: float, random_state: np.random.Generator):
         self.value = value
         self.mean = mean
-        self.location = location
-        self.kernel_sigma = 0.1
+        self.shape = shape
+        self.kernel_sigma = kernel_sigma
         self.random_state = random_state
 
     @staticmethod
     def generate_from_prior(fitter: ABCSMC) -> InferredInfectionProbability:
         """ Sample from prior distribution. For infection probability, we use
-        the value in the data pipeline as mean of our prior, and location parameter
+        the value in the data pipeline as mean of our prior, and shape parameter
         is fixed at 2. This defines a Beta distribution centered around our prior.
 
         :param fitter: ABC-SMC fitter object
         :return: New InferredInitialInfections randomly sampled from prior
         """
-        location = 2.
+        shape = fitter.infection_probability_shape
+        kernel_sigma = fitter.infection_probability_kernel_sigma
         mean = fitter.infection_probability.at[0, "Value"]
-        value = stats.beta.rvs(location, location * (1 - mean) / mean, random_state=fitter.random_state)
-        return InferredInfectionProbability(value, mean, location, fitter.random_state)
+        value = stats.beta.rvs(shape, shape * (1 - mean) / mean, random_state=fitter.random_state)
+        return InferredInfectionProbability(value, mean, shape, kernel_sigma, fitter.random_state)
 
     def generate_perturbated(self) -> InferredInfectionProbability:
         """ From current parameter, add a perturbation to infection probability and return
@@ -80,7 +81,8 @@ class InferredInfectionProbability(InferredVariable):
         :return: New parameter which is similar to self up to a perturbation
         """
         perturbated_value = self.value + stats.uniform.rvs(-1., 2., random_state=self.random_state) * self.kernel_sigma
-        return InferredInfectionProbability(perturbated_value, self.mean, self.location, self.random_state)
+        return InferredInfectionProbability(perturbated_value, self.mean, self.shape, self.kernel_sigma,
+                                            self.random_state)
 
     def validate(self) -> bool:
         """ Checks that the particle is valid, i.e. that infection probability is
@@ -104,7 +106,7 @@ class InferredInfectionProbability(InferredVariable):
         :param x: Particle to evaluate the pdf at
         :return: pdf value of prior distribution evaluated at x
         """
-        return stats.beta.pdf(x.value, self.location, self.location * (1 - self.mean) / self.mean)
+        return stats.beta.pdf(x.value, self.shape, self.shape * (1 - self.mean) / self.mean)
 
     def perturbation_pdf(self, x: InferredInfectionProbability) -> float:
         """ Compute pdf of the perturbation evaluated at the parameter x,
@@ -121,16 +123,25 @@ class InferredInfectionProbability(InferredVariable):
 
 class InferredInitialInfections(InferredVariable):
 
-    def __init__(self, value: pd.DataFrame, mean: pd.DataFrame, stddev: float, random_state: np.random.Generator):
+    def __init__(
+        self,
+        value: pd.DataFrame,
+        mean: pd.DataFrame,
+        stddev: float,
+        stddev_min: float,
+        kernel_sigma: float,
+        random_state: np.random.Generator
+    ):
         self.value = value
         self.mean = mean
         self.stddev = stddev
+        self.stddev_min = stddev_min
         self.random_state = random_state
-        self.kernel_sigma = 5.
+        self.kernel_sigma = kernel_sigma
 
     @staticmethod
-    def _rvs_lognormal(mean: float, stddev: float):
-        """ Constructs scipy lognormal object to match a given mean and std
+    def _rvs_lognormal(mean: float, stddev: float, stddev_min: float):
+        """ Constructs Scipy lognormal object to match a given mean and std
         dev passed as input. The parameters to input in the model are inverted
         from the formulas:
             if X~LogNormal(mu, scale)
@@ -138,13 +149,16 @@ class InferredInitialInfections(InferredVariable):
             E[X] = exp{mu + sigma**2 * 0.5}
             Var[X] = (exp{sigma**2} - 1) * exp{2 * mu + sigma**2}
 
+        The stddev is taken as a % of the mean, floored at 10. This
+        allows natural scaling with the size of the population inside the
+        nodes, always allowing for a minimal uncertainty.
+
         :param mean: Mean to match
         :param stddev: Std dev to match
         :return: Distribution object representing a lognormal distribution with
         the given mean and std dev
         """
-        mean = max(mean, 1e-5)
-        var = max((mean * stddev)**2, 100.)  # Minimal stddev of 10 people for initial infections
+        var = max((mean * stddev)**2, stddev_min)
         sigma = np.sqrt(np.log(1 + (var / mean**2)))
         mu = np.log(mean / np.sqrt(1 + (var / mean**2)))
         return stats.lognorm(s=sigma, loc=0., scale=np.exp(mu))
@@ -159,12 +173,14 @@ class InferredInitialInfections(InferredVariable):
         :param fitter: ABC-SMC fitter object
         :return: New InferredInitialInfections randomly sampled from prior
         """
-        stddev = 0.2
-
+        stddev = fitter.initial_infections_stddev
+        stddev_min = fitter.initial_infections_stddev_min
+        kernel_sigma = fitter.initial_infections_kernel_sigma
         value = fitter.initial_infections.copy()
-        value.Infected = value.Infected.apply(lambda x: InferredInitialInfections._rvs_lognormal(x, stddev)
+        value.Infected = value.Infected.apply(lambda x: InferredInitialInfections._rvs_lognormal(x, stddev, stddev_min)
                                               .rvs(random_state=fitter.random_state))
-        return InferredInitialInfections(value, fitter.initial_infections, stddev, fitter.random_state)
+        return InferredInitialInfections(value, fitter.initial_infections, stddev, stddev_min, kernel_sigma,
+                                         fitter.random_state)
 
     def generate_perturbated(self) -> InferredInitialInfections:
         """ From current parameter, add a perturbation to every parameter and return
@@ -179,7 +195,8 @@ class InferredInitialInfections(InferredVariable):
         perturbated_value.Infected = perturbated_value.Infected.apply(lambda x: x + self.kernel_sigma * stats.uniform
                                                                       .rvs(-1., 2., random_state=self.random_state))
 
-        return InferredInitialInfections(perturbated_value, self.mean, self.stddev, self.random_state)
+        return InferredInitialInfections(perturbated_value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
+                                         self.random_state)
 
     def validate(self) -> bool:
         """ Checks that the particle is valid, i.e. that all initial infections are
@@ -206,7 +223,8 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.mean.iterrows():
-            pdf *= InferredInitialInfections._rvs_lognormal(row.Infected, self.stddev).pdf(x.value.at[index, "Infected"])
+            pdf *= InferredInitialInfections._rvs_lognormal(row.Infected, self.stddev, self.stddev_min)\
+                                            .pdf(x.value.at[index, "Infected"])
 
         return pdf
 
@@ -225,7 +243,8 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.value.iterrows():
-            pdf *= stats.uniform.pdf(x.value.at[index, "Infected"], row.Infected - self.kernel_sigma, 2 * self.kernel_sigma)
+            pdf *= stats.uniform.pdf(x.value.at[index, "Infected"], row.Infected - self.kernel_sigma,
+                                     2 * self.kernel_sigma)
 
         return pdf
 
@@ -353,11 +372,19 @@ class ABCSMC:
 
         self.n_smc_steps = parameters["n_smc_steps"]
         self.n_particles = parameters["n_particles"]
-        self.thresholds = parameters["thresholds"]
+        self.infection_probability_shape = parameters["infection_probability_shape"]
+        self.infection_probability_kernel_sigma = parameters["infection_probability_kernel_sigma"]
+        self.initial_infections_stddev = parameters["initial_infections_stddev"]
+        self.initial_infections_stddev_min = parameters["initial_infections_stddev_min"]
+        self.initial_infections_kernel_sigma = parameters["initial_infections_kernel_sigma"]
 
         assert self.n_smc_steps > 0
         assert self.n_particles > 0
-        assert self.n_smc_steps == len(self.thresholds)
+        assert self.infection_probability_shape > 0.
+        assert self.infection_probability_kernel_sigma > 0.
+        assert self.initial_infections_stddev > 0.
+        assert self.initial_infections_stddev_min > 0.
+        assert self.initial_infections_kernel_sigma > 0.
 
         self.compartment_transition_table = compartment_transition_table
         self.population_table = population_table
@@ -587,13 +614,8 @@ def run_inference(args) -> Dict:
             store.read_table("human/random-seed"),
         )
 
-        t0 = time.time()
         particles, weights = abcsmc.fit()
         summary = abcsmc.summarize(particles, weights)
-
-        logger.info("Writing output")
-        store.write_table("output/simple_network_sim/inference", summary)
-        logger.info("Took %.2fs to run the inference.", time.time() - t0)
 
     return summary
 
@@ -603,7 +625,11 @@ def main(argv):
     sm.setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
+    t0 = time.time()
     run_inference(args)
+
+    logger.info("Writing output")
+    logger.info("Took %.2fs to run the inference.", time.time() - t0)
 
 
 if __name__ == "__main__":

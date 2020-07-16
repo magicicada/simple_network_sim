@@ -198,7 +198,12 @@ def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
 
     parameters["n_smc_steps"] = int(parameters["n_smc_steps"])
     parameters["n_particles"] = int(parameters["n_particles"])
-    parameters["thresholds"] = [float(x) for x in parameters["thresholds"].split(",")]
+    parameters["infection_probability_shape"] = float(parameters["infection_probability_shape"])
+    parameters["infection_probability_kernel_sigma"] = float(parameters["infection_probability_kernel_sigma"])
+    parameters["initial_infections_stddev"] = float(parameters["initial_infections_stddev"])
+    parameters["initial_infections_stddev_min"] = float(parameters["initial_infections_stddev_min"])
+    parameters["initial_infections_kernel_sigma"] = float(parameters["initial_infections_kernel_sigma"])
+
 
     return parameters
 
