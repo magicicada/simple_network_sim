@@ -832,7 +832,7 @@ def createNetworkOfPopulation(
                 assert state == nextState or nextState != EXPOSED_STATE, \
                     "progression into exposed state is not allowed other than in self reference"
     assert (set(infectious_states) - all_states) == set(), \
-        f"mismatched infectious states and states {infectious_states} {set(progression.keys())}"
+        f"mismatched infectious states and states {infectious_states} {all_states}"
 
     # people movement's graph
     graph = loaders.genGraphFromContactFile(commutes_table)
@@ -854,13 +854,20 @@ def createNetworkOfPopulation(
     assert agesInInfectionMatrix == set(progression.keys()), "infection matrix and progression ages mismatch"
     assert agesInInfectionMatrix == {age for region in population.values() for age in region}, \
         "infection matrix and population ages mismatch"
-    assert set(graph.nodes()) == set(population.keys()), "regions mismatch between graph and population"
+    disconnected_nodes = set(population.keys()) - set(graph.nodes())
+    if disconnected_nodes:
+        logger.warning("These nodes have no contacts in the current network: %s", disconnected_nodes)
 
     state0: Dict[str, Dict[Tuple[str, str], float]] = {}
     for node in list(graph.nodes()):
         region = state0.setdefault(node, {})
         for age, compartments in progression.items():
-            region[(age, SUSCEPTIBLE_STATE)] = population[node][age]
+            if node not in population:
+                logger.warning("Node %s is not in the population table, assuming population of 0 for all ages", node)
+                pop = 0.0
+            else:
+                pop = population[node][age]
+            region[(age, SUSCEPTIBLE_STATE)] = pop
             for compartment in compartments:
                 region[(age, compartment)] = 0
 

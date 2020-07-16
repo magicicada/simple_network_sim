@@ -50,10 +50,10 @@ def teardown_remove_data():
     when the config file changes.
     """
     yield
-    shutil.rmtree(FIXTURE_DIR / "data_pipeline_inputs" / "output")
+    shutil.rmtree(FIXTURE_DIR / "data_pipeline_inputs" / "output", ignore_errors=True)
     # Tests may drop access*.yaml files in the fixtures directory
     for logpath in (FIXTURE_DIR / "data_pipeline_inputs").glob("access*.yaml"):
-        shutil.rmtree(logpath)
+        shutil.rmtree(logpath, ignore_errors=True)
     # Tests may drop access*.log files in the fixtures directory
     for logpath in (FIXTURE_DIR / "data_pipeline_inputs").glob("access*.log"):
-        shutil.rmtree(logpath)
+        shutil.rmtree(logpath, ignore_errors=True)
