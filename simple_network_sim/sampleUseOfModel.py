@@ -52,12 +52,13 @@ def main(argv):
             store.read_table("human/infection-probability", "infection-probability"),
             store.read_table("human/initial-infections", "initial-infections"),
             store.read_table("human/trials", "trials"),
+            store.read_table("human/start-end-date", "start-end-date"),
             store.read_table("human/movement-multipliers", "movement-multipliers") if args.use_movement_multipliers else None,
             store.read_table("human/stochastic-mode", "stochastic-mode"),
             store.read_table("human/random-seed", "random-seed"),
         )
 
-        results = runSimulation(network, args.time)
+        results = runSimulation(network)
         aggregated = aggregateResults(results)
 
         logger.info("Writing output")
@@ -76,20 +77,16 @@ def main(argv):
         )
 
 
-def runSimulation(
-    network: ss.NetworkOfPopulation,
-    max_time: int,
-) -> List[pd.DataFrame]:
+def runSimulation(network: ss.NetworkOfPopulation) -> List[pd.DataFrame]:
     """Run pre-created network
 
     :param network: object representing the network of populations
-    :param max_time: Maximum time for simulation
     :return: Result runs for all trials of the simulation
     """
     results = []
     for i in range(network.trials):
         logger.info("Running simulation (%s/%s)", i + 1, network.trials)
-        result = ss.basicSimulationInternalAgeStructure(network, max_time, network.initialInfections)
+        result = ss.basicSimulationInternalAgeStructure(network, network.initialInfections)
         results.append(result)
 
     return results
@@ -203,12 +200,6 @@ def build_args(argv):
         "--use-movement-multipliers",
         action="store_true",
         help="By enabling this parameter you can adjust dampening or heightening people movement through time",
-    )
-    parser.add_argument(
-        "--time",
-        default=200,
-        type=int,
-        help="The number of time steps to take for each simulation",
     )
     parser.add_argument(
         "-l",
