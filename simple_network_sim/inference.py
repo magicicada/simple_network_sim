@@ -24,7 +24,7 @@ class InferredVariable(ABC):
 
     @staticmethod
     @abstractmethod
-    def generate_from_prior() -> InferredVariable:
+    def generate_from_prior(fitter: ABCSMC) -> InferredVariable:
         pass
 
     @abstractmethod
@@ -49,23 +49,25 @@ class InferredVariable(ABC):
 
 
 class InferredInfectionProbability(InferredVariable):
-    location: float = 1.
-    mean: float = 0.5
-    sigma: float = 0.1
+    perturbation_scale: float = 0.1
 
-    def __init__(self, value: float):
+    def __init__(self, value: float, mean: float, location: float, random_state: np.random.Generator):
         self.value = value
+        self.mean = mean
+        self.location = location
+        self.random_state = random_state
 
     @staticmethod
-    def generate_from_prior() -> InferredInfectionProbability:
-        location = InferredInfectionProbability.location
-        mean = InferredInfectionProbability.mean
-        value = np.random.beta(location, location * (1 - mean) / mean)
-        return InferredInfectionProbability(value)
+    def generate_from_prior(fitter: ABCSMC) -> InferredInfectionProbability:
+        location = 4.
+        mean = fitter.infection_probability.at[0, "Value"]
+        value = stats.beta.rvs(location, location * (1 - mean) / mean, random_state=fitter.random_state)
+        return InferredInfectionProbability(value, mean, location, fitter.random_state)
 
     def generate_perturbated(self) -> InferredInfectionProbability:
-        sigma = InferredInfectionProbability.sigma
-        return InferredInfectionProbability(self.value + np.random.uniform(-1, 1) * sigma)
+        sigma = InferredInfectionProbability.perturbation_scale
+        perturbated_value = self.value + stats.uniform.rvs(-1., 2., random_state=self.random_state) * sigma
+        return InferredInfectionProbability(perturbated_value, self.mean, self.location, self.random_state)
 
     def validate(self) -> bool:
         return 0. < self.value < 1.
@@ -73,27 +75,85 @@ class InferredInfectionProbability(InferredVariable):
     def generate_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([0., self.value], columns=[0], index=["Time", "Value"]).T
 
-    def prior_pdf(self, value: InferredInfectionProbability) -> float:
-        location = InferredInfectionProbability.location
-        mean = InferredInfectionProbability.mean
-        return stats.beta.pdf(value.value, location, location * (1 - mean) / mean)
+    def prior_pdf(self, x: InferredInfectionProbability) -> float:
+        return stats.beta.pdf(x.value, self.location, self.location * (1 - self.mean) / self.mean)
 
-    def perturbation_pdf(self, value: InferredInfectionProbability) -> float:
-        sigma = InferredInfectionProbability.sigma
-        return stats.uniform.pdf(value.value, self.value - sigma, 2 * sigma)
+    def perturbation_pdf(self, x: InferredInfectionProbability) -> float:
+        sigma = InferredInfectionProbability.perturbation_scale
+        return stats.uniform.pdf(x.value, self.value - sigma, 2 * sigma)
+
+
+class InferredInitialInfections(InferredVariable):
+    perturbation_scale: float = 5.
+
+    def __init__(self, value: pd.DataFrame, mean: pd.DataFrame, stddev: float, random_state: np.random.Generator):
+        self.value = value
+        self.mean = mean
+        self.stddev = stddev
+        self.random_state = random_state
+
+    @staticmethod
+    def _rvs_lognormal_from_mean_std(mean: float, stddev: float):
+        mean = max(mean, 1e-5)
+        var = max((mean * stddev)**2, 100.)  # Minimal stddev of 10 people for initial infections
+        sigma = np.sqrt(np.log(1 + (var / mean**2)))
+        mu = np.log(mean / np.sqrt(1 + (var / mean**2)))
+        return stats.lognorm(s=sigma, loc=0., scale=np.exp(mu))
+
+    @staticmethod
+    def generate_from_prior(fitter: ABCSMC) -> InferredInitialInfections:
+        stddev = 0.2
+
+        value = fitter.initial_infections.copy()
+        value.Infected = value.Infected.apply(lambda x: InferredInitialInfections._rvs_lognormal_from_mean_std(x, stddev)
+                                              .rvs(random_state=fitter.random_state))
+        return InferredInitialInfections(value, fitter.initial_infections, stddev, fitter.random_state)
+
+    def generate_perturbated(self) -> InferredInitialInfections:
+        sigma = InferredInfectionProbability.perturbation_scale
+
+        perturbated_value = self.value.copy()
+        perturbated_value.Infected = perturbated_value.Infected.apply(lambda x: x + sigma * stats.uniform
+                                                                      .rvs(-1., 2., random_state=self.random_state))
+
+        return InferredInitialInfections(perturbated_value, self.mean, self.stddev, self.random_state)
+
+    def validate(self) -> bool:
+        return np.all(self.value.Infected >= 0.)
+
+    def generate_dataframe(self) -> pd.DataFrame:
+        return self.value
+
+    def prior_pdf(self, x: InferredInitialInfections) -> float:
+        pdf = 1.
+        for index, row in self.mean.iterrows():
+            pdf *= InferredInitialInfections._rvs_lognormal_from_mean_std(row.Infected, self.stddev)\
+                   .pdf(x.value.at[index, "Infected"])
+
+        return pdf
+
+    def perturbation_pdf(self, x: InferredInfectionProbability) -> float:
+        sigma = InferredInfectionProbability.perturbation_scale
+
+        pdf = 1.
+        for index, row in self.value.iterrows():
+            pdf *= stats.uniform.pdf(x.value.at[index, "Infected"], row.Infected - sigma, 2 * sigma)
+
+        return pdf
 
 
 class Particle:
     inferred_variables_classes = {
-        "infection_probability": InferredInfectionProbability
+        "infection_probability": InferredInfectionProbability,
+        "initial-infections": InferredInitialInfections
     }
 
     def __init__(self, inferred_variables: Dict[str, InferredVariable]):
         self.inferred_variables = inferred_variables
 
     @staticmethod
-    def generate_from_priors() -> Particle:
-        return Particle({variable_name: variable_class.generate_from_prior()
+    def generate_from_priors(fitter: ABCSMC) -> Particle:
+        return Particle({variable_name: variable_class.generate_from_prior(fitter)
                          for variable_name, variable_class in Particle.inferred_variables_classes.items()})
 
     def generate_perturbated(self) -> Particle:
@@ -115,14 +175,14 @@ class Particle:
             if particle.validate_particle():
                 return particle
 
-    def prior_pdf(self, at: Particle) -> Optional[float, np.ndarray]:
+    def prior_pdf(self, at: Particle) -> Optional[float]:
         pdf = 1.
         for key in self.inferred_variables:
             pdf *= self.inferred_variables[key].prior_pdf(at.inferred_variables[key])
 
         return pdf
 
-    def perturbation_pdf(self, at: Particle) -> Optional[float, np.ndarray]:
+    def perturbation_pdf(self, at: Particle) -> Optional[float]:
         pdf = 1.
         for key in self.inferred_variables:
             pdf *= self.inferred_variables[key].perturbation_pdf(at.inferred_variables[key])
@@ -140,6 +200,7 @@ class ABCSMC:
         population_table: pd.DataFrame,
         commutes_table: pd.DataFrame,
         mixing_matrix_table: pd.DataFrame,
+        infection_probability: pd.DataFrame,
         initial_infections: pd.DataFrame,
         infectious_states: pd.DataFrame,
         trials: pd.DataFrame,
@@ -163,6 +224,7 @@ class ABCSMC:
         self.population_table = population_table
         self.commutes_table = commutes_table
         self.mixing_matrix_table = mixing_matrix_table
+        self.infection_probability = infection_probability
         self.initial_infections = initial_infections
         self.infectious_states = infectious_states
         self.trials = trials
@@ -170,6 +232,7 @@ class ABCSMC:
         self.movement_multipliers_table = movement_multipliers_table
         self.stochastic_mode = stochastic_mode
         self.random_seed = random_seed
+        self.random_state = np.random.default_rng(loaders.readRandomSeed(random_seed))
 
         assert trials.at[0, "Value"] == 1
 
@@ -208,7 +271,7 @@ class ABCSMC:
         while particles_accepted < self.n_particles:
 
             if smc_step == 0:
-                particle = Particle.generate_from_priors()
+                particle = Particle.generate_from_priors(self)
             else:
                 particle = Particle.resample_and_perturbate(prev_particles, prev_weights)
 
@@ -238,14 +301,14 @@ class ABCSMC:
             self.mixing_matrix_table,
             self.infectious_states,
             particle.inferred_variables["infection_probability"].generate_dataframe(),
-            self.initial_infections,
+            particle.inferred_variables["initial-infections"].generate_dataframe(),
             self.trials,
             self.start_date,
             self.movement_multipliers_table,
             self.stochastic_mode,
             self.random_seed
         )
-        results = sm.runSimulation(network, 200)
+        results = sm.runSimulation(network, 111)
         aggregated = sm.aggregateResults(results)
         return aggregated
 
@@ -261,7 +324,8 @@ class ABCSMC:
             .resample('7D').sum()
         )
 
-        distance = np.sqrt(((result_by_node - self.historical_deaths)**2).sum().sum())
+        distance = (result_by_node - self.historical_deaths)**2
+        distance = np.sqrt(distance.sum().sum() / distance.count().sum())
         return distance
 
     def compute_weight(
@@ -291,6 +355,7 @@ class ABCSMC:
         self.fit_statistics[smc_step]["particles_accepted"] = particles_accepted
         self.fit_statistics[smc_step]["particles_simulated"] = particles_simulated
         self.fit_statistics[smc_step]["distances"] = distances
+        self.fit_statistics[smc_step]["threshold"] = self.threshold
         self.fit_statistics[smc_step]["time"] = f"{time.time() - t0:.0f}s"
 
     def summarize(self, particles: List[Particle], weights: List[float]) -> Dict:
@@ -311,6 +376,7 @@ def run_inference(args, store):
         store.read_table("human/population"),
         store.read_table("human/commutes"),
         store.read_table("human/mixing-matrix"),
+        store.read_table("human/infection-probability"),
         store.read_table("human/initial-infections"),
         store.read_table("human/infectious-compartments"),
         store.read_table("human/trials"),
@@ -333,7 +399,7 @@ def main(argv):
     sm.setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
-    with data.Datastore("../config.yaml") as store:
+    with data.Datastore("../config_inference.yaml") as store:
         results = run_inference(args, store)
 
         logger.info("Writing output")

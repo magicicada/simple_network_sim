@@ -1,4 +1,4 @@
 Parameter,Value
 n_smc_steps,5
-n_particles,10
+n_particles,5
 thresholds,"100, 75, 50, 25, 10"
