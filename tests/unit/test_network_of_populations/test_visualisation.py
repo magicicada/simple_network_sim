@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from data_pipeline_api.file_formats import object_file
 
 import simple_network_sim.network_of_populations.visualisation as vis
 from tests.utils import compare_mpl_plots
@@ -74,7 +75,8 @@ def test_plotStates_empty_missing_column():
 
 def test_read_output(tmpdir):
     df = pd.DataFrame([{"a": 10, "b": 20}])
-    df.to_csv(str(tmpdir / Path("simple.csv")), index=False)
+    with open(str(tmpdir / Path("simple.h5")), "wb") as fp:
+        object_file.write_table(fp, "outbreak-timeseries", df)
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
@@ -85,7 +87,7 @@ io:
     data_product: output/simple_network_sim/outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
-    filename: simple.csv
+    filename: simple.h5
 """)
     output = vis.read_output("output/simple_network_sim/outbreak-timeseries", path)
 
@@ -94,7 +96,8 @@ io:
 
 def test_read_output_ignore_read(tmpdir):
     df = pd.DataFrame([{"a": 10, "b": 20}])
-    df.to_csv(str(tmpdir / Path("simple.csv")), index=False)
+    with open(str(tmpdir / Path("simple.h5")), "wb") as fp:
+        object_file.write_table(fp, "outbreak-timeseries", df)
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
@@ -110,7 +113,7 @@ io:
     data_product: output/simple_network_sim/outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
-    filename: simple.csv
+    filename: simple.h5
 """)
     output = vis.read_output("output/simple_network_sim/outbreak-timeseries", path)
 
@@ -119,7 +122,8 @@ io:
 
 def test_read_output_multiple_writes(tmpdir):
     df = pd.DataFrame([{"a": 10, "b": 20}])
-    df.to_csv(str(tmpdir / Path("simple.csv")), index=False)
+    with open(str(tmpdir / Path("simple.h5")), "wb") as fp:
+        object_file.write_table(fp, "outbreak-timeseries", df)
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
@@ -130,13 +134,13 @@ io:
     data_product: output/simple_network_sim/outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
-    filename: simple.csv
+    filename: simple.h5
 - type: write
   call_metadata:
     data_product: other
   access_metadata:
     data_product: other
-    filename: simple.csv
+    filename: simple.h5
 """)
     output = vis.read_output("output/simple_network_sim/outbreak-timeseries", path)
 

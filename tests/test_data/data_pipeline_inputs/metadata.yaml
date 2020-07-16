@@ -1,58 +1,66 @@
 -
   data_product: human/compartment-transition
   version: 1.0.0
-  extension: csv
-  filename: human/compartment-transition/1/data.csv
+  extension: h5
+  component: compartment-transition
+  filename: human/compartment-transition/1/data.h5
 -
   data_product: human/population
   version: 1.0.0
-  extension: csv
-  filename: human/population/1/data.csv
+  extension: h5
+  component: population
+  filename: human/population/1/data.h5
 -
   data_product: human/commutes
   version: 1.0.0
-  extension: csv
-  filename: human/commutes/1/data.csv
+  extension: h5
+  component: commutes
+  filename: human/commutes/1/data.h5
 -
   data_product: human/mixing-matrix
   version: 1.0.0
-  extension: csv
-  filename: human/mixing-matrix/1/data.csv
+  extension: h5
+  component: mixing-matrix
+  filename: human/mixing-matrix/1/data.h5
 -
   data_product: human/infectious-compartments
   version: 1.0.0
-  extension: csv
-  filename: human/infectious-compartments/1/data.csv
+  extension: h5
+  component: infectious-compartments
+  filename: human/infectious-compartments/1/data.h5
 -
   data_product: human/infection-probability
   version: 1.0.0
-  extension: csv
-  filename: human/infection-probability/1/data.csv
+  extension: h5
+  component: infection-probability
+  filename: human/infection-probability/1/data.h5
 -
   data_product: human/movement-multipliers
   version: 1.0.0
-  extension: csv
-  filename: human/movement-multipliers/1/data.csv
+  extension: h5
+  component: movement-multipliers
+  filename: human/movement-multipliers/1/data.h5
 -
   data_product: human/initial-infections
   version: 1.0.0
-  extension: csv
-  filename: human/initial-infections/1/data.csv
+  extension: h5
+  component: initial-infections
+  filename: human/initial-infections/1/data.h5
 -
   data_product: human/trials
   version: 1.0.0
-  extension: csv
-  filename: human/trials/1/data.csv
-  verified_hash: 33d97bfd0e2c92f5002a9d1cd62a7a822fd57d0f
+  extension: h5
+  component: trials
+  filename: human/trials/1/data.h5
 -
   data_product: human/stochastic-mode
   version: 1.0.0
-  extension: csv
-  filename: human/stochastic-mode/1/data.csv
-  verified_hash: a8ff97c16baf5143f1154c26b9519d046ba144a5
+  extension: h5
+  component: stochastic-mode
+  filename: human/stochastic-mode/deterministic/1/data.h5
 -
   data_product: human/random-seed
   version: 1.0.0
-  extension: csv
-  filename: human/random-seed/1/data.csv
-  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6
+  extension: h5
+  component: random-seed
+  filename: human/random-seed/1/data.h5

@@ -6,14 +6,14 @@ write:
 - where:
     data_product: output/simple_network_sim/outbreak-timeseries
   use:
-    filename: output/simple_network_sim/outbreak-timeseries/data.csv
+    filename: output/simple_network_sim/outbreak-timeseries/data.h5
 - where:
     data_product: output/data
   use:
-    filename: output/data.csv
+    filename: output/data.h5
 
 read:
 - where:
     data_product: human/stochastic-mode
   use:
-    filename: human/stochastic-mode/deterministic/1/data.csv
+    filename: human/stochastic-mode/deterministic/1/data.h5
