@@ -1,9 +1,14 @@
+"""
+Visualisation tool for network of populations
+"""
+# pylint: disable=import-error
 import argparse
 import logging
 import math
 import sys
 from pathlib import Path
 
+from data_pipeline_api.file_formats import object_file
 import pandas as pd
 import yaml
 
@@ -96,13 +101,14 @@ def read_output(data_product: str, path: str) -> pd.DataFrame:
     assert len(outputs) == 1, f"More than one output selected: {outputs}"
 
     output_path = Path(access_log["data_directory"]) / Path(outputs[0]["access_metadata"]["filename"])
-    return pd.read_csv(output_path)
+    with open(output_path, "rb") as fp:
+        return object_file.read_table(output_path, "outbreak-timeseries")
 
 
 def build_args(argv):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Reads",
+        description="Reads the access*.yaml files and outputs graphs for a given run",
     )
 
     parser.add_argument(
@@ -135,6 +141,9 @@ def build_args(argv):
 
 
 def main(argv):
+    """
+    This is the main function of the visualisation tool. The tool outputs graphs for a given network of populations run
+    """
     logging.basicConfig(
         stream=sys.stdout,
         level=logging.INFO,

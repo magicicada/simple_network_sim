@@ -1,3 +1,10 @@
+"""
+This package implements the network of populations simuation. This models regions as nodes with intra node rules and
+different inter node transmission rules. The end result of the model is a timeseries of the number of people in each
+node, compartment and age.
+"""
+# pylint: disable=import-error
+# pylint: disable=too-many-lines
 import logging
 import random
 import copy
@@ -856,7 +863,7 @@ def createNetworkOfPopulation(
         "infection matrix and population ages mismatch"
     disconnected_nodes = set(population.keys()) - set(graph.nodes())
     if disconnected_nodes:
-        logger.warning("These nodes are disconnected from the graph: %s", disconnected_nodes)
+        logger.warning("These nodes have no contacts in the current network: %s", disconnected_nodes)
 
     state0: Dict[str, Dict[Tuple[str, str], float]] = {}
     for node in list(graph.nodes()):

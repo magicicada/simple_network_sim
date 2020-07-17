@@ -1,7 +1,15 @@
+"""
+Assortment of useful functions
+"""
+# pylint: disable=import-error
 import logging
-from typing import Callable, Any
+from typing import Callable, Any, NamedTuple
+
+import git
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_GITHUB_REPO = "https://github.com/ScottishCovidResponse/simple_network_sim.git"
 
 
 # CurrentlyInUse
@@ -43,3 +51,30 @@ class Lazy:
 
     def __repr__(self):
         return repr(self.f())
+
+
+class RepoInfo(NamedTuple):
+    """
+    The info needed by the data pipeline API
+    """
+    git_sha: str
+    uri: str
+    is_dirty: bool
+
+
+def get_repo_info() -> RepoInfo:
+    """
+    Retrieves the current git sha and uri for the current git repo
+    :return: A RepoInfo object. If not inside a git repo, is_dirty will be True, git_sha empty and uri will be a
+             default value
+    """
+    try:
+        repo = git.Repo()
+    except git.InvalidGitRepositoryError:
+        return RepoInfo(git_sha="", uri=DEFAULT_GITHUB_REPO, is_dirty=True)
+    else:
+        return RepoInfo(
+            git_sha=repo.head.commit.hexsha,
+            uri=next(repo.remote("origin").urls),
+            is_dirty=repo.is_dirty(),
+        )

@@ -1,15 +1,20 @@
+"""
+This is the main module used to run simulations based on network of populations
+"""
+# pylint: disable=import-error
 import argparse
 import logging
 import logging.config
 import sys
 import time
+from typing import Optional, List, NamedTuple
 
+from data_pipeline_api import standard_api
 import pandas as pd
 from pathlib import Path
-from typing import Optional, List
 from functools import reduce
 
-from . import data
+from . import common
 from . import network_of_populations as ss
 
 # Default logger, used if module not called as __main__
@@ -17,32 +22,52 @@ logger = logging.getLogger(__name__)
 
 
 def main(argv):
+    """
+    Main function to run the network of populations simulation
+    """
     t0 = time.time()
 
     args = build_args(argv)
     setup_logger(args)
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
-    with data.Datastore(args.data_pipeline_config) as store:
+    issues: List[standard_api.Issue] = []
+
+    info = common.get_repo_info()
+    if not info.git_sha:
+        desc = "Not running from a git repo, so no git_sha associated with the run"
+        logger.warning(desc)
+        issues.append(standard_api.Issue(severity=10, description=desc))
+    elif info.is_dirty:
+        desc = "Running out of a dirty git repo"
+        logger.warning(desc)
+        issues.append(standard_api.Issue(severity=10, description=desc))
+    with standard_api.StandardAPI(args.data_pipeline_config, uri=info.uri, git_sha=info.git_sha) as store:
         network = ss.createNetworkOfPopulation(
-            store.read_table("human/compartment-transition"),
-            store.read_table("human/population"),
-            store.read_table("human/commutes"),
-            store.read_table("human/mixing-matrix"),
-            store.read_table("human/infectious-compartments"),
-            store.read_table("human/infection-probability"),
-            store.read_table("human/initial-infections"),
-            store.read_table("human/trials"),
-            store.read_table("human/movement-multipliers") if args.use_movement_multipliers else None,
-            store.read_table("human/stochastic-mode"),
-            store.read_table("human/random-seed"),
+            store.read_table("human/compartment-transition", "compartment-transition"),
+            store.read_table("human/population", "population"),
+            store.read_table("human/commutes", "commutes"),
+            store.read_table("human/mixing-matrix", "mixing-matrix"),
+            store.read_table("human/infectious-compartments", "infectious-compartments"),
+            store.read_table("human/infection-probability", "infection-probability"),
+            store.read_table("human/initial-infections", "initial-infections"),
+            store.read_table("human/trials", "trials"),
+            store.read_table("human/movement-multipliers", "movement-multipliers") if args.use_movement_multipliers else None,
+            store.read_table("human/stochastic-mode", "stochastic-mode"),
+            store.read_table("human/random-seed", "random-seed"),
         )
 
         results = runSimulation(network, args.time)
         aggregated = aggregateResults(results)
 
         logger.info("Writing output")
-        store.write_table("output/simple_network_sim/outbreak-timeseries", aggregated)
+        store.write_table(
+            "output/simple_network_sim/outbreak-timeseries",
+            "outbreak-timeseries",
+            aggregated.output,
+            issues=issues,
+            description=aggregated.description,
+        )
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
         logger.info(
@@ -70,19 +95,29 @@ def runSimulation(
     return results
 
 
-def aggregateResults(results: List[pd.DataFrame]) -> pd.DataFrame:
+class AggregatedResults(NamedTuple):
+    """
+    This object contains the results of a simulation and a small description
+    """
+    output: pd.DataFrame
+    description: str = "A dataframe of the number of people in each node, compartment and age over time"
+
+
+def aggregateResults(results: List[pd.DataFrame]) -> AggregatedResults:
     """Aggregate results from runs
 
     :param results: result runs from runSimulation
     :return: Averaged number of infection through time, for all trial
     """
     if len(results) == 1:
-        return results[0]
+        aggregated = results[0]
     else:
         results = [result.set_index(["time", "node", "age", "state"]).total for result in results]
         average = reduce(lambda x, y: x.add(y), results) / len(results)
 
-        return average.reset_index()
+        aggregated = average.reset_index()
+    # The data pipeline API doesn't support categorical data, so we need to convert these to strings
+    return AggregatedResults(output=aggregated.astype({"node": "str", "age": "str", "state": "str"}))
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:

@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from simple_network_sim.data import Datastore
+from data_pipeline_api import standard_api
 
 # Path to directory containing test files for fixtures
 FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
@@ -11,7 +11,7 @@ FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
 
 def _data_api(base_data_dir, config):
     try:
-        with Datastore(str(base_data_dir / config)) as store:
+        with standard_api.StandardAPI(str(base_data_dir / config), uri="", git_sha="") as store:
             yield store
     finally:
         # TODO; remove this once https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/505 is in prod

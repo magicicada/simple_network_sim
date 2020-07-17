@@ -17,14 +17,14 @@ def _count_people_per_region(state):
 @pytest.mark.parametrize("num_infected", [0, 10])
 def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_infected):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
-        data_api.read_table("human/infection-probability"),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/infection-probability", "infection-probability"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
     )
 
     initial_population = sum(_count_people_per_region(network.initialState))
@@ -51,14 +51,14 @@ def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_in
 @pytest.mark.parametrize("num_infected", [0, 10, 1000])
 def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(data_api, region, num_infected):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
-        data_api.read_table("human/infection-probability"),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/infection-probability", "infection-probability"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
         pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
     )
 
@@ -95,14 +95,14 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
     ])
     dampening = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 1.0, "Contact_Multiplier": 0.0}])
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
         population,
         nodes,
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
-        data_api.read_table("human/infection-probability"),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/infection-probability", "infection-probability"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
         dampening,
     )
 
@@ -121,14 +121,14 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
         pd.DataFrame([{"Time": 0, "Value": 0.0}]),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
     )
     susceptibles = 0.0
     for region in network.initialState.values():
@@ -153,14 +153,14 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         return susceptibles
 
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
         pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
     )
     people_to_infect = 30
     susceptibles = count_susceptibles(network.initialState) - people_to_infect
@@ -204,7 +204,7 @@ def test_createNetworkOfPopulation_missing_population_table_nodes(data_api):
         infectious,
         infection_prob,
         initial,
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/trials", "trials"),
     )
 
     result = np.basicSimulationInternalAgeStructure(model, 30, {"S08000016": {"70+": 40}})
@@ -241,7 +241,7 @@ def test_createNetworkOfPopulation_missing_connections(data_api):
         infectious,
         infection_prob,
         initial,
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/trials", "trials"),
     )
 
     result = np.basicSimulationInternalAgeStructure(model, 30, {"S08000016": {"70+": 40}})
@@ -739,14 +739,14 @@ def test_exposeRegion_only_desired_region():
 
 def test_createNetworkOfPopulation(data_api):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
-        data_api.read_table("human/infection-probability"),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/infection-probability", "infection-probability"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
     )
 
     assert network.graph
@@ -763,14 +763,14 @@ def test_createNetworkOfPopulation(data_api):
 def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
     with pytest.raises(AssertionError):
         np.createNetworkOfPopulation(
-            data_api.read_table("human/compartment-transition"),
-            data_api.read_table("human/population"),
-            data_api.read_table("human/commutes"),
-            data_api.read_table("human/mixing-matrix"),
+            data_api.read_table("human/compartment-transition", "compartment-transition"),
+            data_api.read_table("human/population", "population"),
+            data_api.read_table("human/commutes", "commutes"),
+            data_api.read_table("human/mixing-matrix", "mixing-matrix"),
             pd.DataFrame([{"Compartment": "INVALID"}]),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -778,14 +778,14 @@ def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
 def test_createNetworkOfPopulation_invalid_infection_probability(data_api, time, prob):
     with pytest.raises(ValueError):
         np.createNetworkOfPopulation(
-            data_api.read_table("human/compartment-transition"),
-            data_api.read_table("human/population"),
-            data_api.read_table("human/commutes"),
-            data_api.read_table("human/mixing-matrix"),
-            data_api.read_table("human/infectious-compartments"),
+            data_api.read_table("human/compartment-transition", "compartment-transition"),
+            data_api.read_table("human/population", "population"),
+            data_api.read_table("human/commutes", "commutes"),
+            data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
             pd.DataFrame([{"Time": time, "Value": prob}]),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -807,10 +807,10 @@ def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -832,10 +832,10 @@ def test_createNetworkOfPopulation_age_mismatch_matrix_internal(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -857,10 +857,10 @@ def test_createNetworkOfPopulation_age_mismatch_population(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -882,10 +882,10 @@ def test_createNetworkOfPopulation_age_mismatch_progression(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -909,10 +909,10 @@ def test_createNetworkOfPopulation_susceptible_in_progression(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -936,10 +936,10 @@ def test_createNetworkOfPopulation_transition_to_exposed(data_api):
             population,
             commutes,
             mixingMatrix,
-            data_api.read_table("human/infectious-compartments"),
-            data_api.read_table("human/infection-probability"),
-            data_api.read_table("human/initial-infections"),
-            data_api.read_table("human/trials"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            data_api.read_table("human/infection-probability", "infection-probability"),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
         )
 
 
@@ -1130,14 +1130,14 @@ def test_getWeight_no_delta_adjustment():
 @pytest.mark.parametrize("infected", [100, 10])
 def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
     network = np.createNetworkOfPopulation(
-        data_api.read_table("human/compartment-transition"),
-        data_api.read_table("human/population"),
-        data_api.read_table("human/commutes"),
-        data_api.read_table("human/mixing-matrix"),
-        data_api.read_table("human/infectious-compartments"),
-        data_api.read_table("human/infection-probability"),
-        data_api.read_table("human/initial-infections"),
-        data_api.read_table("human/trials"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/infection-probability", "infection-probability"),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
     )
 
     random.seed(3)

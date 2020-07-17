@@ -1,17 +1,19 @@
 import pandas as pd
 
-from simple_network_sim import sampleUseOfModel
+from simple_network_sim import sampleUseOfModel, hdf5_to_csv
 from tests.utils import create_baseline
 
 
-def test_run_seeded(base_data_dir):
+def test_cli_run(base_data_dir):
     try:
         sampleUseOfModel.main(["-c", str(base_data_dir / "config.yaml")])
 
-        test_data = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
-        baseline = create_baseline(test_data)
+        h5_file = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.h5"
+        csv_file = base_data_dir / "output" / "simple_network_sim" / "outbreak-timeseries" / "data.csv"
+        hdf5_to_csv.main([str(h5_file), str(csv_file)])
+        baseline = create_baseline(csv_file)
 
-        test_df = pd.read_csv(test_data)
+        test_df = pd.read_csv(csv_file)
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
