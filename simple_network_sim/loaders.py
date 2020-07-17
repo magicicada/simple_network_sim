@@ -189,10 +189,10 @@ def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
         return {}
 
     if "Parameter" not in parameters.columns:
-        raise ValueError(f"'Parameter' column should be in ABCSMC parameters")
+        raise ValueError("'Parameter' column should be in ABCSMC parameters")
 
     if "Value" not in parameters.columns:
-        raise ValueError(f"'Value' column should be in ABCSMC parameters")
+        raise ValueError("'Value' column should be in ABCSMC parameters")
 
     parameters = parameters.set_index("Parameter").Value.to_dict()
 
@@ -204,7 +204,6 @@ def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
     parameters["initial_infections_stddev_min"] = float(parameters["initial_infections_stddev_min"])
     parameters["initial_infections_kernel_sigma"] = float(parameters["initial_infections_kernel_sigma"])
 
-
     return parameters
 
 
@@ -215,12 +214,12 @@ def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
     :return: a pd.DataFrame of historical deaths by HB
     """
     if historical_deaths.size == 0:
-        raise ValueError(f"With an empty target no inference can take place")
+        raise ValueError("With an empty target no inference can take place")
 
     historical_deaths = historical_deaths.set_index("Week beginning")
 
     if len(historical_deaths.columns) != 14:
-        raise ValueError(f"The historical deaths should contain a column for every HB")
+        raise ValueError("The historical deaths should contain a column for every HB")
 
     historical_deaths.index = pd.to_datetime(historical_deaths.index)
 

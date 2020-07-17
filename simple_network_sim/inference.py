@@ -8,7 +8,7 @@ import numpy as np
 import scipy.stats as stats
 from abc import ABC, abstractmethod
 
-from typing import Tuple, List, Any, Dict, Optional
+from typing import Tuple, List, Any, Dict, Type, ClassVar
 
 from simple_network_sim import sampleUseOfModel as sm
 from simple_network_sim import network_of_populations as ss
@@ -20,36 +20,48 @@ logger = logging.getLogger(__name__)
 
 
 class InferredVariable(ABC):
+    """
+    Abstract class representing a variable to infer in ABC-SMC. To be inferred,
+    we require from a parameter to:
+    - Sample and retrieve pdf from prior
+    - Perturb the parameter and get the perturbation pdf
+    - Validate if the parameter is correct
+    - Convert to frame to be initialize and run the model
+    """
     value: Any
 
     @staticmethod
     @abstractmethod
     def generate_from_prior(fitter: ABCSMC) -> InferredVariable:
-        pass
+        """ Abstract method for generating a parameter from the prior """
 
     @abstractmethod
     def generate_perturbated(self) -> InferredVariable:
-        pass
+        """ Abstract method for generating a perturbated copy """
 
     @abstractmethod
     def validate(self) -> bool:
-        pass
+        """ Abstract method for validating the parameter correctness """
 
     @abstractmethod
     def generate_dataframe(self) -> pd.DataFrame:
-        pass
+        """ Abstract method for generating the parameter in format to be used in model """
 
     @abstractmethod
-    def prior_pdf(self, value: InferredVariable) -> float:
-        pass
+    def prior_pdf(self) -> float:
+        """ Abstract method for generating the prior pdf """
 
     @abstractmethod
     def perturbation_pdf(self, value: InferredVariable) -> float:
-        pass
+        """ Abstract method for generating the perturbation pdf """
 
 
 class InferredInfectionProbability(InferredVariable):
-
+    """
+    Class representing inferred infection probability to be used inside ABC-SMC fitter.
+    Infection probability is the odd that a contact between an infectious and susceptible
+    person leads to a new infection.
+    """
     def __init__(self, value: float, mean: float, shape: float, kernel_sigma: float, random_state: np.random.Generator):
         self.value = value
         self.mean = mean
@@ -99,14 +111,14 @@ class InferredInfectionProbability(InferredVariable):
         """
         return pd.DataFrame([0., self.value], columns=[0], index=["Time", "Value"]).T
 
-    def prior_pdf(self, x: InferredInfectionProbability) -> float:
+    def prior_pdf(self) -> float:
         """ Compute pdf of the prior distribution evaluated at the parameter x.
-        Infection probability has a prior a beta distribution.
+        Infection probability has a prior a beta distribution. The pdf is evaluated
+        at the current value of the parameter.
 
-        :param x: Particle to evaluate the pdf at
         :return: pdf value of prior distribution evaluated at x
         """
-        return stats.beta.pdf(x.value, self.shape, self.shape * (1 - self.mean) / self.mean)
+        return stats.beta.pdf(self.value, self.shape, self.shape * (1 - self.mean) / self.mean)
 
     def perturbation_pdf(self, x: InferredInfectionProbability) -> float:
         """ Compute pdf of the perturbation evaluated at the parameter x,
@@ -122,15 +134,19 @@ class InferredInfectionProbability(InferredVariable):
 
 
 class InferredInitialInfections(InferredVariable):
-
+    """
+    Class representing inferred initial infections to be used inside ABC-SMC fitter.
+    Initial infections are the number of exposed individuals per node at the start
+    date of the model.
+    """
     def __init__(
-        self,
-        value: pd.DataFrame,
-        mean: pd.DataFrame,
-        stddev: float,
-        stddev_min: float,
-        kernel_sigma: float,
-        random_state: np.random.Generator
+            self,
+            value: pd.DataFrame,
+            mean: pd.DataFrame,
+            stddev: float,
+            stddev_min: float,
+            kernel_sigma: float,
+            random_state: np.random.Generator
     ):
         self.value = value
         self.mean = mean
@@ -214,17 +230,17 @@ class InferredInitialInfections(InferredVariable):
         """
         return self.value
 
-    def prior_pdf(self, x: InferredInitialInfections) -> float:
+    def prior_pdf(self) -> float:
         """ Compute pdf of the prior distribution evaluated at the parameter x.
         As all priors are independent the joint pdf is the product of individual pdfs.
+        The pdf is evaluated at the current value of the parameter.
 
-        :param x: Particle to evaluate the pdf at
         :return: pdf value of prior distribution evaluated at x
         """
         pdf = 1.
         for index, row in self.mean.iterrows():
             pdf *= InferredInitialInfections._rvs_lognormal(row.Infected, self.stddev, self.stddev_min)\
-                                            .pdf(x.value.at[index, "Infected"])
+                                            .pdf(self.value.at[index, "Infected"])
 
         return pdf
 
@@ -250,7 +266,15 @@ class InferredInitialInfections(InferredVariable):
 
 
 class Particle:
-    inferred_variables_classes = {
+    """
+    Class representing a particle, a collection of parameters that will be
+    sampled and eventually inferred. To be used within ABC-SMC, a particle
+    must satisfy the following requirements:
+    1) We can sample from the priors and get the prior pdf
+    2) We should be able to generate a perturbated particle
+    """
+
+    inferred_variables_classes: ClassVar[Dict[str, Type[InferredVariable]]] = {
         "infection_probability": InferredInfectionProbability,
         "initial-infections": InferredInitialInfections
     }
@@ -313,21 +337,20 @@ class Particle:
             if particle.validate_particle():
                 return particle
 
-    def prior_pdf(self, x: Particle) -> Optional[float]:
+    def prior_pdf(self) -> float:
         """ Compute pdf of the prior distribution evaluated at the particle x.
         As all priors are independent the joint pdf is the product
-        of individual pdfs.
+        of individual pdfs. The pdf is evaluated at the current particle.
 
-        :param x: Particle to evaluate the pdf at
         :return: pdf value of prior distribution evaluated at x
         """
         pdf = 1.
         for key in self.inferred_variables:
-            pdf *= self.inferred_variables[key].prior_pdf(x.inferred_variables[key])
+            pdf *= self.inferred_variables[key].prior_pdf()
 
         return pdf
 
-    def perturbation_pdf(self, x: Particle) -> Optional[float]:
+    def perturbation_pdf(self, x: Particle) -> float:
         """ Compute pdf of the perturbation evaluated at the particle x,
         from the current particle. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
@@ -349,23 +372,44 @@ class Particle:
 
 
 class ABCSMC:
+    """
+    Class to wrap inference routines for the ABC SMC inference fitting. This algorithm
+    provides a list of samples distribution with the posterior pdf of parameters
+    given the data.
 
+    Algorithm (briefly):
+    Set parameters `smc_iteration`, `n_particles`, `threshold`
+
+    For iteration in smc_iterations:
+        While accepted_particles < n_particles:
+            p = sample randomly chosen particle from accepted at previous iteration
+            p = perturb p Using uniform perturbation
+            distance = run model with particle p
+
+            if distance < threshold:
+                Particle is accepted for the current population
+                Compute weight for current particle
+
+    References:
+        https://royalsocietypublishing.org/doi/pdf/10.1098/rsif.2008.0172
+        https://en.wikipedia.org/wiki/Approximate_Bayesian_computation
+    """
     def __init__(
-        self,
-        parameters: pd.DataFrame,
-        historical_deaths: pd.DataFrame,
-        compartment_transition_table: pd.DataFrame,
-        population_table: pd.DataFrame,
-        commutes_table: pd.DataFrame,
-        mixing_matrix_table: pd.DataFrame,
-        infection_probability: pd.DataFrame,
-        initial_infections: pd.DataFrame,
-        infectious_states: pd.DataFrame,
-        trials: pd.DataFrame,
-        start_date: pd.DataFrame,
-        movement_multipliers_table: pd.DataFrame,
-        stochastic_mode: pd.DataFrame,
-        random_seed: pd.DataFrame
+            self,
+            parameters: pd.DataFrame,
+            historical_deaths: pd.DataFrame,
+            compartment_transition_table: pd.DataFrame,
+            population_table: pd.DataFrame,
+            commutes_table: pd.DataFrame,
+            mixing_matrix_table: pd.DataFrame,
+            infection_probability: pd.DataFrame,
+            initial_infections: pd.DataFrame,
+            infectious_states: pd.DataFrame,
+            trials: pd.DataFrame,
+            start_date: pd.DataFrame,
+            movement_multipliers_table: pd.DataFrame,
+            stochastic_mode: pd.DataFrame,
+            random_seed: pd.DataFrame
     ):
         self.historical_deaths = loaders.readHistoricalDeaths(historical_deaths)
         parameters = loaders.readABCSMCParameters(parameters)
@@ -403,7 +447,7 @@ class ABCSMC:
         assert trials.at[0, "Value"] == 1
 
         self.threshold = np.inf
-        self.fit_statistics = {}
+        self.fit_statistics: Dict[int] = {}
 
     def fit(self) -> Tuple[List[Particle], List[float]]:
         """ Performs ABC-SMC iterative procedure for finding posterior distributions
@@ -417,11 +461,11 @@ class ABCSMC:
         :return: List of particles selected at the end of the procedure, and weights
         associated
         """
-        prev_particles = []
-        prev_weights = []
+        prev_particles: List[Particle] = []
+        prev_weights: List[float] = []
 
         for smc_step in range(self.n_smc_steps):
-            logger.info(f"SMC step {smc_step + 1}/{self.n_smc_steps}")
+            logger.info("SMC step %d/%d", smc_step + 1, self.n_smc_steps)
             prev_particles, prev_weights, distances = self.sample_particles(smc_step, prev_particles, prev_weights)
             self.update_threshold(distances)
 
@@ -437,10 +481,10 @@ class ABCSMC:
         self.threshold = np.percentile(distances, 50)
 
     def sample_particles(
-        self,
-        smc_step: int,
-        prev_particles: List[Particle],
-        prev_weights: List[float]
+            self,
+            smc_step: int,
+            prev_particles: List[Particle],
+            prev_weights: List[float]
     ) -> Tuple[List[Particle], List[float], List[float]]:
         """ Internal single iteration of ABC-SMC. Sampling particles (from prior or previous accepted ones),
         until enough particles pass a goodness-of-fit threshold.
@@ -469,7 +513,7 @@ class ABCSMC:
             distance = self.compute_distance(result)
 
             if distance <= self.threshold:
-                logger.info(f"Particle accepted with distance {distance}")
+                logger.info("Particle accepted with distance %d", distance)
                 weight = ABCSMC.compute_weight(smc_step, prev_particles, prev_weights, particle)
                 particles.append(particle)
                 weights.append(weight)
@@ -478,8 +522,8 @@ class ABCSMC:
 
             particles_simulated += 1
 
-        logger.info(f"Particles accepted {particles_accepted}/{particles_simulated}")
-        self.add_iteration_statistics(smc_step, particles, particles_accepted, particles_simulated, distances, t0)
+        logger.info("Particles accepted %d/%d", particles_accepted, particles_simulated)
+        self.add_iteration_statistics(smc_step, particles, particles_simulated, distances, t0)
 
         return particles, weights, distances
 
@@ -534,10 +578,10 @@ class ABCSMC:
 
     @staticmethod
     def compute_weight(
-        smc_step: int,
-        particles: List[Particle],
-        weights: List[float],
-        particle: Particle
+            smc_step: int,
+            particles: List[Particle],
+            weights: List[float],
+            particle: Particle
     ) -> float:
         """ Compute weights of particle as per the ABC-SMC algorithm
 
@@ -549,39 +593,43 @@ class ABCSMC:
         """
         if smc_step == 0:
             return 1.
-        else:
-            num = particle.prior_pdf(particle)
-            denom = sum(weights[i] * p.perturbation_pdf(particle) for i, p in enumerate(particles))
 
-            return num / denom
+        num = particle.prior_pdf()
+        denom = sum(weights[i] * p.perturbation_pdf(particle) for i, p in enumerate(particles))
+
+        return num / denom
 
     def add_iteration_statistics(
-        self,
-        smc_step: int,
-        particles: List[Particle],
-        particles_accepted: int,
-        particles_simulated: int,
-        distances: List[float],
-        t0: float
+            self,
+            smc_step: int,
+            particles: List[Particle],
+            particles_simulated: int,
+            distances: List[float],
+            t0: float
     ):
         """ Log statistics of each iteration of ABC-SMC algorithm
 
         :param smc_step: Step number of ABC-SMC algorithm
         :param particles: Accepted particles
-        :param particles_accepted: Number of accepted particles
         :param particles_simulated: Number of accepted particles
         :param distances: List of distances generated by accepted particles
         :param t0: Time at start of iteration
         """
         self.fit_statistics.setdefault(smc_step, {})
         self.fit_statistics[smc_step]["particles"] = particles
-        self.fit_statistics[smc_step]["particles_accepted"] = particles_accepted
+        self.fit_statistics[smc_step]["particles_accepted"] = len(particles)
         self.fit_statistics[smc_step]["particles_simulated"] = particles_simulated
         self.fit_statistics[smc_step]["distances"] = distances
         self.fit_statistics[smc_step]["threshold"] = self.threshold
         self.fit_statistics[smc_step]["time"] = f"{time.time() - t0:.0f}s"
 
     def summarize(self, particles: List[Particle], weights: List[float]) -> Dict:
+        """ Summarize ABC-SMC run, by assembling all fit statistics
+        and final list of particles into a dictionary.
+
+        :param particles: Accepted particles
+        :param weights: Weights of accepted particles
+        """
         results = {
             "fit statistics": self.fit_statistics,
             "particles": particles,
@@ -591,11 +639,9 @@ class ABCSMC:
         return results
 
 
-def run_inference(args, config) -> Dict:
+def run_inference(config) -> Dict:
     """Run inference routine
 
-    :param args: CLI arguments
-    :type args: argparse.Namespace
     :param config: Config file name
     :type config: string
     :return: Result runs for inference
@@ -631,7 +677,7 @@ def main(argv):
     logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
 
     t0 = time.time()
-    run_inference(args, "../config_inference.yaml")
+    run_inference("../config_inference.yaml")
 
     logger.info("Writing output")
     logger.info("Took %.2fs to run the inference.", time.time() - t0)
