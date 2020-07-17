@@ -1,0 +1,19 @@
+data_directory: .
+fail_on_hash_mismatch: false
+access_log: access.log
+
+write:
+- where:
+    data_product: output/simple_network_sim/outbreak-timeseries
+  use:
+    filename: output/simple_network_sim/outbreak-timeseries/data.csv
+- where:
+    data_product: output/data
+  use:
+    filename: output/data.csv
+
+read:
+- where:
+    data_product: human/stochastic-mode
+  use:
+    filename: human/stochastic-mode/deterministic/1/data.csv

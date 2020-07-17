@@ -1,0 +1,25 @@
+digraph compartments {
+
+rankdir=LR
+      node[shape="rectangle" style="rounded,filled" fontname="Arial"]
+      edge [color="#006699" len=2.5]
+
+S [label="(S)usceptible"]
+E [label="(E)xposed, not infectious"]
+A [label="(A)symptomatic, infectious"]
+I [label="(I)nfectious, with symptoms"]
+R [label="(R)ecovered"]
+H [label="(H)ospitalised"]
+D [label="(D)ead"]
+
+S->E
+E->A
+A->R
+A->I
+I->R
+I->H
+I->D
+H->R
+H->D
+
+}

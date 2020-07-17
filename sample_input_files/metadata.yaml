@@ -1,0 +1,66 @@
+-
+  data_product: human/compartment-transition
+  version: 1.0.0
+  extension: csv
+  filename: human/compartment-transition/1/data.csv
+  verified_hash: 839721a1703f2488c029a8d3cd1a5870e433b149
+-
+  data_product: human/population
+  version: 1.0.0
+  extension: csv
+  filename: human/population/1/data.csv
+  verified_hash: 1219832fdd6a2d9af5d33b1e10bfa69c6787748c
+-
+  data_product: human/commutes
+  version: 1.0.0
+  extension: csv
+  filename: human/commutes/1/data.csv
+  verified_hash: dae8dd8b1053e2f33979da109259344f0f9e273f
+-
+  data_product: human/mixing-matrix
+  version: 1.0.0
+  extension: csv
+  filename: human/mixing-matrix/1/data.csv
+  verified_hash: 075abd810909918419cf7495c16f1afec6fa010c
+-
+  data_product: human/infectious-compartments
+  version: 1.0.0
+  extension: csv
+  filename: human/infectious-compartments/1/data.csv
+  verified_hash: f2c674ee30cf14fb36d39fc8c1b5a1f1c156d331
+-
+  data_product: human/infection-probability
+  version: 1.0.0
+  extension: csv
+  filename: human/infection-probability/1/data.csv
+  verified_hash: 26224e53c3a20bf52e4347dbac2d475701ea4ec0
+-
+  data_product: human/movement-multipliers
+  version: 1.0.0
+  extension: csv
+  filename: human/movement-multipliers/1/data.csv
+  verified_hash: d0b5a1e5d66829b105af3d90c8732a4df879c2a6
+-
+  data_product: human/initial-infections
+  version: 1.0.0
+  extension: csv
+  filename: human/initial-infections/1/data.csv
+  verified_hash: 574e68a10d9d40cd1ab0132e68d417ec0166d19b
+-
+  data_product: human/trials
+  version: 1.0.0
+  extension: csv
+  filename: human/trials/1/data.csv
+  verified_hash: 33d97bfd0e2c92f5002a9d1cd62a7a822fd57d0f
+-
+  data_product: human/stochastic-mode
+  version: 1.0.0
+  extension: csv
+  filename: human/stochastic-mode/1/data.csv
+  verified_hash: a8ff97c16baf5143f1154c26b9519d046ba144a5
+-
+  data_product: human/random-seed
+  version: 1.0.0
+  extension: csv
+  filename: human/random-seed/1/data.csv
+  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6
