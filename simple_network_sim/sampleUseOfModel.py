@@ -1,16 +1,17 @@
 """
 This is the main module used to run simulations based on network of populations
 """
+# pylint: disable=import-error
 import argparse
 import logging
 import logging.config
 import sys
 import time
+from typing import Optional, List, NamedTuple
 
 from data_pipeline_api import standard_api
 import pandas as pd
 from pathlib import Path
-from typing import Optional, List, NamedTuple
 from functools import reduce
 
 from . import common
@@ -21,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 def main(argv):
+    """
+    Main function to run the network of populations simulation
+    """
     t0 = time.time()
 
     args = build_args(argv)

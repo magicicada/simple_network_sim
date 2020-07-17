@@ -51,6 +51,7 @@ def no_git_repo(tmp_path_factory):
     os.chdir(old_cwd)
 
 
+# pylint: disable=redefined-outer-name
 def test_get_repo_info(git_repo):
     info = get_repo_info()
     assert not info.is_dirty
@@ -58,6 +59,7 @@ def test_get_repo_info(git_repo):
     assert info.uri == "http://example.com"
 
 
+# pylint: disable=redefined-outer-name
 def test_get_repo_info_is_dirty(git_repo):
     with open("hello", "w") as fp:
         fp.write("hi")
@@ -68,6 +70,8 @@ def test_get_repo_info_is_dirty(git_repo):
     assert info.uri == "http://example.com"
 
 
+# pylint: disable=redefined-outer-name
+# pylint: disable=unused-argument
 def test_get_repo_info_no_repo(no_git_repo):
     info = get_repo_info()
     assert info.is_dirty

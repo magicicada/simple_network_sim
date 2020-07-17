@@ -1,3 +1,10 @@
+"""
+This package implements the network of populations simuation. This models regions as nodes with intra node rules and
+different inter node transmission rules. The end result of the model is a timeseries of the number of people in each
+node, compartment and age.
+"""
+# pylint: disable=import-error
+# pylint: disable=too-many-lines
 import logging
 import random
 import copy

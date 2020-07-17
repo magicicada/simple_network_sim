@@ -1,3 +1,7 @@
+"""
+Assortment of useful functions
+"""
+# pylint: disable=import-error
 import logging
 from typing import Callable, Any, NamedTuple
 

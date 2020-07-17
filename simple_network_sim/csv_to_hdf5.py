@@ -49,6 +49,7 @@ def find_component(path: pathlib.PurePath):
     :param path: path to a CSV file
     :return: likely component to use
     """
+    # pylint: disable=no-else-return
     if path.parent.name.isnumeric():
         # Probably a version directory
         return path.parents[1].name
