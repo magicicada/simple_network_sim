@@ -65,6 +65,7 @@ class RepoInfo(NamedTuple):
 def get_repo_info() -> RepoInfo:
     """
     Retrieves the current git sha and uri for the current git repo
+
     :return: A RepoInfo object. If not inside a git repo, is_dirty will be True, git_sha empty and uri will be a
              default value
     """

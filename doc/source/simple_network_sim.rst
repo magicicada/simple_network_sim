@@ -17,14 +17,6 @@ simple\_network\_sim.common module
    :undoc-members:
    :show-inheritance:
 
-simple\_network\_sim.generateSampleNodeLocationFile module
-----------------------------------------------------------
-
-.. automodule:: simple_network_sim.generateSampleNodeLocationFile
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 simple\_network\_sim.loaders module
 -----------------------------------
 
