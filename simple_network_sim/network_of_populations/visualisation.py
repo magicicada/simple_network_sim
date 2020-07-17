@@ -7,16 +7,26 @@ import logging
 import math
 import sys
 from pathlib import Path
+from typing import List, Tuple
 
-from data_pipeline_api.file_formats import object_file
-import pandas as pd
-import yaml
+from data_pipeline_api.file_formats import object_file  # type: ignore
+import pandas as pd  # type: ignore
+import yaml  # type: ignore
+from matplotlib import pyplot as plt  # type: ignore
+from matplotlib.colors import ListedColormap  # type: ignore
 
-from matplotlib import pyplot as plt
-from matplotlib.colors import ListedColormap
 
-
-def plot_nodes(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, cmap=None):
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-locals
+def plot_nodes(
+        df: pd.DataFrame,
+        nodes: List[str] = None,
+        states: List[str] = None,
+        ncol: int = 3,
+        sharey: bool = False,
+        figsize: Tuple[int, int] = None,
+        cmap: List[str] = None
+) -> plt.Figure:
     """
     Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
     graphs are all Number of People x Time
@@ -24,21 +34,13 @@ def plot_nodes(df, nodes=None, states=None, ncol=3, sharey=False, figsize=None, 
     :param df: pandas DataFrame with node, time, state and total columns
     :param nodes: creates one plot per nodes listed (None means all nodes)
     :param df: pandas DataFrame with nodes, time, state and total columns
-    :type df: pandas DataFrame
     :param nodes: creates one plot per node listed (None means all nodes)
-    :type nodes: list (of region names).
     :param states: plots one curve per state listed (None means all states)
-    :type states: list (of disease states).
     :param ncol: number of columns (the number of rows will be calculated to fit all graphs)
-    :type ncol: int
     :param sharey: set to true if all plots should have the same y-axis
-    :type sharey: bool
     :param figsize: select the size of each individual plot
-    :type figsize:
     :param cmap: color map to use
-    :type cmap:
     :return: returns a matplotlib figure
-    :rtype: matplotlib figure
     """
     if nodes is None:
         nodes = df.node.unique().tolist()
@@ -101,8 +103,8 @@ def read_output(data_product: str, path: str) -> pd.DataFrame:
     assert len(outputs) == 1, f"More than one output selected: {outputs}"
 
     output_path = Path(access_log["data_directory"]) / Path(outputs[0]["access_metadata"]["filename"])
-    with open(output_path, "rb") as fp:
-        return object_file.read_table(output_path, "outbreak-timeseries")
+    with open(output_path, "rb") as outbreak_fp:
+        return object_file.read_table(outbreak_fp, "outbreak-timeseries")
 
 
 def build_args(argv):

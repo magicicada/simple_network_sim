@@ -2,10 +2,11 @@
 Assortment of useful functions
 """
 # pylint: disable=import-error
+# pylint: disable=duplicate-code
 import logging
 from typing import Callable, Any, NamedTuple
 
-import git
+import git  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class RepoInfo(NamedTuple):
 def get_repo_info() -> RepoInfo:
     """
     Retrieves the current git sha and uri for the current git repo
+
     :return: A RepoInfo object. If not inside a git repo, is_dirty will be True, git_sha empty and uri will be a
              default value
     """

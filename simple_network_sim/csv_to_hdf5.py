@@ -7,8 +7,8 @@ import logging
 import pathlib
 import sys
 
-from data_pipeline_api.file_formats import object_file
-import pandas as pd
+from data_pipeline_api.file_formats import object_file  # type: ignore
+import pandas as pd  # type: ignore
 
 logger = logging.getLogger(f"{__package__}.{__name__}")
 
