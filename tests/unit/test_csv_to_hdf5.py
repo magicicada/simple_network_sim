@@ -12,4 +12,4 @@ def test_csv_to_hdf5(tmp_path_factory):
     main(["-c", "test", csv_file, h5_file])
 
     h5 = h5py.File(h5_file, "r")
-    assert h5["test"]["table"].value.tolist() == [(1.0, 0.5)]
+    assert h5["test"]["table"][()].tolist() == [(1.0, 0.5)]

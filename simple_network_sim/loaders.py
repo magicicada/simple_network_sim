@@ -38,8 +38,9 @@ def _checkAgeParameters(agesDictionary):
 
 
 def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartment, Dict[Compartment, float]]]:
-    """Read a file containing a list of age-specific epidemiological parameters.
-    
+    """
+    Read a file containing a list of age-specific epidemiological parameters.
+
     Epidemiological parameters are transition rates between or out of epidemiological compartments,
     here they differ by age group.
 
@@ -80,11 +81,12 @@ def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age,
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
 # keeps them in a dictionary and returns that.  Keys are
 def readNodeAttributesJSON(filename):
-    """Read a file containing node (health board) attributes.
+    """
+    Read a file containing node (health board) attributes.
 
     This might include health board name and geographic co-ordinates.
 
-    :param filename: Health board attributes in json format. 
+    :param filename: Health board attributes in json format.
     :type filename: file-like object
     :return: Dictionary of health board attributes.
     """
@@ -129,6 +131,9 @@ def readInitialInfections(df: pd.DataFrame) -> Dict[NodeName, Dict[Age, float]]:
 
 
 class Multiplier(NamedTuple):
+    """
+    Factors used to dampen or heighten the movement of people between nodes and contact of people within nodes
+    """
     movement: float
     contact: float
 
@@ -287,18 +292,6 @@ def readStochasticMode(df: pd.DataFrame) -> bool:
         return bool(stochastic_mode)
 
 
-def _check_overlap(one, two):
-    """Check two AgeRange objects to see if they overlap.
-    
-    If they do, raise an Exception.
-    :param one:
-    :type one: simple_network_sim.loaders.AgeRange
-    :param two:
-    :type two: simple_network_sim.loaders.AgeRange
-    """
-    assert one._upper <= two._lower or two._upper <= one._lower, f"Overlap in age ranges with {one} and {two}"
-
-
 class AgeRange:
     """A helper class for an age range.
     
@@ -327,12 +320,13 @@ class AgeRange:
 
 
 class MixingRow:
-    """One row of a mixing table.
-    
-    This is a helper class. A row represents a given population, 
-    and can return the expected number of interactions (per unit time) 
+    """
+    One row of a mixing table.
+
+    This is a helper class. A row represents a given population,
+    and can return the expected number of interactions (per unit time)
     a member of this population will have with some other target.
-    
+
     :param ages: Ages
     :type ages: list
     :param interactions: Interactions / person / day
@@ -340,12 +334,12 @@ class MixingRow:
 
     Both lists must be the same length.
 
-    Upon initialization, the property `self._entries` is set to a dictionary mapping 
+    Upon initialization, the property `self._entries` is set to a dictionary mapping
     AgeRange objects to numbers of interactions / person / day.
     """
 
     def __init__(self, ages: List[str], interactions: List[str]):
-        """Initialise."""        
+        """Initialise."""
         self._entries = {}
         for age, interact in zip(ages, interactions):
             self._entries[age] = float(interact)
@@ -370,13 +364,14 @@ class MixingRow:
 
 
 class MixingMatrix:
-    """Stores expected numbers of interactions between people of different ages.
-    
+    """
+    Stores expected numbers of interactions between people of different ages.
+
     Stores expected number of interactions per day a given person will
     have with some other person, based on the ages of the two people, or given
     age-ranges.
-    
-    Examples:    
+
+    Examples:
     `mm = MixingMatrix(api.read_table("human/mixing-matrix")`
     `print(mm[28][57])` Prints the expected number of interactions a 28 year old
     would have with a 57 year old in a day
@@ -390,7 +385,7 @@ class MixingMatrix:
     def __init__(self, mixing_table: pd.DataFrame):
         """Initialise."""
         self._matrix = {
-            group_name: MixingRow([target for target in group["target"]], list(group["mixing"]))
+            group_name: MixingRow(list(group["target"]), list(group["mixing"]))
             for group_name, group in mixing_table.groupby("source")
         }
 

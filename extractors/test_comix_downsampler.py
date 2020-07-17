@@ -74,7 +74,7 @@ def test_split_collapse_sanity_check():
 
 def test_flatten():
     df = pd.DataFrame({"[5,18)": [2.7, 0.89], "[18,30)": [1.19, 0.52]}, index=["[5,18)", "[18,30)"])
-    flattened = comix_downsampler._flatten(df)
+    flattened = comix_downsampler._flatten(df)  # pylint: disable=protected-access
 
     expected = pd.DataFrame(
         [
