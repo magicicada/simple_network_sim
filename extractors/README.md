@@ -3,7 +3,7 @@
 The scripts in this folder will extract the data from the best datasource we can find in order to have a realist run of
 the simple network sim model. They are not necessarily downloading them from the official SCRCdata resource, although
 they might be partially doing that. The resulting files from the scripts in here can be plugged into the model by
-coppying them to the appropriate folder inside `sample_input_files`.
+copying them to the appropriate folder inside `sample_input_files`.
 
 We expect the scripts in here will, at some point, make it into the SCRCdata repo as post-processing scripts. However,
 as the mechanism are not yet in place in SCRCdata or SCRCdataAPI to have these scripts fully integrated, we decided to
