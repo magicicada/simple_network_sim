@@ -44,15 +44,11 @@ class InferredVariable(ABC):
         """ Abstract method for validating the parameter correctness """
 
     @abstractmethod
-    def generate_dataframe(self) -> pd.DataFrame:
-        """ Abstract method for generating the parameter in format to be used in model """
-
-    @abstractmethod
     def prior_pdf(self) -> float:
         """ Abstract method for generating the prior pdf """
 
     @abstractmethod
-    def perturbation_pdf(self, value: InferredVariable) -> float:
+    def perturbation_pdf(self, x: pd.DataFrame) -> float:
         """ Abstract method for generating the perturbation pdf """
 
 
@@ -62,7 +58,14 @@ class InferredInfectionProbability(InferredVariable):
     Infection probability is the odd that a contact between an infectious and susceptible
     person leads to a new infection.
     """
-    def __init__(self, value: float, mean: float, shape: float, kernel_sigma: float, random_state: np.random.Generator):
+    def __init__(
+            self,
+            value: pd.DataFrame,
+            mean: float,
+            shape: float,
+            kernel_sigma: float,
+            random_state: np.random.Generator
+    ):
         self.value = value
         self.mean = mean
         self.shape = shape
@@ -81,7 +84,8 @@ class InferredInfectionProbability(InferredVariable):
         shape = fitter.infection_probability_shape
         kernel_sigma = fitter.infection_probability_kernel_sigma
         mean = fitter.infection_probability.at[0, "Value"]
-        value = stats.beta.rvs(shape, shape * (1 - mean) / mean, random_state=fitter.random_state)
+        value = fitter.infection_probability.copy().assign(
+            Value=lambda x: stats.beta.rvs(shape, shape * (1 - x.Value) / x.Value, random_state=fitter.random_state))
         return InferredInfectionProbability(value, mean, shape, kernel_sigma, fitter.random_state)
 
     def generate_perturbated(self) -> InferredInfectionProbability:
@@ -92,9 +96,9 @@ class InferredInfectionProbability(InferredVariable):
 
         :return: New parameter which is similar to self up to a perturbation
         """
-        perturbated_value = self.value + stats.uniform.rvs(-1., 2., random_state=self.random_state) * self.kernel_sigma
-        return InferredInfectionProbability(perturbated_value, self.mean, self.shape, self.kernel_sigma,
-                                            self.random_state)
+        value = self.value.copy().assign(Value=lambda x: x.Value + self.kernel_sigma * stats.uniform
+                                         .rvs(-1., 2., random_state=self.random_state))
+        return InferredInfectionProbability(value, self.mean, self.shape, self.kernel_sigma, self.random_state)
 
     def validate(self) -> bool:
         """ Checks that the particle is valid, i.e. that infection probability is
@@ -102,14 +106,7 @@ class InferredInfectionProbability(InferredVariable):
 
         :return: Whether the parameter is valid
         """
-        return 0. < self.value < 1.
-
-    def generate_dataframe(self) -> pd.DataFrame:
-        """ Generate dataframe to be used in the model run.
-
-        :return: dataframe in the format ingested by the model declarator
-        """
-        return pd.DataFrame([0., self.value], columns=[0], index=["Time", "Value"]).T
+        return np.all(self.value.Value > 0.) and np.all(self.value.Value < 1.)
 
     def prior_pdf(self) -> float:
         """ Compute pdf of the prior distribution evaluated at the parameter x.
@@ -118,9 +115,9 @@ class InferredInfectionProbability(InferredVariable):
 
         :return: pdf value of prior distribution evaluated at x
         """
-        return stats.beta.pdf(self.value, self.shape, self.shape * (1 - self.mean) / self.mean)
+        return stats.beta.pdf(self.value.at[0, "Value"], self.shape, self.shape * (1 - self.mean) / self.mean)
 
-    def perturbation_pdf(self, x: InferredInfectionProbability) -> float:
+    def perturbation_pdf(self, x: pd.DataFrame) -> float:
         """ Compute pdf of the perturbation evaluated at the parameter x,
         from the current parameter. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
@@ -130,7 +127,7 @@ class InferredInfectionProbability(InferredVariable):
         :param x: Particle to evaluate the pdf at
         :return: pdf value of perturbation from previous particle evaluated at x
         """
-        return stats.uniform.pdf(x.value, self.value - self.kernel_sigma, 2 * self.kernel_sigma)
+        return stats.uniform.pdf(x.at[0, "Value"], self.value.at[0, "Value"] - self.kernel_sigma, 2 * self.kernel_sigma)
 
 
 class InferredInitialInfections(InferredVariable):
@@ -207,11 +204,9 @@ class InferredInitialInfections(InferredVariable):
 
         :return: New parameter which is similar to self up to a perturbation
         """
-        perturbated_value = self.value.copy()
-        perturbated_value.Infected = perturbated_value.Infected.apply(lambda x: x + self.kernel_sigma * stats.uniform
-                                                                      .rvs(-1., 2., random_state=self.random_state))
-
-        return InferredInitialInfections(perturbated_value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
+        value = self.value.copy().assign(
+            Infected=lambda x: x + self.kernel_sigma * stats.uniform.rvs(-1., 2., random_state=self.random_state))
+        return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
                                          self.random_state)
 
     def validate(self) -> bool:
@@ -221,14 +216,6 @@ class InferredInitialInfections(InferredVariable):
         :return: Whether the particle is valid
         """
         return np.all(self.value.Infected >= 0.)
-
-    def generate_dataframe(self) -> pd.DataFrame:
-        """ Generate dataframe to be used in the model run. In this case the value
-        stored is already in dataframe format and hence no additional work is required
-
-        :return: dataframe in the format ingested by the model declarator
-        """
-        return self.value
 
     def prior_pdf(self) -> float:
         """ Compute pdf of the prior distribution evaluated at the parameter x.
@@ -244,7 +231,7 @@ class InferredInitialInfections(InferredVariable):
 
         return pdf
 
-    def perturbation_pdf(self, x: InferredInitialInfections) -> float:
+    def perturbation_pdf(self, x: pd.DataFrame) -> float:
         """ Compute pdf of the perturbation evaluated at the parameter x,
         from the current parameter. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
@@ -259,8 +246,7 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.value.iterrows():
-            pdf *= stats.uniform.pdf(x.value.at[index, "Infected"], row.Infected - self.kernel_sigma,
-                                     2 * self.kernel_sigma)
+            pdf *= stats.uniform.pdf(x.at[index, "Infected"], row.Infected - self.kernel_sigma, 2 * self.kernel_sigma)
 
         return pdf
 
@@ -366,7 +352,7 @@ class Particle:
         """
         pdf = 1.
         for key in self.inferred_variables:
-            pdf *= self.inferred_variables[key].perturbation_pdf(x.inferred_variables[key])
+            pdf *= self.inferred_variables[key].perturbation_pdf(x.inferred_variables[key].value)
 
         return pdf
 
@@ -539,8 +525,8 @@ class ABCSMC:
             self.commutes_table,
             self.mixing_matrix_table,
             self.infectious_states,
-            particle.inferred_variables["infection_probability"].generate_dataframe(),
-            particle.inferred_variables["initial-infections"].generate_dataframe(),
+            particle.inferred_variables["infection_probability"].value,
+            particle.inferred_variables["initial-infections"].value,
             self.trials,
             self.start_date,
             self.movement_multipliers_table,
@@ -623,17 +609,19 @@ class ABCSMC:
         self.fit_statistics[smc_step]["threshold"] = self.threshold
         self.fit_statistics[smc_step]["time"] = f"{time.time() - t0:.0f}s"
 
-    def summarize(self, particles: List[Particle], weights: List[float]) -> Dict:
+    def summarize(self, particles: List[Particle], weights: List[float], t0: float) -> Dict:
         """ Summarize ABC-SMC run, by assembling all fit statistics
         and final list of particles into a dictionary.
 
         :param particles: Accepted particles
         :param weights: Weights of accepted particles
+        :param t0: Time just before fit started
         """
         results = {
-            "fit statistics": self.fit_statistics,
+            "fit_statistics": self.fit_statistics,
             "particles": particles,
-            "weights": weights
+            "weights": weights,
+            "time": time.time() - t0
         }
 
         return results
@@ -665,8 +653,9 @@ def run_inference(config) -> Dict:
             store.read_table("human/random-seed"),
         )
 
+        t0 = time.time()
         particles, weights = abcsmc.fit()
-        summary = abcsmc.summarize(particles, weights)
+        summary = abcsmc.summarize(particles, weights, t0)
 
     return summary
 
