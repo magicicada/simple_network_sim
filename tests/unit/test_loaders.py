@@ -1,11 +1,11 @@
-import json
-
-from data_pipeline_api.file_formats import object_file
-import networkx as nx
-import pandas as pd
 import datetime as dt
+import json
+import pandas as pd
 import pytest
 
+import networkx as nx
+
+from data_pipeline_api.file_formats import object_file
 from simple_network_sim import loaders
 
 

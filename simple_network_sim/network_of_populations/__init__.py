@@ -5,16 +5,16 @@ node, compartment and age.
 """
 # pylint: disable=import-error
 # pylint: disable=too-many-lines
+import copy
+import datetime as dt
 import logging
 import random
-import copy
-import numpy as np
-import datetime as dt
-import scipy.stats as stats
 from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable
 
 import networkx as nx
+import numpy as np
 import pandas as pd
+import scipy.stats as stats
 
 from simple_network_sim import loaders
 from simple_network_sim.common import Lazy
@@ -136,10 +136,10 @@ def nodesToPandas(date: dt.date, nodes: Dict[NodeName, Dict[Tuple[Age, Compartme
     Converts a dict of nodes into a pandas DataFrame
 
     >>> nodesToPandas(dt.date(2020, 1, 1), {"nodea": {("70+", "S"): 10.0, ("70+", "E"): 15.0}, "nodeb": {("[17,70", "S"): 15.0}})  # doctest: +NORMALIZE_WHITESPACE
-        date          node     age  state  total
-    0   "2020-01-01"  nodea     70+     S   10.0
-    1   "2020-01-01"  nodea     70+     E   15.0
-    2   "2020-01-01"  nodeb  [17,70     S   15.0
+        date         node     age  state  total
+    0   2020-01-01  nodea     70+     S   10.0
+    1   2020-01-01  nodea     70+     E   15.0
+    2   2020-01-01  nodeb  [17,70     S   15.0
     >>> nodesToPandas(dt.date(2020, 1, 1), {})  # doctest: +NORMALIZE_WHITESPACE
     Empty DataFrame
     Columns: [date, node, age, state, total]
@@ -798,18 +798,18 @@ EXPOSED_STATE = "E"
 
 
 def createNetworkOfPopulation(
-    compartment_transition_table: pd.DataFrame,
-    population_table: pd.DataFrame,
-    commutes_table: pd.DataFrame,
-    mixing_matrix_table: pd.DataFrame,
-    infectious_states: pd.DataFrame,
-    infection_prob: pd.DataFrame,
-    initial_infections: pd.DataFrame,
-    trials: pd.DataFrame,
-    start_end_date: pd.DataFrame,
-    movement_multipliers_table: pd.DataFrame = None,
-    stochastic_mode: pd.DataFrame = None,
-    random_seed: pd.DataFrame = None
+        compartment_transition_table: pd.DataFrame,
+        population_table: pd.DataFrame,
+        commutes_table: pd.DataFrame,
+        mixing_matrix_table: pd.DataFrame,
+        infectious_states: pd.DataFrame,
+        infection_prob: pd.DataFrame,
+        initial_infections: pd.DataFrame,
+        trials: pd.DataFrame,
+        start_end_date: pd.DataFrame,
+        movement_multipliers_table: pd.DataFrame = None,
+        stochastic_mode: pd.DataFrame = None,
+        random_seed: pd.DataFrame = None
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -912,12 +912,12 @@ def createNetworkOfPopulation(
 
 
 def createNextStep(
-    progression: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
-    infectiousContacts: Dict[NodeName, Dict[Age, float]],
-    currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
-    infectionProb: float,
-    stochastic: bool,
-    random_state: Optional[np.random.Generator]
+        progression: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
+        infectiousContacts: Dict[NodeName, Dict[Age, float]],
+        currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
+        infectionProb: float,
+        stochastic: bool,
+        random_state: Optional[np.random.Generator]
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """Update the current state of each regions population by allowing infected individuals
     to progress to the next infection stage and infecting susceptible individuals. The state is not

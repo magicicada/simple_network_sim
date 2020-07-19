@@ -1,11 +1,11 @@
 import copy
-import random
-import numpy
-
-import networkx as nx
-import pandas as pd
 import datetime as dt
 import pytest
+import random
+
+import networkx as nx
+import numpy
+import pandas as pd
 
 from simple_network_sim import network_of_populations as np
 
