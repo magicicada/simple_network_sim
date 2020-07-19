@@ -65,4 +65,4 @@ def calculateInfectiousOverTime(ts, infectiousStates):
     :param ts: pandas dataframe with the entire outbreak timeseries
     :param infectiousStates: compartments considered infectious
     """
-    return ts[ts.state.isin(infectiousStates)].groupby("time").sum().total.to_list()
+    return ts[ts.state.isin(infectiousStates)].groupby("date").sum().total.to_list()

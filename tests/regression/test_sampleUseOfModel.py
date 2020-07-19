@@ -17,8 +17,8 @@ def test_cli_run(base_data_dir):
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
-            test_df.set_index(["time", "node", "age", "state"]),
-            baseline_df.set_index(["time", "node", "age", "state"]),
+            test_df.set_index(["date", "node", "age", "state"]),
+            baseline_df.set_index(["date", "node", "age", "state"]),
             check_like=True,
         )
     finally:

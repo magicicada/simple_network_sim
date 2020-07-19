@@ -34,10 +34,11 @@ def test_basic_simulation(data_api):
         data_api.read_table("human/infection-probability", "infection-probability"),
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
+        data_api.read_table("human/start-end-date", "start-end-date"),
     )
 
     result = calculateInfectiousOverTime(
-        np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10.0}}),
+        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}),
         network.infectiousStates
     )
 
@@ -54,11 +55,12 @@ def test_basic_simulation_with_dampening(data_api):
         data_api.read_table("human/infection-probability", "infection-probability"),
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
+        data_api.read_table("human/start-end-date", "start-end-date"),
         data_api.read_table("human/movement-multipliers", "movement-multipliers"),
     )
 
     result = calculateInfectiousOverTime(
-        np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10.0}}),
+        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}),
         network.infectiousStates,
     )
 
@@ -75,12 +77,13 @@ def test_basic_simulation_stochastic(data_api_stochastic):
         data_api_stochastic.read_table("human/infection-probability", "infection-probability"),
         data_api_stochastic.read_table("human/initial-infections", "initial-infections"),
         data_api_stochastic.read_table("human/trials", "trials"),
+        data_api_stochastic.read_table("human/start-end-date", "start-end-date"),
         data_api_stochastic.read_table("human/movement-multipliers", "movement-multipliers"),
         data_api_stochastic.read_table("human/stochastic-mode", "stochastic-mode"),
         data_api_stochastic.read_table("human/random-seed", "random-seed"),
     )
 
-    result = np.basicSimulationInternalAgeStructure(network, 200, {"S08000016": {"[17,70)": 10}})
+    result = np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10}})
 
     _assert_baseline_dataframe(result)
 
@@ -95,6 +98,7 @@ def test_basic_simulation_100_runs(data_api):
         data_api.read_table("human/infection-probability", "infection-probability"),
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
+        data_api.read_table("human/start-end-date", "start-end-date"),
     )
 
     runs = []
@@ -103,7 +107,7 @@ def test_basic_simulation_100_runs(data_api):
         regions = rand.choices(list(network.graph.nodes()), k=1)
         assert network.initialState[regions[0]][("[17,70)", "E")] == 0
         result = calculateInfectiousOverTime(
-            np.basicSimulationInternalAgeStructure(network, 200, {regions[0]: {"[17,70)": 10.0}}),
+            np.basicSimulationInternalAgeStructure(network, {regions[0]: {"[17,70)": 10.0}}),
             network.infectiousStates,
         )
         result.pop()  # TODO: due to historical reasons we have to ignore the last entry

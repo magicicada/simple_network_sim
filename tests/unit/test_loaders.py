@@ -3,6 +3,7 @@ import json
 from data_pipeline_api.file_formats import object_file
 import networkx as nx
 import pandas as pd
+import datetime as dt
 import pytest
 
 from simple_network_sim import loaders
@@ -252,6 +253,55 @@ def test_readInfectionProbability_invalid_seed():
 
     with pytest.raises(ValueError):
         loaders.readRandomSeed(pd.DataFrame([-1], columns=["Value"]))
+
+
+def test_readStartEndDate():
+    df = pd.DataFrame(
+        [["start_date", "01/01/2020"], ["end_date", "12/27/2020"]],
+        index=[0, 1],
+        columns=["Parameter", "Value"]
+    )
+    start_date, end_date = loaders.readStartEndDate(df)
+
+    assert start_date == dt.date(2020, 1, 1)
+    assert end_date == dt.date(2020, 12, 27)
+
+
+def test_readStartEndDate_bad_shape():
+    with pytest.raises(ValueError):
+        loaders.readStartEndDate(pd.DataFrame())
+
+    with pytest.raises(ValueError):
+        loaders.readStartEndDate(pd.DataFrame(
+            [["start_date", "01/01/2020"]],
+            index=[0],
+            columns=["Parameter", "Value"]
+        ))
+
+    with pytest.raises(ValueError):
+        loaders.readStartEndDate(pd.DataFrame(
+            [["01/01/2020"], ["12/27/2020"]],
+            index=[0, 1],
+            columns=["Value"]
+        ))
+
+
+def test_readStartEndDate_bad_date_format():
+    df = pd.DataFrame(
+        [["start_date", "01-01-2020"], ["end_date", "12-27-2020"]],
+        index=[0, 1],
+        columns=["Parameter", "Value"]
+    )
+    with pytest.raises(ValueError):
+        loaders.readStartEndDate(df)
+
+    df = pd.DataFrame(
+        [["start_date", "01/01/2020"], ["end_date", "27/12/2020"]],
+        index=[0, 1],
+        columns=["Parameter", "Value"]
+    )
+    with pytest.raises(ValueError):
+        loaders.readStartEndDate(df)
 
 
 def test_readTrials():
