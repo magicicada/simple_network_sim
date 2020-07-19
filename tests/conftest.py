@@ -23,7 +23,7 @@ def _data_api(base_data_dir, config):
 
 @pytest.fixture
 def short_simulation_dates():
-    return pd.DataFrame({"Parameter": ["start_date", "end_date"], "Value": ["01/01/2020", "02/01/2020"]})
+    return pd.DataFrame({"Parameter": ["start_date", "end_date"], "Value": ["2020-01-01", "2020-02-01"]})
 
 
 @pytest.fixture

@@ -259,8 +259,8 @@ def readStartEndDate(df: pd.DataFrame) -> Tuple[datetime.date, datetime.date]:
     if ("start_date" not in list(df.Parameter)) or ("end_date" not in list(df.Parameter)):
         raise ValueError("Both a start and end date must be provided")
 
-    start_date = datetime.datetime.strptime(df.at[0, "Value"], '%m/%d/%Y').date()
-    end_date = datetime.datetime.strptime(df.at[1, "Value"], '%m/%d/%Y').date()
+    start_date = datetime.datetime.strptime(df.at[0, "Value"], '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(df.at[1, "Value"], '%Y-%m-%d').date()
 
     return start_date, end_date
 

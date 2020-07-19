@@ -257,7 +257,7 @@ def test_readInfectionProbability_invalid_seed():
 
 def test_readStartEndDate():
     df = pd.DataFrame(
-        [["start_date", "01/01/2020"], ["end_date", "12/27/2020"]],
+        [["start_date", "2020-01-01"], ["end_date", "2020-12-27"]],
         index=[0, 1],
         columns=["Parameter", "Value"]
     )
@@ -273,14 +273,14 @@ def test_readStartEndDate_bad_shape():
 
     with pytest.raises(ValueError):
         loaders.readStartEndDate(pd.DataFrame(
-            [["start_date", "01/01/2020"]],
+            [["start_date", "2020-01-01"]],
             index=[0],
             columns=["Parameter", "Value"]
         ))
 
     with pytest.raises(ValueError):
         loaders.readStartEndDate(pd.DataFrame(
-            [["01/01/2020"], ["12/27/2020"]],
+            [["2020-01-01"], ["2020-12-27"]],
             index=[0, 1],
             columns=["Value"]
         ))
@@ -288,7 +288,7 @@ def test_readStartEndDate_bad_shape():
 
 def test_readStartEndDate_bad_date_format():
     df = pd.DataFrame(
-        [["start_date", "01-01-2020"], ["end_date", "12-27-2020"]],
+        [["start_date", "01/01/2020"], ["end_date", "12/27/2020"]],
         index=[0, 1],
         columns=["Parameter", "Value"]
     )
