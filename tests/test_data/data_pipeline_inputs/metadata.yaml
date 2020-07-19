@@ -64,3 +64,9 @@
   extension: h5
   component: random-seed
   filename: human/random-seed/1/data.h5
+-
+  data_product: human/start-end-date
+  version: 1.0.0
+  extension: h5
+  component: start-end-date
+  filename: human/start-end-date/1/data.h5

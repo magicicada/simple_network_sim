@@ -62,6 +62,13 @@
   filename: human/trials/1/data.h5
   verified_hash: 6f812a07374690e0152b83c517659d5b979d9357
 -
+  data_product: human/start-end-date
+  component: start-end-date
+  version: 1.0.0
+  extension: h5
+  filename: human/start-end-date/1/data.h5
+  verified_hash: 6f812a07374690e0152b83c517659d5b979d9357
+-
   data_product: human/stochastic-mode
   component: stochastic-mode
   version: 1.0.0
