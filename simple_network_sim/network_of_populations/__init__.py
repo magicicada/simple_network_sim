@@ -38,9 +38,9 @@ class NetworkOfPopulation(NamedTuple):
     initialState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]
     graph: nx.DiGraph
     mixingMatrix: loaders.MixingMatrix
-    movementMultipliers: Dict[Time, loaders.Multiplier]
+    movementMultipliers: Dict[dt.date, loaders.Multiplier]
     infectiousStates: List[Compartment]
-    infectionProb: Dict[Time, float]
+    infectionProb: Dict[dt.date, float]
     initialInfections: Dict[NodeName, Dict[Age, float]]
     trials: int
     startDate: dt.date
@@ -49,18 +49,18 @@ class NetworkOfPopulation(NamedTuple):
     randomState: np.random.Generator
 
 
-def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, int]]:
+def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[dt.date]:
     """Generator of day and time from start date and end date
 
     :param startDate: Start date of the network
     :param endDate: End date of the network
-    :return: Generator of days as datetime.date and integer
+    :return: Generator of days as datetime.date
     """
     if startDate > endDate:
         raise ValueError("Model start date should be <= end date")
 
     for days in range(int((endDate - startDate).days)):
-        yield startDate + dt.timedelta(days=days + 1), days + 1
+        yield startDate + dt.timedelta(days=days + 1)
 
 
 # CurrentlyInUse
@@ -76,17 +76,17 @@ def basicSimulationInternalAgeStructure(
     """
     history = []
 
-    multipliers = network.movementMultipliers.get(0, loaders.Multiplier(contact=1.0, movement=1.0))
-    infectionProb = network.infectionProb[0]  # no default value, time zero must exist
+    multipliers = network.movementMultipliers.get(network.startDate, loaders.Multiplier(contact=1.0, movement=1.0))
+    infectionProb = network.infectionProb[network.startDate]
 
     current = createExposedRegions(initialInfections, network.initialState)
     df = nodesToPandas(network.startDate, current)
     logger.debug("Date (%s/%s). Status: %s", network.startDate, network.endDate,
                  Lazy(lambda: df.groupby("state").total.sum().to_dict()))
     history.append(df)
-    for date, time in dateRange(network.startDate, network.endDate):
-        multipliers = network.movementMultipliers.get(time, multipliers)
-        infectionProb = network.infectionProb.get(time, infectionProb)
+    for date in dateRange(network.startDate, network.endDate):
+        multipliers = network.movementMultipliers.get(date, multipliers)
+        infectionProb = network.infectionProb.get(date, infectionProb)
 
         progression = getInternalProgressionAllNodes(
             current,
@@ -846,6 +846,9 @@ def createNetworkOfPopulation(
     # population census data
     population = loaders.readPopulationAgeStructured(population_table)
 
+    # Checks dates are aligned well
+    assert start_date in infection_prob, "Infection probability should have start date as an index"
+
     # Check some requirements for this particular model to work with the progression matrix
     all_states = set()
     for states in progression.values():
@@ -865,8 +868,10 @@ def createNetworkOfPopulation(
     # movement multipliers (dampening or heightening)
     if movement_multipliers_table is not None:
         movementMultipliers = loaders.readMovementMultipliers(movement_multipliers_table)
+        assert start_date >= np.min(list(movementMultipliers.keys())), \
+            "Movement multipliers must have a date <= start_date"
     else:
-        movementMultipliers: Dict[int, loaders.Multiplier] = {}
+        movementMultipliers: Dict[dt.date, loaders.Multiplier] = {}
 
     # age-based infection matrix
     mixingMatrix = loaders.MixingMatrix(mixing_matrix_table)
