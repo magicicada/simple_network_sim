@@ -39,14 +39,14 @@
   version: 1.0.0
   extension: h5
   filename: human/infection-probability/1/data.h5
-  verified_hash: 5ddb9e4e727a632c06f345ef4a3e4550e0b87f17
+  verified_hash: d24283ee95e26827a4f3d2f04a06aea3548c5ded
 -
   data_product: human/movement-multipliers
   component: movement-multipliers
   version: 1.0.0
   extension: h5
   filename: human/movement-multipliers/1/data.h5
-  verified_hash: e56d92d28d11ca413fa75a85f50c6ae6cc30300c
+  verified_hash: 2c8777f89e18b8c73e234961da4670aab4c7f4c8
 -
   data_product: human/initial-infections
   component: initial-infections
@@ -67,7 +67,7 @@
   version: 1.0.0
   extension: h5
   filename: human/start-end-date/1/data.h5
-  verified_hash: 6f812a07374690e0152b83c517659d5b979d9357
+  verified_hash: 17ffb2595bfd237229162558c5b1ac188812b052
 -
   data_product: human/stochastic-mode
   component: stochastic-mode
