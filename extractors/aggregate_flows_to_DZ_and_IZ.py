@@ -15,9 +15,7 @@ dfUp = dfUp[['OutputArea', 'DataZone', 'InterZone']]
 dfUp = dfUp.set_index('OutputArea')
 
 
-dfMoves = pd.read_csv(flows, header=None)
-dfMoves.columns = ['sourceOA', 'destOA', 'total', 'breakdown1', 'breakdown2', 'breakdown3']
-
+dfMoves = pd.read_csv(flows, names=['sourceOA', 'destOA', 'total', 'breakdown1', 'breakdown2', 'breakdown3'])
 
 withSourceDZ = dfMoves.merge(dfUp, how = 'inner', left_on='sourceOA', right_index=True )
 withBothDZ = withSourceDZ.merge(dfUp, how = 'inner', left_on='destOA', right_index=True)
