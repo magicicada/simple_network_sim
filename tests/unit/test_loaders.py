@@ -175,6 +175,7 @@ def test_readMovementMultipliers(data_api):
     ms = loaders.readMovementMultipliers(data_api.read_table("human/movement-multipliers", "movement-multipliers"))
 
     assert ms == {
+        dt.date(2020, 3, 16): loaders.Multiplier(movement=1.0, contact=1.0),
         dt.date(2020, 5, 5): loaders.Multiplier(movement=0.05, contact=0.05),
         dt.date(2020, 5, 30): loaders.Multiplier(movement=0.3, contact=0.3),
         dt.date(2020, 6, 4): loaders.Multiplier(movement=0.8, contact=0.8),
