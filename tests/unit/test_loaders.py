@@ -366,7 +366,7 @@ def test_AgeRange_hash():
 
 def test_AgeRange_equal():
     assert loaders.AgeRange("[10,20)") == loaders.AgeRange("[10,20)")
-    assert not loaders.AgeRange("[10,20)") == loaders.AgeRange("[10,21)")
+    assert not loaders.AgeRange("[10,20)") == loaders.AgeRange("[10,21)")  # pylint: disable=unneeded-not
 
 
 def test_AgeRange_str():
@@ -382,7 +382,7 @@ def test_AgeRange_different_ranges(range_a, range_b):
 
     assert hash(a) != hash(b)
     assert a != b
-    assert not (a == b)
+    assert not a == b  # pylint: disable=unneeded-not
 
 
 def test_sampleMixingMatrix(data_api):

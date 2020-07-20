@@ -65,8 +65,8 @@ def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, i
 
 # CurrentlyInUse
 def basicSimulationInternalAgeStructure(
-    network: NetworkOfPopulation,
-    initialInfections: Dict[NodeName, Dict[Age, float]]
+        network: NetworkOfPopulation,
+        initialInfections: Dict[NodeName, Dict[Age, float]],
 ) -> pd.DataFrame:
     """Run the simulation of a disease progressing through a network of regions.
 
@@ -181,7 +181,7 @@ def getAges(node: Dict[Tuple[Age, Compartment], float]) -> List[Age]:
     :return: The unique collection of ages.
     """
     ages = set()
-    for (age, state) in node:
+    for (age, _) in node:
         ages.add(age)
     return sorted(list(ages))
 
@@ -301,6 +301,7 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
     :return: The number of new infections in each age group.
     :rtype: A dictionary of ages (keys) and the number of new infections (values)
     """
+    # pylint: disable=no-else-return
     if stochastic:
         assert isinstance(newContacts, int) or newContacts.is_integer()
 
@@ -312,13 +313,14 @@ def _distributeContactsOverAges(ageToSusceptibles, totalSusceptibles, newContact
         return {age: (sus / totalSusceptibles) * newContacts for age, sus in ageToSusceptibles.items()}
 
 
+# pylint: disable=too-many-arguments
 def getIncomingInfectiousContactsByNode(
-    graph,
-    currentState,
-    movementMultiplier,
-    infectiousStates,
-    stochastic,
-    random_state
+        graph,
+        currentState,
+        movementMultiplier,
+        infectiousStates,
+        stochastic,
+        random_state,
 ):
     """Determine the number of new infections at each node of a graph based on incoming people
     from neighbouring nodes.
@@ -448,7 +450,7 @@ def getWeight(graph, orig, dest, multiplier):
     return weight - (delta * delta_adjustment)
 
 
-# CurrentlyInUse
+# pylint: disable=too-many-arguments
 def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousStates, stochastic, random_state):
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
@@ -492,14 +494,14 @@ def getExternalInfectiousContacts(graph, nodes, movementMultiplier, infectiousSt
     return infectionsByNode
 
 
-# CurrentlyInUse
+# pylint: disable=too-many-arguments
 def getInternalInfectiousContactsInNode(
-    currentInternalStateDict,
-    mixingMatrix,
-    contactsMultiplier,
-    infectiousStates,
-    stochastic,
-    random_state
+        currentInternalStateDict,
+        mixingMatrix,
+        contactsMultiplier,
+        infectiousStates,
+        stochastic,
+        random_state,
 ):
     """Calculate the new infections due to mixing within the region and stratify them by age.
 
@@ -544,6 +546,7 @@ def getInternalInfectiousContactsInNode(
     return infectiousContacts
 
 
+# pylint: disable=too-many-arguments
 def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, stochastic, random_state):
     """From raw contacts (between any two people in different age groups), filters
     only those contacts that originated from an infectious person and received
@@ -587,7 +590,7 @@ def _computeInfectiousContacts(contacts, infectious, susceptibles, totalInAge, s
         return infectious * contacts * (susceptibles / totalInAge)
 
 
-# CurrentlyInUse        
+# pylint: disable=too-many-arguments
 def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infectiousStates, stochastic, random_state):
     """Calculate the new infections and stratify them by region and age.
 
@@ -627,7 +630,6 @@ def getInternalInfectiousContacts(nodes, mixingMatrix, contactsMultiplier, infec
     return contacts
 
 
-# CurrentlyInUse
 def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs, stochastic, random_state):
     """Returns the status of exposed individuals, moving them into the next disease state with a
     probability defined in the given progression matrix.
@@ -656,6 +658,7 @@ def internalStateDiseaseUpdate(currentInternalStateDict, diseaseProgressionProbs
     return newStates
 
 
+# pylint: disable=too-many-arguments
 def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, stochastic, random_state):
     """Returns the status of exposed individuals, moving them into the next disease state with a
     probability defined in the given progression matrix. Two modes available:
@@ -704,7 +707,6 @@ def _internalStateDiseaseUpdate(age, state, people, outTransitions, newStates, s
             newStates[(age, nextState)] += transition * people
 
 
-# CurrentlyInUse
 def getInternalProgressionAllNodes(currStates, diseaseProgressionProbs, stochastic, random_state):
     """Given the size of the population in each exposed state, calculate the numbers that progress
     the next disease state based on the progression matrix.
@@ -759,8 +761,8 @@ def mergeContacts(*args):
 
 
 def createExposedRegions(
-    infections: Dict[NodeName, Dict[Age, float]],
-    states: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]
+        infections: Dict[NodeName, Dict[Age, float]],
+        states: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """Creates a new the state of a region, adding the new infections.
 
@@ -800,6 +802,7 @@ SUSCEPTIBLE_STATE = "S"
 EXPOSED_STATE = "E"
 
 
+# pylint: disable=too-many-arguments
 def createNetworkOfPopulation(
         compartment_transition_table: pd.DataFrame,
         population_table: pd.DataFrame,
@@ -812,7 +815,7 @@ def createNetworkOfPopulation(
         start_end_date: pd.DataFrame,
         movement_multipliers_table: pd.DataFrame = None,
         stochastic_mode: pd.DataFrame = None,
-        random_seed: pd.DataFrame = None
+        random_seed: pd.DataFrame = None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -914,13 +917,14 @@ def createNetworkOfPopulation(
     )
 
 
+# pylint: disable=too-many-arguments
 def createNextStep(
         progression: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
         infectiousContacts: Dict[NodeName, Dict[Age, float]],
         currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
         infectionProb: float,
         stochastic: bool,
-        random_state: Optional[np.random.Generator]
+        random_state: Optional[np.random.Generator],
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """Update the current state of each regions population by allowing infected individuals
     to progress to the next infection stage and infecting susceptible individuals. The state is not
@@ -955,20 +959,25 @@ def createNextStep(
             nextStep[name][key] = value
 
     for name, node in infectiousContacts.items():
-        for age, infectiousContacts in node.items():
-            susceptible = nextStep[name][(age, SUSCEPTIBLE_STATE)]
-            exposed = _calculateExposed(susceptible, infectiousContacts, infectionProb, stochastic, random_state)
+        for age, contacts in node.items():
+            exposed = _calculateExposed(
+                nextStep[name][(age, SUSCEPTIBLE_STATE)],
+                contacts,
+                infectionProb,
+                stochastic,
+                random_state,
+            )
             expose(age, exposed, nextStep[name])
 
     return nextStep
 
 
 def _calculateExposed(
-    susceptible: float,
-    contacts: float,
-    infectionProb: float,
-    stochastic: bool,
-    random_state: Optional[np.random.Generator]
+        susceptible: float,
+        contacts: float,
+        infectionProb: float,
+        stochastic: bool,
+        random_state: Optional[np.random.Generator],
 ):
     """From the number of contacts (between infectious and susceptible) people, compute
     the number of actual infectious contacts. Two modes:

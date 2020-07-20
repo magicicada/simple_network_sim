@@ -1,3 +1,5 @@
+# Pylint is complaining about duplicated lines, but they are all imports
+# pylint: disable=duplicate-code
 import shutil
 import pandas as pd
 from pathlib import Path
@@ -9,7 +11,7 @@ from data_pipeline_api import standard_api
 FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
 
 
-def _data_api(base_data_dir, config):
+def _data_api(base_data_dir, config):  # pylint: disable=redefined-outer-name
     try:
         with standard_api.StandardAPI(str(base_data_dir / config), uri="", git_sha="") as store:
             yield store
@@ -27,12 +29,12 @@ def short_simulation_dates():
 
 
 @pytest.fixture
-def data_api(base_data_dir):
+def data_api(base_data_dir):  # pylint: disable=redefined-outer-name
     yield from _data_api(base_data_dir, "config.yaml")
 
 
 @pytest.fixture
-def data_api_stochastic(base_data_dir):
+def data_api_stochastic(base_data_dir):  # pylint: disable=redefined-outer-name
     yield from _data_api(base_data_dir, "config_stochastic.yaml")
 
 

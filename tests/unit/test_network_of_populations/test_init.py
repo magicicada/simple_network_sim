@@ -151,9 +151,9 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api, short_s
 
 
 def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(data_api, short_simulation_dates):
-    def count_susceptibles(state):
+    def count_susceptibles(states):
         susceptibles = 0.0
-        for region in state.values():
+        for region in states.values():
             for (age, state) in region.keys():
                 if state == "S":
                     susceptibles += region[(age, state)]

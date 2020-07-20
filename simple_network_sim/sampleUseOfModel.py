@@ -3,16 +3,16 @@ This is the main module used to run simulations based on network of populations
 """
 # pylint: disable=import-error
 import argparse
+from functools import reduce
 import logging
 import logging.config
+from pathlib import Path
 import sys
 import time
 from typing import Optional, List, NamedTuple
 
 from data_pipeline_api import standard_api
 import pandas as pd
-from pathlib import Path
-from functools import reduce
 
 from . import common
 from . import network_of_populations as ss
@@ -29,7 +29,7 @@ def main(argv):
 
     args = build_args(argv)
     setup_logger(args)
-    logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
+    logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))  # pylint: disable=protected-access
 
     issues: List[standard_api.Issue] = []
 
@@ -118,8 +118,9 @@ def aggregateResults(results: List[pd.DataFrame]) -> AggregatedResults:
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
-    """Configure package-level logger instance.
-    
+    """
+    Configure package-level logger instance.
+
     :param args: argparse.Namespace
         args.logfile (pathlib.Path) is used to create a logfile if present
         args.quiet and args.debug control logging level to sys.stderr
