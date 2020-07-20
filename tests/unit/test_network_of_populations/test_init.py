@@ -449,11 +449,11 @@ def test_dateRange():
 
 def test_dateRange_invalid_dates():
     with pytest.raises(ValueError):
-        _ = [d for d in np.dateRange(dt.date(2020, 1, 1), dt.date(2019, 1, 1))]
+        _ = list(np.dateRange(dt.date(2020, 1, 1), dt.date(2019, 1, 1)))
 
 
 def test_dateRange_empty_dates():
-    dates = [d for d in np.dateRange(dt.date(2020, 1, 1), dt.date(2020, 1, 1))]
+    dates = list(np.dateRange(dt.date(2020, 1, 1), dt.date(2020, 1, 1)))
     assert len(dates) == 0
 
 
