@@ -43,21 +43,24 @@ class NetworkOfPopulation(NamedTuple):
     infectionProb: Dict[Time, float]
     initialInfections: Dict[NodeName, Dict[Age, float]]
     trials: int
-    start_date: dt.date
-    end_date: dt.date
+    startDate: dt.date
+    endDate: dt.date
     stochastic: bool
     randomState: np.random.Generator
 
 
-def date_range(start_date: dt.date, end_date: dt.date) -> Iterable[Tuple[dt.date, int]]:
+def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, int]]:
     """ Generator of day and time from start date and end date
 
-    :param start_date: Start date of the network
-    :param end_date: End date of the network
+    :param startDate: Start date of the network
+    :param endDate: End date of the network
     :return: Generator of days as datetime.date and integer
     """
-    for days in range(int((end_date - start_date).days)):
-        yield start_date + dt.timedelta(days + 1), days + 1
+    if startDate > endDate:
+        raise ValueError("Model start date should be <= end date")
+
+    for days in range(int((endDate - startDate).days)):
+        yield startDate + dt.timedelta(days + 1), days + 1
 
 
 # CurrentlyInUse
@@ -77,11 +80,11 @@ def basicSimulationInternalAgeStructure(
     infectionProb = network.infectionProb[0]  # no default value, time zero must exist
 
     current = createExposedRegions(initialInfections, network.initialState)
-    df = nodesToPandas(network.start_date, current)
-    logger.debug("Date (%s/%s). Status: %s", network.start_date, network.end_date,
+    df = nodesToPandas(network.startDate, current)
+    logger.debug("Date (%s/%s). Status: %s", network.startDate, network.endDate,
                  Lazy(lambda: df.groupby("state").total.sum().to_dict()))
     history.append(df)
-    for date, time in date_range(network.start_date, network.end_date):
+    for date, time in dateRange(network.startDate, network.endDate):
         multipliers = network.movementMultipliers.get(time, multipliers)
         infectionProb = network.infectionProb.get(time, infectionProb)
 
@@ -123,7 +126,7 @@ def basicSimulationInternalAgeStructure(
         logger.debug(
             "Date (%s/%s). Status: %s",
             date,
-            network.end_date,
+            network.endDate,
             Lazy(lambda: df.groupby("state").total.sum().to_dict())
         )
         history.append(df)
@@ -904,8 +907,8 @@ def createNetworkOfPopulation(
         infectionProb=infection_prob,
         initialInfections=initial_infections,
         trials=trials,
-        start_date=start_date,
-        end_date=end_date,
+        startDate=start_date,
+        endDate=end_date,
         stochastic=stochastic_mode,
         randomState=np.random.default_rng(random_seed)
     )

@@ -175,7 +175,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
 
     result = np.basicSimulationInternalAgeStructure(network, {"S08000024": {"[0,17)": people_to_infect}})
     result.date = pd.to_datetime(result.date)
-    inflection_date = pd.Timestamp(network.start_date + dt.timedelta(days=25))
+    inflection_date = pd.Timestamp(network.startDate + dt.timedelta(days=25))
 
     # no infection before time 25
     for total in result[(result.date < inflection_date) & (result.state == "S")].groupby("date").total.sum().to_list():
@@ -429,6 +429,32 @@ def test_doInternalInfectionProcessAllNodes_large_num_infected_ignored():
     new_infected = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], True,
                                                     numpy.random.default_rng(1))
     assert new_infected == {"region1": {"m": 385}}
+
+
+def test_dateRange():
+    start_date = dt.date(2020, 1, 1)
+    end_date = dt.date(2020, 2, 1)
+
+    dates = [d[0] for d in np.dateRange(start_date, end_date)]
+    times = [d[1] for d in np.dateRange(start_date, end_date)]
+
+    assert start_date not in dates
+    assert end_date in dates
+    assert len(dates) == 31
+    assert len(sorted(dates)) == 31
+
+    assert len(dates) == len(times)
+    assert times == list(numpy.arange(1, 32))
+
+
+def test_dateRange_invalid_dates():
+    with pytest.raises(ValueError):
+        _ = [d for d in np.dateRange(dt.date(2020, 1, 1), dt.date(2019, 1, 1))]
+
+
+def test_dateRange_empty_dates():
+    dates = [d for d in np.dateRange(dt.date(2020, 1, 1), dt.date(2020, 1, 1))]
+    assert len(dates) == 0
 
 
 def test_doIncomingInfectionsByNode_no_susceptibles():
@@ -771,8 +797,8 @@ def test_createNetworkOfPopulation(data_api):
     assert network.infectionProb == {0: 1.0}
     assert network.initialInfections == {"S08000016": {"[17,70)": 100}}
     assert network.trials == 1
-    assert network.start_date == dt.date(2020, 3, 16)
-    assert network.end_date == dt.date(2020, 10, 2)
+    assert network.startDate == dt.date(2020, 3, 16)
+    assert network.endDate == dt.date(2020, 10, 2)
 
 
 def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
