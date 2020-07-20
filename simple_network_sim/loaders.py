@@ -2,7 +2,8 @@
 
 import json
 import math
-from typing import Dict, NamedTuple, List
+import datetime
+from typing import Dict, NamedTuple, List, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -13,7 +14,6 @@ Compartment = str
 NodeName = str
 
 
-# CurrentlyInUse
 def _checkAgeParameters(agesDictionary):
     """Check the consistency of data within the ages dictionary.
 
@@ -37,7 +37,6 @@ def _checkAgeParameters(agesDictionary):
     return agesDictionary
 
 
-# CurrentlyInUse
 def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartment, Dict[Compartment, float]]]:
     """Read a file containing a list of age-specific epidemiological parameters.
     
@@ -55,7 +54,6 @@ def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartmen
     return _checkAgeParameters(agesDictionary)
 
 
-# CurrentlyInUse
 def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age, int]]:
     """Read a file containing population data.
 
@@ -79,7 +77,6 @@ def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age,
     return dictOfPops
 
 
-# CurrentlyInUse
 # making this general to include arbitrary future attributes.  Location is the primary one for right now
 # keeps them in a dictionary and returns that.  Keys are
 def readNodeAttributesJSON(filename):
@@ -96,7 +93,6 @@ def readNodeAttributesJSON(filename):
     return node_data
 
 
-# CurrentlyInUse
 # at the moment this uses vanilla networkx edge list reading - needs weights
 #  I've set it apart as its own function in case we want to do anything fancier with edge files
 # in future - e.g. sampling, generating movements, whatever
@@ -248,6 +244,25 @@ def readTrials(df: pd.DataFrame) -> int:
             raise ValueError("trials must be > 0")
 
         return trials
+
+
+def readStartEndDate(df: pd.DataFrame) -> Tuple[datetime.date, datetime.date]:
+    """
+    Transforms the dataframe from the data API into a bool int inside the model
+    :param df: The dataframe containing the starting date of the model
+    :return: The starting date of the model
+    """
+    if len(df) != 2:
+        raise ValueError("DataFrame must be of size 2")
+    if not all(df.columns == ["Parameter", "Value"]):
+        raise ValueError("There must be 2 columns names 'Parameter' and 'Value'")
+    if ("start_date" not in list(df.Parameter)) or ("end_date" not in list(df.Parameter)):
+        raise ValueError("Both a start and end date must be provided")
+
+    start_date = datetime.datetime.strptime(df.at[0, "Value"], '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(df.at[1, "Value"], '%Y-%m-%d').date()
+
+    return start_date, end_date
 
 
 def readStochasticMode(df: pd.DataFrame) -> bool:

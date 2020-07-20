@@ -5,15 +5,16 @@ node, compartment and age.
 """
 # pylint: disable=import-error
 # pylint: disable=too-many-lines
+import copy
+import datetime as dt
 import logging
 import random
-import copy
-import numpy as np
-import scipy.stats as stats
-from typing import Dict, Tuple, NamedTuple, List, Optional
+from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable
 
 import networkx as nx
+import numpy as np
 import pandas as pd
+import scipy.stats as stats
 
 from simple_network_sim import loaders
 from simple_network_sim.common import Lazy
@@ -26,7 +27,7 @@ Compartment = str
 NodeName = str
 Time = int
 
-RESULT_DTYPES = {"time": "int16", "age": "category", "state": "category", "node": "category"}
+RESULT_DTYPES = {"date": str, "age": "category", "state": "category", "node": "category"}
 
 
 class NetworkOfPopulation(NamedTuple):
@@ -42,20 +43,34 @@ class NetworkOfPopulation(NamedTuple):
     infectionProb: Dict[Time, float]
     initialInfections: Dict[NodeName, Dict[Age, float]]
     trials: int
+    startDate: dt.date
+    endDate: dt.date
     stochastic: bool
     randomState: np.random.Generator
+
+
+def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, int]]:
+    """Generator of day and time from start date and end date
+
+    :param startDate: Start date of the network
+    :param endDate: End date of the network
+    :return: Generator of days as datetime.date and integer
+    """
+    if startDate > endDate:
+        raise ValueError("Model start date should be <= end date")
+
+    for days in range(int((endDate - startDate).days)):
+        yield startDate + dt.timedelta(days=days + 1), days + 1
 
 
 # CurrentlyInUse
 def basicSimulationInternalAgeStructure(
     network: NetworkOfPopulation,
-    timeHorizon: int,
     initialInfections: Dict[NodeName, Dict[Age, float]]
 ) -> pd.DataFrame:
     """Run the simulation of a disease progressing through a network of regions.
 
     :param network: This is a NetworkOfPopulation instance which will have the states field modified by this function.
-    :param timeHorizon: How many times to run the simulation. Each new time means a new entry to the network.states dict
     :param initialInfections: Initial infections of the disease
     :return: A time series of the size of the infectious population.
     """
@@ -65,13 +80,13 @@ def basicSimulationInternalAgeStructure(
     infectionProb = network.infectionProb[0]  # no default value, time zero must exist
 
     current = createExposedRegions(initialInfections, network.initialState)
-    df = nodesToPandas(0, current)
-    logger.debug("Time (0/%s). Status: %s", timeHorizon, Lazy(lambda: df.groupby("state").total.sum().to_dict()))
+    df = nodesToPandas(network.startDate, current)
+    logger.debug("Date (%s/%s). Status: %s", network.startDate, network.endDate,
+                 Lazy(lambda: df.groupby("state").total.sum().to_dict()))
     history.append(df)
-    for time in range(timeHorizon):
-        # we are building the interactions for time + 1, so that's the multiplier value we need to use
-        multipliers = network.movementMultipliers.get(time + 1, multipliers)
-        infectionProb = network.infectionProb.get(time + 1, infectionProb)
+    for date, time in dateRange(network.startDate, network.endDate):
+        multipliers = network.movementMultipliers.get(time, multipliers)
+        infectionProb = network.infectionProb.get(time, infectionProb)
 
         progression = getInternalProgressionAllNodes(
             current,
@@ -107,11 +122,11 @@ def basicSimulationInternalAgeStructure(
             network.randomState
         )
 
-        df = nodesToPandas(time + 1, current)
+        df = nodesToPandas(date, current)
         logger.debug(
-            "Time (%s/%s). Status: %s",
-            time + 1,
-            timeHorizon,
+            "Date (%s/%s). Status: %s",
+            date,
+            network.endDate,
             Lazy(lambda: df.groupby("state").total.sum().to_dict())
         )
         history.append(df)
@@ -119,29 +134,29 @@ def basicSimulationInternalAgeStructure(
     return pd.concat(history, copy=False, ignore_index=True)
 
 
-def nodesToPandas(time: int, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]) -> pd.DataFrame:
+def nodesToPandas(date: dt.date, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]) -> pd.DataFrame:
     """
     Converts a dict of nodes into a pandas DataFrame
 
-    >>> nodesToPandas(0, {"nodea": {("70+", "S"): 10.0, ("70+", "E"): 15.0}, "nodeb": {("[17,70", "S"): 15.0}})  # doctest: +NORMALIZE_WHITESPACE
-        time   node     age state  total
-    0     0  nodea     70+     S   10.0
-    1     0  nodea     70+     E   15.0
-    2     0  nodeb  [17,70     S   15.0
-    >>> nodesToPandas(0, {})  # doctest: +NORMALIZE_WHITESPACE
+    >>> nodesToPandas(dt.date(2020, 1, 1), {"nodea": {("70+", "S"): 10.0, ("70+", "E"): 15.0}, "nodeb": {("[17,70", "S"): 15.0}})  # doctest: +NORMALIZE_WHITESPACE
+        date         node     age  state  total
+    0   2020-01-01  nodea     70+     S   10.0
+    1   2020-01-01  nodea     70+     E   15.0
+    2   2020-01-01  nodeb  [17,70     S   15.0
+    >>> nodesToPandas(dt.date(2020, 1, 1), {})  # doctest: +NORMALIZE_WHITESPACE
     Empty DataFrame
-    Columns: [time, node, age, state, total]
+    Columns: [date, node, age, state, total]
     Index: []
 
-    :param time: time that will be inserted into every row
+    :param date: date that will be inserted into every row
     :param nodes: a dict of nodes
     :return: a pandas dataframe representation of the nodes
     """
     rows = []
     for name, node in nodes.items():
         for (age, state), value in node.items():
-            rows.append([time, name, age, state, value])
-    return pd.DataFrame(rows, columns=["time", "node", "age", "state", "total"]).astype(RESULT_DTYPES, copy=True)
+            rows.append([date, name, age, state, value])
+    return pd.DataFrame(rows, columns=["date", "node", "age", "state", "total"]).astype(RESULT_DTYPES, copy=True)
 
 
 # CurrentlyInUse
@@ -786,17 +801,18 @@ EXPOSED_STATE = "E"
 
 
 def createNetworkOfPopulation(
-    compartment_transition_table: pd.DataFrame,
-    population_table: pd.DataFrame,
-    commutes_table: pd.DataFrame,
-    mixing_matrix_table: pd.DataFrame,
-    infectious_states: pd.DataFrame,
-    infection_prob: pd.DataFrame,
-    initial_infections: pd.DataFrame,
-    trials: pd.DataFrame,
-    movement_multipliers_table: pd.DataFrame = None,
-    stochastic_mode: pd.DataFrame = None,
-    random_seed: pd.DataFrame = None
+        compartment_transition_table: pd.DataFrame,
+        population_table: pd.DataFrame,
+        commutes_table: pd.DataFrame,
+        mixing_matrix_table: pd.DataFrame,
+        infectious_states: pd.DataFrame,
+        infection_prob: pd.DataFrame,
+        initial_infections: pd.DataFrame,
+        trials: pd.DataFrame,
+        start_end_date: pd.DataFrame,
+        movement_multipliers_table: pd.DataFrame = None,
+        stochastic_mode: pd.DataFrame = None,
+        random_seed: pd.DataFrame = None
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -810,6 +826,7 @@ def createNetworkOfPopulation(
     :param infection_prob: Probability that a given contact will result in an infection
     :param initial_infections: Initial infections of the population at time 0
     :param trials: Number of trials for the model
+    :param start_end_date: Starting and ending dates of the model
     :param stochastic_mode: Use stochastic mode for the model
     :param random_seed: Random number generator seed used for stochastic mode
     :return: The constructed network
@@ -819,6 +836,7 @@ def createNetworkOfPopulation(
     infectious_states = loaders.readInfectiousStates(infectious_states)
     initial_infections = loaders.readInitialInfections(initial_infections)
     trials = loaders.readTrials(trials)
+    start_date, end_date = loaders.readStartEndDate(start_end_date)
     stochastic_mode = loaders.readStochasticMode(stochastic_mode)
     random_seed = loaders.readRandomSeed(random_seed)
 
@@ -889,18 +907,20 @@ def createNetworkOfPopulation(
         infectionProb=infection_prob,
         initialInfections=initial_infections,
         trials=trials,
+        startDate=start_date,
+        endDate=end_date,
         stochastic=stochastic_mode,
         randomState=np.random.default_rng(random_seed)
     )
 
 
 def createNextStep(
-    progression: Dict[Age, Dict[Compartment, Dict[Compartment, float]]],
-    infectiousContacts: Dict[NodeName, Dict[Age, float]],
-    currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
-    infectionProb: float,
-    stochastic: bool,
-    random_state: Optional[np.random.Generator]
+        progression: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
+        infectiousContacts: Dict[NodeName, Dict[Age, float]],
+        currState: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
+        infectionProb: float,
+        stochastic: bool,
+        random_state: Optional[np.random.Generator]
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """Update the current state of each regions population by allowing infected individuals
     to progress to the next infection stage and infecting susceptible individuals. The state is not
