@@ -50,7 +50,7 @@ class NetworkOfPopulation(NamedTuple):
 
 
 def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, int]]:
-    """ Generator of day and time from start date and end date
+    """Generator of day and time from start date and end date
 
     :param startDate: Start date of the network
     :param endDate: End date of the network
@@ -60,7 +60,7 @@ def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, i
         raise ValueError("Model start date should be <= end date")
 
     for days in range(int((endDate - startDate).days)):
-        yield startDate + dt.timedelta(days + 1), days + 1
+        yield startDate + dt.timedelta(days=days + 1), days + 1
 
 
 # CurrentlyInUse
