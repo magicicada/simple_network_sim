@@ -186,7 +186,7 @@ def readInfectionProbability(df: pd.DataFrame) -> Dict[datetime.date, float]:
     :param df: a timeseries of infection probabilities
     :return: a timeseries of infection probabilities in the dict format
     """
-    assert len(df), "Dataframe must be non empty"
+    assert len(df) != 0, "Dataframe must be non empty"
 
     probs: Dict[datetime.date, float] = {}
     for row in df.to_dict(orient="row"):
