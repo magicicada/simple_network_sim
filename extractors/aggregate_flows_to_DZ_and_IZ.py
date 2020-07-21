@@ -1,5 +1,4 @@
 import pandas as pd
-import sys
 import urllib.request
 
 def main():
@@ -10,7 +9,6 @@ def main():
     # government after making an account and agreeing to a EULA for access to safeguarded data
     flows = 'wu03buk_oa_wz_v4.csv'
     
-    
     dfUp = pd.read_csv(upward)
     dfUp = dfUp[['OutputArea', 'DataZone', 'InterZone']]
     dfUp = dfUp.set_index('OutputArea')
@@ -18,8 +16,8 @@ def main():
     
     dfMoves = pd.read_csv(flows, names=['sourceOA', 'destOA', 'total', 'breakdown1', 'breakdown2', 'breakdown3'])
     
-    withSourceDZ = dfMoves.merge(dfUp, how = 'inner', left_on='sourceOA', right_index=True )
-    withBothDZ = withSourceDZ.merge(dfUp, how = 'inner', left_on='destOA', right_index=True)
+    withSourceDZ = dfMoves.merge(dfUp, how='inner', left_on='sourceOA', right_index=True )
+    withBothDZ = withSourceDZ.merge(dfUp, how='inner', left_on='destOA', right_index=True)
     
     withBothIZ = withBothDZ[['InterZone_x', 'InterZone_y', 'total']]
     withBothIZ.columns = ['source_IZ', 'dest_IZ', 'weight']
