@@ -212,7 +212,7 @@ def test_readInfectionProbability():
 
 
 def test_readInfectionProbability_empty():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         loaders.readInfectionProbability(pd.DataFrame())
 
 

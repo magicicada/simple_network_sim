@@ -71,12 +71,12 @@ def getInitialMultipliers(startDate: dt.date, multipliers: Dict[dt.date, loaders
     :param multipliers: dict of movement and contact multipliers
     :return: Multipliers for initial day
     """
-    dates = [d for d in sorted(list(multipliers.keys())) if d <= startDate]
+    dates = [d for d in list(multipliers.keys()) if d <= startDate]
 
     if not dates:
         return loaders.Multiplier(contact=1.0, movement=1.0)
 
-    return multipliers.get(dates[-1])
+    return multipliers.get(max(dates))
 
 
 # CurrentlyInUse
