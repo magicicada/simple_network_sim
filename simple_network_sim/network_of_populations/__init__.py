@@ -1,7 +1,18 @@
 """
-This package implements the network of populations simuation. This models regions as nodes with intra node rules and
+This package implements the network of populations simulation. This models regions as nodes with intra node rules and
 different inter node transmission rules. The end result of the model is a timeseries of the number of people in each
 node, compartment and age.
+
+The compartments and age groups are defined in the inputs for the model. The only hardcoded compartment are:
+
+1. Susceptibles (S) -- people who are not immune to the disease and can catch it at any moment.
+2. Exposed (E) -- people who already have the disease, whoever do not yet show symptoms and do not yet infectious.
+
+The main type of this module is the `NetworkOfPopulation` class, which is a data object with all the data needed to run
+the model. The main entrypoint function for the simulation is :meth:`basicSimulationInternalAgeStructure`. That function
+will run a simulation based on the data in the `NetworkOfPopulation` instance and it will output a pandas DataFrame
+with disease progression over time. Just like most public functions in this module, it does not make changes to the
+objects passed as inputs.
 """
 # pylint: disable=import-error
 # pylint: disable=too-many-lines
@@ -63,7 +74,6 @@ def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[Tuple[dt.date, i
         yield startDate + dt.timedelta(days=days + 1), days + 1
 
 
-# CurrentlyInUse
 def basicSimulationInternalAgeStructure(
         network: NetworkOfPopulation,
         initialInfections: Dict[NodeName, Dict[Age, float]],

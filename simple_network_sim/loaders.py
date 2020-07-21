@@ -59,7 +59,7 @@ def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age,
     """Read a file containing population data.
 
     Population is labelled by node ID, sex and age. Sex is currently ignored.
-    
+
     :param table: Population data
     :return: Nested dict with age-stratified population in each node
     """

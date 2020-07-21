@@ -1,11 +1,12 @@
 # Pylint is complaining about duplicated lines, but they are all imports
 # pylint: disable=duplicate-code
 import shutil
-import pandas as pd
 from pathlib import Path
 
-import pytest
 from data_pipeline_api import standard_api
+import pandas as pd
+import pytest
+
 
 # Path to directory containing test files for fixtures
 FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
