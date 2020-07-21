@@ -3,7 +3,7 @@
 import json
 import math
 import datetime
-from typing import Any, Dict, NamedTuple, List, Tuple
+from typing import Any, Dict, NamedTuple, List, Tuple, Union
 
 import networkx as nx  # type: ignore
 import pandas as pd  # type: ignore
@@ -399,12 +399,18 @@ class MixingMatrix:
     :param mixing_table: Raw DataFrame from the data API. The expected columns are: source, target and mixing (value).
     """
 
-    def __init__(self, mixing_table: pd.DataFrame):
+    def __init__(self, mixing_table: Union[pd.DataFrame, Dict[str, Dict[str, float]]]):
         """Initialise."""
-        self._matrix = {
-            group_name: MixingRow(list(group["target"]), list(group["mixing"]))
-            for group_name, group in mixing_table.groupby("source")
-        }
+
+        if isinstance(mixing_table, pd.DataFrame):
+            self._matrix = {
+                group_name: MixingRow(list(group["target"]), list(group["mixing"]))
+                for group_name, group in mixing_table.groupby("source")
+            }
+        elif isinstance(mixing_table, dict):
+            self._matrix = mixing_table
+        else:
+            raise ValueError("Wrong data type passed in constructor of MixingMatrix")
 
     def __getitem__(self, age: str) -> MixingRow:
         """Return MixingRow for given age.

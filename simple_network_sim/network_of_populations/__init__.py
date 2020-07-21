@@ -9,7 +9,7 @@ import copy
 import datetime as dt
 import logging
 import random
-from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast
+from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any
 
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
@@ -62,21 +62,31 @@ def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[dt.date]:
         yield startDate + dt.timedelta(days=days + 1)
 
 
-def getInitialMultipliers(startDate: dt.date, multipliers: Dict[dt.date, loaders.Multiplier]):
-    """Queries the multipliers at the most recent date before
+def getInitialParameter(
+        startDate: dt.date,
+        timeSeries: Dict[dt.date, Any],
+        default: Any,
+        raise_on_missing: bool = False
+):
+    """Queries the timeSeries at the most recent date before
     (and including) model start date. If no such date is found
-    returns neutral multipliers (1.0 for both).
+    returns the default value if raise_on_missing == False,
+    otherwise returns ValueError.
 
     :param startDate: Start date of the network
-    :param multipliers: dict of movement and contact multipliers
+    :param timeSeries: dict of parameters indexed by dates
+    :param default: default value to use if not date before or at startDate is found
+    :param raise_on_missing: If not date before or at startDate is found, raise or return default
     :return: Multipliers for initial day
     """
-    dates = [d for d in list(multipliers.keys()) if d <= startDate]
+    dates = [d for d in list(timeSeries.keys()) if d <= startDate]
 
     if not dates:
-        return loaders.Multiplier(contact=1.0, movement=1.0)
+        if raise_on_missing:
+            raise ValueError("No parameter found at or before start date")
+        return default
 
-    return multipliers.get(max(dates))
+    return timeSeries.get(max(dates))
 
 
 # CurrentlyInUse
@@ -92,8 +102,9 @@ def basicSimulationInternalAgeStructure(
     """
     history = []
 
-    multipliers = getInitialMultipliers(network.startDate, network.movementMultipliers)
-    infectionProb = network.infectionProb[network.startDate]
+    defaultMultipliers = loaders.Multiplier(contact=1.0, movement=1.0)
+    multipliers = getInitialParameter(network.startDate, network.movementMultipliers, defaultMultipliers)
+    infectionProb = getInitialParameter(network.startDate, network.infectionProb, default=None, raise_on_missing=True)
 
     current = createExposedRegions(initialInfections, network.initialState)
     df = nodesToPandas(network.startDate, current)
@@ -241,7 +252,7 @@ def distributeContactsOverAges(
         nodeState: Dict[Tuple[Age, Compartment], float],
         newContacts: float,
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[Age, float]:
     r"""
     Distribute the number of new contacts across a region. There are two possible implementations:
@@ -326,7 +337,7 @@ def getIncomingInfectiousContactsByNode(
         movementMultiplier: float,
         infectiousStates: List[Compartment],
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[NodeName, float]:
     r"""
     Determine the number of new infections at each node of a graph based on incoming people from neighbouring nodes.
@@ -447,7 +458,7 @@ def getExternalInfectiousContacts(
         movementMultiplier: float,
         infectiousStates: List[Compartment],
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[NodeName, Dict[Age, float]]:
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
@@ -488,7 +499,7 @@ def getInternalInfectiousContactsInNode(
         contactsMultiplier: float,
         infectiousStates: List[Compartment],
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[Age, float]:
     """
     Calculate the new infections due to mixing within the region and stratify them by age. The `stochastic` parameter
@@ -574,7 +585,7 @@ def getInternalInfectiousContacts(
         contactsMultiplier: float,
         infectiousStates,
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[NodeName, Dict[Age, float]]:
     """Calculate the new infections and stratify them by region and age.
 
@@ -605,7 +616,7 @@ def internalStateDiseaseUpdate(
         currentInternalStateDict: Dict[Tuple[Age, Compartment], float],
         diseaseProgressionProbs: Dict[Age, Dict[Compartment, Dict[Compartment, float]]],
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[Tuple[Age, Compartment], float]:
     r"""
     Returns the status of exposed individuals, moving them into the next disease state with a probability defined in the
@@ -678,7 +689,7 @@ def getInternalProgressionAllNodes(
         currStates: Dict[NodeName, Dict[Tuple[Age, Compartment], float]],
         diseaseProgressionProbs: Dict[Age, Dict[Compartment, Dict[Compartment, float]]],
         stochastic: bool,
-        random_state: np.random.Generator,
+        random_state: Optional[np.random.Generator],
 ) -> Dict[NodeName, Dict[Tuple[Age, Compartment], float]]:
     """
     Given the size of the population in each exposed state, calculate the numbers that progress
@@ -809,9 +820,6 @@ def createNetworkOfPopulation(
 
     # population census data
     population = loaders.readPopulationAgeStructured(population_table)
-
-    # Checks dates are aligned well
-    assert start_date in infection_prob, "Infection probability should have start date as an index"
 
     # Check some requirements for this particular model to work with the progression matrix
     all_states = set()
