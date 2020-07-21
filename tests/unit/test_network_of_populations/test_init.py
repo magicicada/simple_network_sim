@@ -9,6 +9,7 @@ import numpy
 import pandas as pd
 
 from simple_network_sim import network_of_populations as np
+from simple_network_sim import loaders
 
 
 def _count_people_per_region(state):
@@ -451,6 +452,23 @@ def test_dateRange_invalid_dates():
 def test_dateRange_empty_dates():
     dates = list(np.dateRange(dt.date(2020, 1, 1), dt.date(2020, 1, 1)))
     assert len(dates) == 0
+
+
+def test_getInitialMultipliers():
+    multipliers = np.getInitialMultipliers(dt.date(2020, 1, 1), {dt.date(2020, 1, 1): loaders.Multiplier(0., 0.)})
+    assert multipliers == loaders.Multiplier(0., 0.)
+
+    multipliers = np.getInitialMultipliers(dt.date(2020, 1, 1), {dt.date(2019, 1, 1): loaders.Multiplier(0., 0.)})
+    assert multipliers == loaders.Multiplier(0., 0.)
+
+    multipliers = np.getInitialMultipliers(dt.date(2020, 1, 1), {dt.date(2020, 1, 2): loaders.Multiplier(0., 0.)})
+    assert multipliers == loaders.Multiplier(1.0, 1.0)
+
+    multipliers = np.getInitialMultipliers(dt.date(2020, 12, 31), {
+        dt.date(2020, 1, 1): loaders.Multiplier(0., 0.),
+        dt.date(2021, 1, 1): loaders.Multiplier(10., 10.),
+    })
+    assert multipliers == loaders.Multiplier(0., 0.)
 
 
 def test_doIncomingInfectionsByNode_no_susceptibles():

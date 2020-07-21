@@ -63,6 +63,23 @@ def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[dt.date]:
         yield startDate + dt.timedelta(days=days + 1)
 
 
+def getInitialMultipliers(startDate: dt.date, multipliers: Dict[dt.date, loaders.Multiplier]):
+    """Queries the multipliers at the most recent date before
+    (and including) model start date. If no such date is found
+    returns neutral multipliers (1.0 for both).
+
+    :param startDate: Start date of the network
+    :param multipliers: dict of movement and contact multipliers
+    :return: Multipliers for initial day
+    """
+    dates = [d for d in sorted(list(multipliers.keys())) if d <= startDate]
+
+    if not dates:
+        return loaders.Multiplier(contact=1.0, movement=1.0)
+
+    return multipliers.get(dates[-1])
+
+
 # CurrentlyInUse
 def basicSimulationInternalAgeStructure(
         network: NetworkOfPopulation,
@@ -76,7 +93,7 @@ def basicSimulationInternalAgeStructure(
     """
     history = []
 
-    multipliers = network.movementMultipliers.get(network.startDate, loaders.Multiplier(contact=1.0, movement=1.0))
+    multipliers = getInitialMultipliers(network.startDate, network.movementMultipliers)
     infectionProb = network.infectionProb[network.startDate]
 
     current = createExposedRegions(initialInfections, network.initialState)
@@ -816,8 +833,6 @@ def createNetworkOfPopulation(
     # movement multipliers (dampening or heightening)
     if movement_multipliers_table is not None:
         movementMultipliers = loaders.readMovementMultipliers(movement_multipliers_table)
-        assert start_date >= np.min(list(movementMultipliers.keys())), \
-            "Movement multipliers must have a date <= start_date"
     else:
         movementMultipliers: Dict[dt.date, loaders.Multiplier] = {}
 
