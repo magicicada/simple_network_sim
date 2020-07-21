@@ -69,8 +69,8 @@ def plot_nodes(
             if count < len(nodes):
                 node = nodes[count]
                 count += 1
-                grouped = df[df.node == node].groupby(["time", "state"]).sum()
-                indexed = grouped.reset_index().pivot(index="time", columns="state", values="total")
+                grouped = df[df.node == node].groupby(["date", "state"]).sum()
+                indexed = grouped.reset_index().pivot(index="date", columns="state", values="total")
 
                 ax = axes[i, j]
                 indexed.plot(ax=ax, legend=False, title=node, cmap=cmap)
@@ -152,7 +152,7 @@ def main(argv):
         format="[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s",
     )
     args = build_args(argv)
-    df = read_output(args.data_product, args.access_log_path)
+    df = read_output(args.data_product, args.access_log_path).astype({"date": "datetime64"})
     plot_nodes(
         df,
         args.nodes.split(",") if args.nodes else None,
