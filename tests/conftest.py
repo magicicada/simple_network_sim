@@ -26,7 +26,7 @@ def _data_api(base_data_dir, config):  # pylint: disable=redefined-outer-name
 
 @pytest.fixture
 def short_simulation_dates():
-    return pd.DataFrame({"Parameter": ["start_date", "end_date"], "Value": ["2020-01-01", "2020-02-01"]})
+    return pd.DataFrame({"Parameter": ["start_date", "end_date"], "Value": ["2020-03-16", "2020-04-16"]})
 
 
 @pytest.fixture

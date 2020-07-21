@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from simple_network_sim import network_of_populations as np
+from simple_network_sim import loaders
 
 
 def _count_people_per_region(state):
@@ -64,7 +65,7 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
         short_simulation_dates,
-        pd.DataFrame([{"Time": 0, "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
+        pd.DataFrame([{"Date": "2020-03-16", "Movement_Multiplier": 0.0, "Contact_Multiplier": 1.0}]),
     )
 
     initial_population = sum(_count_people_per_region(network.initialState))
@@ -98,7 +99,7 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
         {"Health_Board": "S08000016", "Sex": "Female", "Age": "[17,70)", "Total": 31950},
         {"Health_Board": "S08000016", "Sex": "Female", "Age": "70+", "Total": 31950},
     ])
-    dampening = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 1.0, "Contact_Multiplier": 0.0}])
+    dampening = pd.DataFrame([{"Date": "2020-03-16", "Movement_Multiplier": 1.0, "Contact_Multiplier": 0.0}])
     network = np.createNetworkOfPopulation(
         data_api.read_table("human/compartment-transition", "compartment-transition"),
         population,
@@ -132,7 +133,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api, short_s
         data_api.read_table("human/commutes", "commutes"),
         data_api.read_table("human/mixing-matrix", "mixing-matrix"),
         data_api.read_table("human/infectious-compartments", "infectious-compartments"),
-        pd.DataFrame([{"Time": 0, "Value": 0.0}]),
+        pd.DataFrame([{"Date": "2020-03-16", "Value": 0.0}]),
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
         short_simulation_dates
@@ -165,7 +166,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
         data_api.read_table("human/commutes", "commutes"),
         data_api.read_table("human/mixing-matrix", "mixing-matrix"),
         data_api.read_table("human/infectious-compartments", "infectious-compartments"),
-        pd.DataFrame([{"Time": 0, "Value": 0.0}, {"Time": 25, "Value": 1.0}]),
+        pd.DataFrame([{"Date": "2020-03-16", "Value": 0.0}, {"Date": "2020-04-10", "Value": 1.0}]),
         data_api.read_table("human/initial-infections", "initial-infections"),
         data_api.read_table("human/trials", "trials"),
         short_simulation_dates
@@ -203,7 +204,7 @@ def test_createNetworkOfPopulation_missing_population_table_nodes(data_api, shor
     ])
     mixingMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 2.0}])
     infectious = pd.DataFrame({"Compartment": ["A"]})
-    infection_prob = pd.DataFrame([{"Time": 0, "Value": 1.0}])
+    infection_prob = pd.DataFrame([{"Date": "2020-03-16", "Value": 1.0}])
     initial = pd.DataFrame({"Health_Board": ["S08000016"], "Age": ["70+"], "Infected": [40]})
 
     model = np.createNetworkOfPopulation(
@@ -221,7 +222,7 @@ def test_createNetworkOfPopulation_missing_population_table_nodes(data_api, shor
     result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}})
 
     assert result[result.node == "S08000015"].total.sum() == 0
-    assert pytest.approx(result[(result.date == "2020-02-01") & (result.state == "D")].total.sum(), 31950)
+    assert pytest.approx(result[(result.date == "2020-04-16") & (result.state == "D")].total.sum(), 31950)
 
 
 def test_createNetworkOfPopulation_missing_connections(data_api, short_simulation_dates):
@@ -241,7 +242,7 @@ def test_createNetworkOfPopulation_missing_connections(data_api, short_simulatio
     ])
     mixingMatrix = pd.DataFrame([{"source": "70+", "target": "70+", "mixing": 2.0}])
     infectious = pd.DataFrame({"Compartment": ["A"]})
-    infection_prob = pd.DataFrame([{"Time": 0, "Value": 1.0}])
+    infection_prob = pd.DataFrame([{"Date": "2020-03-16", "Value": 1.0}])
     initial = pd.DataFrame({"Health_Board": ["S08000016"], "Age": ["70+"], "Infected": [40]})
 
     model = np.createNetworkOfPopulation(
@@ -258,7 +259,7 @@ def test_createNetworkOfPopulation_missing_connections(data_api, short_simulatio
 
     result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}})
 
-    assert pytest.approx(result[(result.date == "2020-02-01") & (result.state == "D")].total.sum(), 31950)
+    assert pytest.approx(result[(result.date == "2020-04-16") & (result.state == "D")].total.sum(), 31950)
     assert result[result.node == "S08000015"].empty
 
 
@@ -297,7 +298,7 @@ def test_doInternalProgressionAllNodes_e_to_a_progression():
 @pytest.mark.parametrize("dampening", [1.0, 0.0, 0.5, 2.0])
 def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic, contact_rate, dampening):
     current_state = {("m", "S"): susceptible, ("m", "A"): asymptomatic, ("m", "I"): infectious}
-    age_matrix = {"m": {"m": contact_rate}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": contact_rate}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, dampening, ["I", "A"], False, None)
 
@@ -308,7 +309,7 @@ def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic
 
 def test_doInternalInfectionProcess_simple_stochastic():
     current_state = {("m", "S"): 100, ("m", "A"): 50, ("m", "I"): 50}
-    age_matrix = {"m": {"m": 2}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 2}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], True,
                                                           numpy.random.default_rng(123))
@@ -317,7 +318,7 @@ def test_doInternalInfectionProcess_simple_stochastic():
 
 def test_doInternalInfectionProcess_empty_age_group():
     current_state = {("m", "S"): 0.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
-    age_matrix = {"m": {"m": 0.0}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.0}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected["m"] == 0.0
@@ -330,7 +331,7 @@ def test_doInternalInfectionProcess_empty_age_group():
 
 def test_doInternalInfectionProcess_no_contact():
     current_state = {("m", "S"): 500.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
-    age_matrix = {"m": {"m": 0.0}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.0}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected["m"] == 0.0
@@ -342,7 +343,7 @@ def test_doInternalInfectionProcess_no_contact():
 
 def test_doInternalInfectionProcess_no_susceptibles():
     current_state = {("m", "S"): 0.0, ("m", "A"): 100.0, ("m", "I"): 100.0}
-    age_matrix = {"m": {"m": 0.2}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.2}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected["m"] == 0.0
@@ -355,7 +356,7 @@ def test_doInternalInfectionProcess_no_susceptibles():
 
 def test_doInternalInfectionProcess_no_infectious():
     current_state = {("m", "S"): 300.0, ("m", "A"): 0.0, ("m", "I"): 0.0}
-    age_matrix = {"m": {"m": 0.2}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.2}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected["m"] == 0.0
@@ -375,7 +376,7 @@ def test_doInternalInfectionProcess_only_A_and_I_count_as_infectious():
         ("m", "D"): 100.0,
         ("m", "R"): 100.0,
     }
-    age_matrix = {"m": {"m": 0.2}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.2}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected["m"] == 0.0
@@ -394,7 +395,7 @@ def test_doInternalInfectionProcess_between_ages():
         ("o", "A"): 200.0,
         ("o", "I"): 100.0,
     }
-    age_matrix = {"m": {"m": 0.2, "o": 0.5}, "o": {"o": 0.3, "m": 0.5}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.2, "o": 0.5}, "o": {"o": 0.3, "m": 0.5}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], False, None)
 
@@ -408,7 +409,7 @@ def test_doInternalInfectionProcess_between_ages():
 
 def test_doInternalInfectionProcessAllNodes_single_compartment():
     nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
-    age_matrix = {"m": {"m": 0.2}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 0.2}})
 
     infections = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False, None)
     assert infections == {"region1": {"m": (300.0 / 400.0) * (0.2 * 100.0)}}
@@ -421,7 +422,7 @@ def test_doInternalInfectionProcessAllNodes_single_compartment():
 
 def test_doInternalInfectionProcessAllNodes_large_num_infected_ignored():
     nodes = {"region1": {("m", "S"): 300.0, ("m", "E"): 0.0, ("m", "A"): 100.0, ("m", "I"): 0.0}}
-    age_matrix = {"m": {"m": 5.0}}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 5.0}})
 
     new_infected = np.getInternalInfectiousContacts(nodes, age_matrix, 1.0, ["I", "A"], False, None)
     assert new_infected == {"region1": {"m": (300.0 / 400.0) * (100.0 * 5.0)}}
@@ -435,16 +436,12 @@ def test_dateRange():
     start_date = dt.date(2020, 1, 1)
     end_date = dt.date(2020, 2, 1)
 
-    dates = [d[0] for d in np.dateRange(start_date, end_date)]
-    times = [d[1] for d in np.dateRange(start_date, end_date)]
+    dates = list(np.dateRange(start_date, end_date))
 
     assert start_date not in dates
     assert end_date in dates
     assert len(dates) == 31
     assert len(sorted(dates)) == 31
-
-    assert len(dates) == len(times)
-    assert times == list(numpy.arange(1, 32))
 
 
 def test_dateRange_invalid_dates():
@@ -455,6 +452,44 @@ def test_dateRange_invalid_dates():
 def test_dateRange_empty_dates():
     dates = list(np.dateRange(dt.date(2020, 1, 1), dt.date(2020, 1, 1)))
     assert len(dates) == 0
+
+
+def test_getInitialParameter_multipliers():
+    multipliers = np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2020, 1, 1): loaders.Multiplier(0., 0.)},
+                                         None, False)
+    assert multipliers == loaders.Multiplier(0., 0.)
+
+    multipliers = np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2019, 1, 1): loaders.Multiplier(0., 0.)},
+                                         None, False)
+    assert multipliers == loaders.Multiplier(0., 0.)
+
+    multipliers = np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2020, 1, 2): loaders.Multiplier(0., 0.)},
+                                         loaders.Multiplier(1.0, 1.0), False)
+    assert multipliers == loaders.Multiplier(1.0, 1.0)
+
+    multipliers = np.getInitialParameter(dt.date(2020, 12, 31), {
+        dt.date(2020, 1, 1): loaders.Multiplier(0., 0.),
+        dt.date(2021, 1, 1): loaders.Multiplier(10., 10.),
+    }, None, False)
+    assert multipliers == loaders.Multiplier(0., 0.)
+
+
+def test_getInitialParameter_infection_proba():
+    multipliers = np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2020, 1, 1): 1.0}, None, True)
+    assert multipliers == 1.0
+
+    multipliers = np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2019, 1, 1): 1.0}, None, True)
+    assert multipliers == 1.0
+
+    with pytest.raises(ValueError):
+        np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2020, 1, 2): 1.0}, None, True)
+
+    with pytest.raises(ValueError):
+        np.getInitialParameter(dt.date(2020, 1, 1), {dt.date(2020, 1, 2): 1.0}, 1.0, True)
+
+    multipliers = np.getInitialParameter(dt.date(2020, 12, 31), {dt.date(2020, 1, 1): 0.5, dt.date(2021, 1, 1): 1.0},
+                                         None, True)
+    assert multipliers == 0.5
 
 
 def test_doIncomingInfectionsByNode_no_susceptibles():
@@ -794,7 +829,7 @@ def test_createNetworkOfPopulation(data_api):
     assert network.progression
     assert network.movementMultipliers == {}
     assert set(network.infectiousStates) == {"I", "A"}
-    assert network.infectionProb == {0: 1.0}
+    assert network.infectionProb == {dt.date(2020, 3, 16): 1.0}
     assert network.initialInfections == {"S08000016": {"[17,70)": 100}}
     assert network.trials == 1
     assert network.startDate == dt.date(2020, 3, 16)
@@ -816,8 +851,8 @@ def test_basicSimulationInternalAgeStructure_invalid_compartment(data_api):
         )
 
 
-@pytest.mark.parametrize("time,prob", [(0, -0.5), (0, 10.0), (1, 1.0)])
-def test_createNetworkOfPopulation_invalid_infection_probability(data_api, time, prob):
+@pytest.mark.parametrize("date,prob", [("2020-03-16", -0.5), ("2020-03-16", 10.0)])
+def test_createNetworkOfPopulation_invalid_infection_probability(data_api, date, prob):
     with pytest.raises(ValueError):
         np.createNetworkOfPopulation(
             data_api.read_table("human/compartment-transition", "compartment-transition"),
@@ -825,11 +860,42 @@ def test_createNetworkOfPopulation_invalid_infection_probability(data_api, time,
             data_api.read_table("human/commutes", "commutes"),
             data_api.read_table("human/mixing-matrix", "mixing-matrix"),
             data_api.read_table("human/infectious-compartments", "infectious-compartments"),
-            pd.DataFrame([{"Time": time, "Value": prob}]),
+            pd.DataFrame([{"Date": date, "Value": prob}]),
             data_api.read_table("human/initial-infections", "initial-infections"),
             data_api.read_table("human/trials", "trials"),
             data_api.read_table("human/start-end-date", "start-end-date"),
         )
+
+
+def test_createNetworkOfPopulation_invalid_infection_probability_date(data_api, short_simulation_dates):
+    with pytest.raises(ValueError):
+        network = np.createNetworkOfPopulation(
+            data_api.read_table("human/compartment-transition", "compartment-transition"),
+            data_api.read_table("human/population", "population"),
+            data_api.read_table("human/commutes", "commutes"),
+            data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+            data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+            pd.DataFrame([{"Date": "2020-03-17", "Value": 1.0}]),
+            data_api.read_table("human/initial-infections", "initial-infections"),
+            data_api.read_table("human/trials", "trials"),
+            short_simulation_dates,
+        )
+
+        np.basicSimulationInternalAgeStructure(network, network.initialInfections)
+
+    network = np.createNetworkOfPopulation(
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        pd.DataFrame([{"Date": "2020-03-15", "Value": 1.0}]),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/trials", "trials"),
+        short_simulation_dates,
+    )
+
+    np.basicSimulationInternalAgeStructure(network, network.initialInfections)
 
 
 def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):

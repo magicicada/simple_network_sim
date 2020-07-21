@@ -175,38 +175,40 @@ def test_readMovementMultipliers(data_api):
     ms = loaders.readMovementMultipliers(data_api.read_table("human/movement-multipliers", "movement-multipliers"))
 
     assert ms == {
-        50: loaders.Multiplier(movement=0.05, contact=0.05),
-        75: loaders.Multiplier(movement=0.3, contact=0.3),
-        80: loaders.Multiplier(movement=0.8, contact=0.8),
-        100: loaders.Multiplier(movement=0.9, contact=0.9)
+        dt.date(2020, 3, 16): loaders.Multiplier(movement=1.0, contact=1.0),
+        dt.date(2020, 5, 5): loaders.Multiplier(movement=0.05, contact=0.05),
+        dt.date(2020, 5, 30): loaders.Multiplier(movement=0.3, contact=0.3),
+        dt.date(2020, 6, 4): loaders.Multiplier(movement=0.8, contact=0.8),
+        dt.date(2020, 6, 24): loaders.Multiplier(movement=0.9, contact=0.9)
     }
 
 
 @pytest.mark.parametrize("m", [float("NaN"), float("inf"), -1.0, "asdf"])
 def test_readMovementMultipliers_bad_movement_multipliers(m):
-    df = pd.DataFrame([{"Time": 0, "Movement_Multiplier": m, "Contact_Multiplier": 1.0}])
+    df = pd.DataFrame([{"Date": "2020-05-05", "Movement_Multiplier": m, "Contact_Multiplier": 1.0}])
     with pytest.raises(ValueError):
         loaders.readMovementMultipliers(df)
 
 
 @pytest.mark.parametrize("m", [float("NaN"), float("inf"), -1.0, "asdf"])
 def test_readMovementMultipliers_bad_contact_multipliers(m):
-    df = pd.DataFrame([{"Time": 0, "Movement_Multiplier": 1.0, "Contact_Multiplier": m}])
+    df = pd.DataFrame([{"Date": "2020-05-05", "Movement_Multiplier": 1.0, "Contact_Multiplier": m}])
     with pytest.raises(ValueError):
         loaders.readMovementMultipliers(df)
 
 
-@pytest.mark.parametrize("t", [-1, "asdf"])
+@pytest.mark.parametrize("t", [0, "12/31/2020", "31/12/2020", "asdf"])
 def test_readMovementMultipliers_bad_times(t):
-    df = pd.DataFrame([{"Time": t, "Movement_Multiplier": 1.0, "Contact_Multiplier": 1.0}])
+    df = pd.DataFrame([{"Date": t, "Movement_Multiplier": 1.0, "Contact_Multiplier": 1.0}])
     with pytest.raises(ValueError):
         loaders.readMovementMultipliers(df)
 
 
 def test_readInfectionProbability():
-    df = pd.DataFrame([(0, 0.3), (4, 0.7), (30, 1.0)], columns=["Time", "Value"])
+    df = pd.DataFrame([("2020-01-01", 0.3), ("2020-02-01", 0.7), ("2020-12-31", 1.0)], columns=["Date", "Value"])
 
-    assert loaders.readInfectionProbability(df) == {0: 0.3, 4: 0.7, 30: 1.0}
+    assert loaders.readInfectionProbability(df) == {dt.date(2020, 1, 1): 0.3, dt.date(2020, 2, 1): 0.7,
+                                                    dt.date(2020, 12, 31): 1.0}
 
 
 def test_readInfectionProbability_empty():
@@ -214,20 +216,16 @@ def test_readInfectionProbability_empty():
         loaders.readInfectionProbability(pd.DataFrame())
 
 
-def test_readInfectionProbability_no_zeroth_time():
+@pytest.mark.parametrize("t", [0, "12/31/2020", "31/12/2020", "asdf"])
+def test_readInfectionProbability_invalid_time(t):
     with pytest.raises(ValueError):
-        loaders.readInfectionProbability(pd.DataFrame([{"Time": 3, "Value": 1.0}]))
-
-
-def test_readInfectionProbability_invalid_time():
-    with pytest.raises(ValueError):
-        loaders.readInfectionProbability(pd.DataFrame([{"Time": -1, "Value": 1.0}, {"Time": 0, "Value": 1.0}]))
+        loaders.readInfectionProbability(pd.DataFrame([{"Date": t, "Value": 1.0}]))
 
 
 @pytest.mark.parametrize("prob", [-1.0, 2.0, float("inf"), float("nan"), "asdf"])
 def test_readInfectionProbability_invalid_prob(prob):
     with pytest.raises(ValueError):
-        loaders.readInfectionProbability(pd.DataFrame([{"Time": 0, "Value": prob}]))
+        loaders.readInfectionProbability(pd.DataFrame([{"Date": "2020-02-01", "Value": prob}]))
 
 
 def test_readRandomSeed():
