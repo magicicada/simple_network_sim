@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 Age = str
 Compartment = str
 NodeName = str
-Time = int
 
 RESULT_DTYPES = {"date": str, "age": "category", "state": "category", "node": "category"}
 
