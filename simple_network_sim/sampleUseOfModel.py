@@ -11,8 +11,8 @@ import sys
 import time
 from typing import Optional, List, NamedTuple
 
-from data_pipeline_api import standard_api
-import pandas as pd
+from data_pipeline_api import standard_api  # type: ignore
+import pandas as pd  # type: ignore
 
 from . import common
 from . import network_of_populations as ss
@@ -165,22 +165,22 @@ def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
             logger.error("Could not create %s for logging", logdir, exc_info=True)
             raise SystemExit(1)  # Substitute meaningful error code when known
         # Add logfile configuration
-        logconf["handlers"]["logfile"] = {
+        logconf["handlers"]["logfile"] = {  # type: ignore
             "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "standard",
             "filename": str(args.logfile),
             "encoding": "utf8",
         }
-        logconf["loggers"][__package__]["handlers"].append("logfile")
+        logconf["loggers"][__package__]["handlers"].append("logfile")  # type: ignore
 
     # Set STDERR/logfile levels if args.quiet/args.debug specified
     if args is not None and args.quiet:
-        logconf["handlers"]["stderr"]["level"] = "WARNING"
+        logconf["handlers"]["stderr"]["level"] = "WARNING"  # type: ignore
     elif args is not None and args.debug:
-        logconf["handlers"]["stderr"]["level"] = "DEBUG"
-        if "logfile" in logconf["handlers"]:
-            logconf["handlers"]["logfile"]["level"] = "DEBUG"
+        logconf["handlers"]["stderr"]["level"] = "DEBUG"  # type: ignore
+        if "logfile" in logconf["handlers"]:  # type: ignore
+            logconf["handlers"]["logfile"]["level"] = "DEBUG"  # type: ignore
 
     # Configure logger
     logging.config.dictConfig(logconf)

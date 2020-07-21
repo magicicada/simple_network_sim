@@ -9,48 +9,48 @@ from tests.utils import compare_mpl_plots
 
 def test_plotStates_three_rows():
     simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb5", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb6", "state": "S", "total": 10.0},
-        {"time": 0, "node": "hb7", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
-        {"time": 1, "node": "hb5", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb6", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb7", "state": "S", "total": 10.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "S", "total": 20.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "E", "total": 0.0},
+        {"date": "2020-04-12", "node": "hb4", "state": "S", "total": 10.0},
+        {"date": "2020-04-12", "node": "hb5", "state": "S", "total": 10.0},
+        {"date": "2020-04-12", "node": "hb6", "state": "S", "total": 10.0},
+        {"date": "2020-04-12", "node": "hb7", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "S", "total": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "E", "total": 15.0},
+        {"date": "2020-04-13", "node": "hb4", "state": "S", "total": 0.0},
+        {"date": "2020-04-13", "node": "hb5", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb6", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb7", "state": "S", "total": 10.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 
 
 def test_plotStates_two_rows():
     simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 0, "node": "hb3", "state": "S", "total": 20.0},
-        {"time": 0, "node": "hb3", "state": "E", "total": 0.0},
-        {"time": 0, "node": "hb4", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "S", "total": 5.0},
-        {"time": 1, "node": "hb3", "state": "E", "total": 15.0},
-        {"time": 1, "node": "hb4", "state": "S", "total": 0.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "S", "total": 20.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "E", "total": 0.0},
+        {"date": "2020-04-12", "node": "hb4", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "S", "total": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "E", "total": 15.0},
+        {"date": "2020-04-13", "node": "hb4", "state": "S", "total": 0.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 
 
 def test_plotStates_single_row():
     simple = pd.DataFrame([
-        {"time": 0, "node": "hb1", "state": "S", "total": 15.0},
-        {"time": 0, "node": "hb2", "state": "S", "total": 21.0},
-        {"time": 1, "node": "hb1", "state": "S", "total": 10.0},
-        {"time": 1, "node": "hb2", "state": "S", "total": 5.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 

@@ -3,10 +3,10 @@
 import json
 import math
 import datetime
-from typing import Dict, NamedTuple, List, Tuple
+from typing import Any, Dict, NamedTuple, List, Tuple
 
-import networkx as nx
-import pandas as pd
+import networkx as nx  # type: ignore
+import pandas as pd  # type: ignore
 
 # Type aliases used to make the types for the functions below easier to read
 Age = str
@@ -47,7 +47,7 @@ def readCompartmentRatesByAge(table: pd.DataFrame,) -> Dict[Age, Dict[Compartmen
     :param table: Age transition data
     :return: nested dictionary with progression rates
     """
-    agesDictionary = {}
+    agesDictionary: Dict[Age, Dict[Compartment, Dict[Compartment, float]]] = {}
     for row in table.to_dict(orient="row"):
         compartments = agesDictionary.setdefault(row["age"], {})
         transitions = compartments.setdefault(row["src"], {})
@@ -63,7 +63,7 @@ def readPopulationAgeStructured(table: pd.DataFrame) -> Dict[NodeName, Dict[Age,
     :param table: Population data
     :return: Nested dict with age-stratified population in each node
     """
-    dictOfPops = {}
+    dictOfPops: Dict[NodeName, Dict[Age, int]] = {}
 
     for row in table.to_dict(orient="row"):
         board = dictOfPops.setdefault(row["Health_Board"], {})
@@ -228,6 +228,8 @@ def readRandomSeed(df: pd.DataFrame) -> int:
 
         return seed
 
+    raise ValueError("No seed found")
+
 
 def readTrials(df: pd.DataFrame) -> int:
     """
@@ -249,6 +251,8 @@ def readTrials(df: pd.DataFrame) -> int:
             raise ValueError("trials must be > 0")
 
         return trials
+
+    raise ValueError("Dataframe must have at least one row")
 
 
 def readStartEndDate(df: pd.DataFrame) -> Tuple[datetime.date, datetime.date]:
@@ -291,6 +295,8 @@ def readStochasticMode(df: pd.DataFrame) -> bool:
 
         return bool(stochastic_mode)
 
+    raise ValueError("Dataframe must contain at least one row")
+
 
 class AgeRange:
     """A helper class for an age range.
@@ -302,19 +308,23 @@ class AgeRange:
         """Initialise."""
         self.age_group = age_group
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the current AgeRange instance."""
         return self.age_group
 
-    def __eq__(self, other: "AgeRange"):
+    def __eq__(self, other: Any) -> bool:
         """Return true if "other" is the same as the current AgeRange instance."""
+        if not isinstance(other, AgeRange):
+            return False
         return self.age_group == other.age_group
 
-    def __neq__(self, other: "AgeRange"):
+    def __neq__(self, other: Any) -> bool:  # type: ignore
         """Return true if "other" is not the same as the current AgeRange instance."""
+        if not isinstance(other, AgeRange):
+            return False
         return not self == other
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Return a hash of the current AgeRange instance."""
         return hash(self.age_group)
 
@@ -372,11 +382,19 @@ class MixingMatrix:
     age-ranges.
 
     Examples:
-    `mm = MixingMatrix(api.read_table("human/mixing-matrix")`
-    `print(mm[28][57])` Prints the expected number of interactions a 28 year old
+
+    .. code-block:: python
+
+        mm = MixingMatrix(api.read_table("human/mixing-matrix"))
+        print(mm[28][57])  # Prints the expected number of interactions a 28 year old
+
     would have with a 57 year old in a day
-    `print(mm["[30,40)"]["70+"])` or `print(mm[(30,40)]["70+"])` Prints the expected number of interactions someone in
-    the age range [30-40) would have with someone aged 70 or older
+
+    .. code-block:: python
+
+        print(mm["[30,40)"]["70+"]); print(mm[(30,40)]["70+"])
+
+    prints the expected number of interactions someone in the age range [30-40) would have with someone aged 70 or older
     in any given day.
 
     :param mixing_table: Raw DataFrame from the data API. The expected columns are: source, target and mixing (value).

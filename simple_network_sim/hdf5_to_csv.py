@@ -6,8 +6,8 @@ import argparse
 import logging
 import sys
 
-from data_pipeline_api.file_formats import object_file
-import h5py
+from data_pipeline_api.file_formats import object_file  # type: ignore
+import h5py  # type: ignore
 
 logger = logging.getLogger(f"{__package__}.{__name__}")
 
