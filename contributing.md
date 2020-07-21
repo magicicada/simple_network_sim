@@ -25,6 +25,22 @@ Our preferred coding style is [PEP8](https://www.python.org/dev/peps/pep-0008/),
 
 It is preferred that docstrings are in [sphinx format](https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html). [pydocstyle](https://pypi.org/project/pydocstyle/) may be a helpful tool for checking that documentation coverage is complete.
 
+## Type hints
+
+We don't require new contributions to have type hints (we don't run mypy as part of our CI), as we don't want to add an extra barrier for contributions. However, we do encourage the usage and may ask for it in the PR reviews. You can install mypy with
+
+```
+conda install mypy
+```
+
+and then run it with
+
+```
+mypy simple_network_sim
+```
+
+Your favourite IDE or text editor may have it already available or with a plugin.
+
 ## Licensing
 
 By contributing to this project (e.g. by submitting a pull request or providing advice on code), you agree - unless simultaneously and expressly stated otherwise - that your contribution may be included in the source code of the project and published under the [2-Clause BSD License](license.txt) and that the contribution was created in whole or in part by you and you have the right to submit it under the open source license indicated above.
