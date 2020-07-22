@@ -226,7 +226,7 @@ def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
     return historical_deaths
 
 
-def readInfectionProbability(df: pd.DataFrame) -> Dict[int, float]:
+def readInfectionProbability(df: pd.DataFrame) -> Dict[datetime.date, float]:
     """
     Transforms the dataframe from the data API into a dict usable inside the model
 

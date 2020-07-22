@@ -1,18 +1,23 @@
+"""
+main module used for running the inference on simple network sim
+"""
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import logging.config
 import sys
 import time
+from typing import Tuple, List, Any, Dict, Type, ClassVar
+
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
-from abc import ABC, abstractmethod
 
-from typing import Tuple, List, Any, Dict, Type, ClassVar
+from data_pipeline_api import standard_api
 
 from simple_network_sim import sampleUseOfModel as sm
 from simple_network_sim import network_of_populations as ss
-from simple_network_sim import data, loaders
+from simple_network_sim import loaders
 
 sys.path.append('..')
 
@@ -92,12 +97,14 @@ class InferredInfectionProbability(InferredVariable):
         """ From current parameter, add a perturbation to infection probability and return
         a newly created perturbated parameter:
 
-        P_t* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+        .. math::
+            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
 
         :return: New parameter which is similar to self up to a perturbation
         """
-        value = self.value.copy().assign(Value=lambda x: x.Value + self.kernel_sigma * stats.uniform
-                                         .rvs(-1., 2., random_state=self.random_state))
+        value = self.value.copy()
+        value.Value = value.Value.apply(lambda x: x + self.kernel_sigma * stats.uniform
+                                        .rvs(-1., 2., random_state=self.random_state))
         return InferredInfectionProbability(value, self.mean, self.shape, self.kernel_sigma, self.random_state)
 
     def validate(self) -> bool:
@@ -122,7 +129,8 @@ class InferredInfectionProbability(InferredVariable):
         from the current parameter. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
 
-        P_t* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+        .. math::
+            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
 
         :param x: Particle to evaluate the pdf at
         :return: pdf value of perturbation from previous particle evaluated at x
@@ -157,10 +165,12 @@ class InferredInitialInfections(InferredVariable):
         """ Constructs Scipy lognormal object to match a given mean and std
         dev passed as input. The parameters to input in the model are inverted
         from the formulas:
-            if X~LogNormal(mu, scale)
-        then:
-            E[X] = exp{mu + sigma**2 * 0.5}
-            Var[X] = (exp{sigma**2} - 1) * exp{2 * mu + sigma**2}
+
+        .. math::
+                if X~LogNormal(mu, scale)
+            then:
+                E[X] = exp{mu + sigma^2 * 0.5}
+                Var[X] = (exp{sigma^2} - 1) * exp{2 * mu + sigma^2}
 
         The stddev is taken as a % of the mean, floored at 10. This
         allows natural scaling with the size of the population inside the
@@ -171,7 +181,7 @@ class InferredInitialInfections(InferredVariable):
         :return: Distribution object representing a lognormal distribution with
         the given mean and std dev
         """
-        var = max((mean * stddev)**2, stddev_min)
+        var = np.maximum((mean * stddev)**2, stddev_min)
         sigma = np.sqrt(np.log(1 + (var / mean**2)))
         mu = np.log(mean / np.sqrt(1 + (var / mean**2)))
         return stats.lognorm(s=sigma, loc=0., scale=np.exp(mu))
@@ -189,9 +199,9 @@ class InferredInitialInfections(InferredVariable):
         stddev = fitter.initial_infections_stddev
         stddev_min = fitter.initial_infections_stddev_min
         kernel_sigma = fitter.initial_infections_kernel_sigma
-        value = fitter.initial_infections.copy()
-        value.Infected = value.Infected.apply(lambda x: InferredInitialInfections._rvs_lognormal(x, stddev, stddev_min)
-                                              .rvs(random_state=fitter.random_state))
+        value = fitter.initial_infections.copy().assign(Infected=lambda x: InferredInitialInfections
+                                                        ._rvs_lognormal(x.Infected, stddev, stddev_min)
+                                                        .rvs(random_state=fitter.random_state))
         return InferredInitialInfections(value, fitter.initial_infections, stddev, stddev_min, kernel_sigma,
                                          fitter.random_state)
 
@@ -200,12 +210,14 @@ class InferredInitialInfections(InferredVariable):
         a newly created perturbated particle. For initial infections, we apply a uniform
         perturbation from the current value:
 
-        P_t* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+        .. math::
+            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
 
         :return: New parameter which is similar to self up to a perturbation
         """
-        value = self.value.copy().assign(
-            Infected=lambda x: x + self.kernel_sigma * stats.uniform.rvs(-1., 2., random_state=self.random_state))
+        value = self.value.copy()
+        value.Infected = value.Infected.apply(lambda x: x + self.kernel_sigma * stats.uniform
+                                              .rvs(-1., 2., random_state=self.random_state))
         return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
                                          self.random_state)
 
@@ -232,11 +244,12 @@ class InferredInitialInfections(InferredVariable):
         return pdf
 
     def perturbation_pdf(self, x: pd.DataFrame) -> float:
-        """ Compute pdf of the perturbation evaluated at the parameter x,
+        """ Compute pdf of the perturbation evaluated at the parameter ``x``,
         from the current parameter. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
 
-        P_t* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+        .. math::
+            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
 
         As all perturbations are independent the joint pdf is the product
         of individual pdfs.
@@ -340,8 +353,8 @@ class Particle:
         """ Compute pdf of the perturbation evaluated at the particle x,
         from the current particle. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
-
-        P_t* ~ K(P_t | P_{t-1})
+        .. math::
+            P_t* ~ K(P_t | P_{t-1})
 
         (Usually a uniform perturbation around the previous value).
         As all perturbations are independent the joint pdf is the product
@@ -364,8 +377,9 @@ class ABCSMC:
     given the data.
 
     Algorithm (briefly):
-    Set parameters `smc_iteration`, `n_particles`, `threshold`
+    Set parameters ``smc_iteration``, ``n_particles``, ``threshold``
 
+    ```
     For iteration in smc_iterations:
         While accepted_particles < n_particles:
             p = sample randomly chosen particle from accepted at previous iteration
@@ -375,6 +389,7 @@ class ABCSMC:
             if distance < threshold:
                 Particle is accepted for the current population
                 Compute weight for current particle
+    ```
 
     References:
         https://royalsocietypublishing.org/doi/pdf/10.1098/rsif.2008.0172
@@ -392,7 +407,7 @@ class ABCSMC:
             initial_infections: pd.DataFrame,
             infectious_states: pd.DataFrame,
             trials: pd.DataFrame,
-            start_date: pd.DataFrame,
+            start_end_date: pd.DataFrame,
             movement_multipliers_table: pd.DataFrame,
             stochastic_mode: pd.DataFrame,
             random_seed: pd.DataFrame
@@ -424,7 +439,7 @@ class ABCSMC:
         self.initial_infections = initial_infections
         self.infectious_states = infectious_states
         self.trials = trials
-        self.start_date = start_date
+        self.start_end_date = start_end_date
         self.movement_multipliers_table = movement_multipliers_table
         self.stochastic_mode = stochastic_mode
         self.random_seed = random_seed
@@ -528,14 +543,14 @@ class ABCSMC:
             particle.inferred_variables["infection_probability"].value,
             particle.inferred_variables["initial-infections"].value,
             self.trials,
-            self.start_date,
+            self.start_end_date,
             self.movement_multipliers_table,
             self.stochastic_mode,
             self.random_seed
         )
-        results = sm.runSimulation(network, 111)
+        results = sm.runSimulation(network)
         aggregated = sm.aggregateResults(results)
-        return aggregated
+        return aggregated.output
 
     def compute_distance(self, result: pd.DataFrame) -> float:
         """ Computes distance between target and model run with current particle.
@@ -553,6 +568,7 @@ class ABCSMC:
             .groupby(["date", "node"])
             .sum()
             .reset_index()
+            .assign(date=lambda x: pd.to_datetime(x.date))
             .pivot(index="date", columns="node", values="total")
             .diff()
             .resample('7D').sum()
@@ -627,30 +643,32 @@ class ABCSMC:
         return results
 
 
-def run_inference(config) -> Dict:
+def run_inference(config, uri: str = "", git_sha: str = "") -> Dict:
     """Run inference routine
 
     :param config: Config file name
     :type config: string
+    :param uri: Git uri used
+    :param git_sha: git_sha used
     :return: Result runs for inference
     """
 
-    with data.Datastore(config) as store:
+    with standard_api.StandardAPI(config, uri=uri, git_sha=git_sha) as store:
         abcsmc = ABCSMC(
-            store.read_table("human/abcsmc-parameters"),
-            store.read_table("human/historical-deaths"),
-            store.read_table("human/compartment-transition"),
-            store.read_table("human/population"),
-            store.read_table("human/commutes"),
-            store.read_table("human/mixing-matrix"),
-            store.read_table("human/infection-probability"),
-            store.read_table("human/initial-infections"),
-            store.read_table("human/infectious-compartments"),
-            store.read_table("human/trials"),
-            store.read_table("human/start-date"),
-            store.read_table("human/movement-multipliers"),
-            store.read_table("human/stochastic-mode"),
-            store.read_table("human/random-seed"),
+            store.read_table("human/abcsmc-parameters", "abcsmc-parameters"),
+            store.read_table("human/historical-deaths", "historical-deaths"),
+            store.read_table("human/compartment-transition", "compartment-transition"),
+            store.read_table("human/population", "population"),
+            store.read_table("human/commutes", "commutes"),
+            store.read_table("human/mixing-matrix", "mixing-matrix"),
+            store.read_table("human/infection-probability", "infection-probability"),
+            store.read_table("human/initial-infections", "initial-infections"),
+            store.read_table("human/infectious-compartments", "infectious-compartments"),
+            store.read_table("human/trials", "trials"),
+            store.read_table("human/start-end-date", "start-end-date"),
+            store.read_table("human/movement-multipliers", "movement-multipliers"),
+            store.read_table("human/stochastic-mode", "stochastic-mode"),
+            store.read_table("human/random-seed", "random-seed"),
         )
 
         t0 = time.time()
