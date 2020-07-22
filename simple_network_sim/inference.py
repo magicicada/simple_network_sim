@@ -3,21 +3,20 @@ main module used for running the inference on simple network sim
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import logging.config
 import sys
 import time
+from abc import ABC, abstractmethod
 from typing import Tuple, List, Any, Dict, Type, ClassVar
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import scipy.stats as stats
-
 from data_pipeline_api import standard_api
 
-from simple_network_sim import sampleUseOfModel as sm
-from simple_network_sim import network_of_populations as ss
 from simple_network_sim import loaders
+from simple_network_sim import network_of_populations as ss
+from simple_network_sim import sampleUseOfModel as sm
 
 sys.path.append('..')
 
@@ -63,6 +62,8 @@ class InferredInfectionProbability(InferredVariable):
     Infection probability is the odd that a contact between an infectious and susceptible
     person leads to a new infection.
     """
+
+    # pylint: disable=too-many-arguments
     def __init__(
             self,
             value: pd.DataFrame,
@@ -144,6 +145,8 @@ class InferredInitialInfections(InferredVariable):
     Initial infections are the number of exposed individuals per node at the start
     date of the model.
     """
+
+    # pylint: disable=too-many-arguments
     def __init__(
             self,
             value: pd.DataFrame,
@@ -370,6 +373,7 @@ class Particle:
         return pdf
 
 
+# pylint: disable=too-many-instance-attributes
 class ABCSMC:
     """
     Class to wrap inference routines for the ABC SMC inference fitting. This algorithm
@@ -395,6 +399,8 @@ class ABCSMC:
         https://royalsocietypublishing.org/doi/pdf/10.1098/rsif.2008.0172
         https://en.wikipedia.org/wiki/Approximate_Bayesian_computation
     """
+
+    # pylint: disable=too-many-arguments
     def __init__(
             self,
             parameters: pd.DataFrame,
@@ -601,6 +607,7 @@ class ABCSMC:
 
         return num / denom
 
+    # pylint: disable=too-many-arguments
     def add_iteration_statistics(
             self,
             smc_step: int,
@@ -681,7 +688,7 @@ def run_inference(config, uri: str = "", git_sha: str = "") -> Dict:
 def main(argv):
     args = sm.build_args(argv)
     sm.setup_logger(args)
-    logger.info("Parameters\n%s", "\n".join(f"\t{key}={value}" for key, value in args._get_kwargs()))
+    logger.info("Running inference ABC SMC...")
 
     t0 = time.time()
     run_inference("../config_inference.yaml")
