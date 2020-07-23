@@ -143,3 +143,10 @@
   extension: h5
   filename: human/historical-deaths/1/data.h5
   verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743
+-
+  data_product: human/historical-deaths
+  component: historical-deaths
+  version: 2.0.0
+  extension: h5
+  filename: human/historical-deaths/2/data.h5
+  verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743
