@@ -109,7 +109,7 @@ def aggregateResults(results: List[pd.DataFrame]) -> AggregatedResults:
     if len(results) == 1:
         aggregated = results[0]
     else:
-        results = [result.set_index(["time", "node", "age", "state"]).total for result in results]
+        results = [result.set_index(["date", "node", "age", "state"]).total for result in results]
         average = reduce(lambda x, y: x.add(y), results) / len(results)
 
         aggregated = average.reset_index()
