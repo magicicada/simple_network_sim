@@ -319,7 +319,7 @@ def _distributeContactsOverAgesStochastic(
     assert isinstance(newContacts, int) or newContacts.is_integer()
 
     ageProbabilities = np.array(list(ageToSusceptibles.values())) / totalSusceptibles
-    allocationsByAge = stats.multinomial.rvs(newContacts, ageProbabilities, random_state=random_state)
+    allocationsByAge = random_state.multinomial(newContacts, ageProbabilities)
 
     return dict(zip(ageToSusceptibles.keys(), allocationsByAge))
 
@@ -424,9 +424,8 @@ def _computeInfectiousCommutesStochastic(
     :return: the number of new infections in each region.
     """
     # weight can be fractional because of the movement multiplier, round it
-    contacts = stats.binom.rvs(int(round(weight)), fractionReceivingSus, random_state=random_state)
-    contacts = stats.binom.rvs(contacts, fractionGivingInfected, random_state=random_state)
-    return contacts
+    contacts = random_state.binomial(int(round(weight)), fractionReceivingSus)
+    return random_state.binomial(contacts, fractionGivingInfected)
 
 
 def getWeight(graph: nx.DiGraph, orig: str, dest: str, multiplier: float) -> float:
@@ -582,9 +581,14 @@ def _computeInfectiousContactsStochastic(
     assert isinstance(totalInAge, int) or totalInAge.is_integer()
     assert isinstance(susceptibles, int) or susceptibles.is_integer()
 
-    numberOfContacts = stats.poisson.rvs(contacts, size=int(infectious), random_state=random_state)
-    numberOfContacts = numberOfContacts[numberOfContacts > 0]  # If 0, the rvs calls fails, but mathematically is 0
-    numberOfContacts = stats.hypergeom.rvs(int(totalInAge), int(susceptibles), numberOfContacts, random_state=random_state)
+    numberOfContacts = random_state.poisson(contacts, size=int(infectious))
+    # If 0, the hypergeometric calls fails, but mathematically is 0
+    numberOfContacts = numberOfContacts[numberOfContacts > 0]
+    numberOfContacts = random_state.hypergeometric(
+        int(susceptibles),
+        int(totalInAge) - int(susceptibles),
+        numberOfContacts
+    )
     return cast(float, np.sum(numberOfContacts))
 
 
@@ -683,7 +687,7 @@ def _internalStateDiseaseUpdate(
 
         assert isinstance(people, int) or people.is_integer()
 
-        outRepartitions = stats.multinomial.rvs(people, list(outTransitions.values()), random_state=random_state)
+        outRepartitions = random_state.multinomial(people, list(outTransitions.values()))
         outRepartitions = dict(zip(outTransitions.keys(), outRepartitions))
 
         for nextState, nextStateCases in outRepartitions.items():
@@ -1010,7 +1014,7 @@ def calculateExposed(
 
     if stochastic:
         # AdjustedContacts can be non integer because of the adjustment, round it
-        infectiousContacts = stats.binom.rvs(int(round(adjustedContacts)), infectionProb, random_state=random_state)
+        infectiousContacts = random_state.binomial(int(round(adjustedContacts)), infectionProb)
     else:
         infectiousContacts = adjustedContacts * infectionProb
 
