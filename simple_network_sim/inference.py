@@ -91,7 +91,7 @@ class InferredInfectionProbability(InferredVariable):
         kernel_sigma = fitter.infection_probability_kernel_sigma
         mean = fitter.infection_probability.at[0, "Value"]
         value = fitter.infection_probability.copy().assign(
-            Value=lambda x: stats.beta.rvs(shape, shape * (1 - x.Value) / x.Value, random_state=fitter.random_state))
+            Value=lambda x: fitter.random_state.beta(shape, shape * (1 - x.Value) / x.Value))
         return InferredInfectionProbability(value, mean, shape, kernel_sigma, fitter.random_state)
 
     def generate_perturbated(self) -> InferredInfectionProbability:
@@ -99,13 +99,12 @@ class InferredInfectionProbability(InferredVariable):
         a newly created perturbated parameter:
 
         .. math::
-            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
 
         :return: New parameter which is similar to self up to a perturbation
         """
         value = self.value.copy()
-        value.Value = value.Value.apply(lambda x: x + self.kernel_sigma * stats.uniform
-                                        .rvs(-1., 2., random_state=self.random_state))
+        value.Value = value.Value.apply(lambda x: x + self.kernel_sigma * self.random_state.uniform(-1., 1.))
         return InferredInfectionProbability(value, self.mean, self.shape, self.kernel_sigma, self.random_state)
 
     def validate(self) -> bool:
@@ -219,8 +218,7 @@ class InferredInitialInfections(InferredVariable):
         :return: New parameter which is similar to self up to a perturbation
         """
         value = self.value.copy()
-        value.Infected = value.Infected.apply(lambda x: x + self.kernel_sigma * stats.uniform
-                                              .rvs(-1., 2., random_state=self.random_state))
+        value.Infected = value.Infected.apply(lambda x: x + self.kernel_sigma * self.random_state.uniform(-1., 1.))
         return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
                                          self.random_state)
 
@@ -320,7 +318,11 @@ class Particle:
         return all(variable.validate() for variable in self.inferred_variables.values())
 
     @staticmethod
-    def resample_and_perturbate(particles: List[Particle], weights: List[float]) -> Particle:
+    def resample_and_perturbate(
+            particles: List[Particle],
+            weights: List[float],
+            random_state: np.random.Generator
+    ) -> Particle:
         """ Resampling part of ABC-SMC, selects randomly a new particle from the
         list of previously accepted. Then perturb it slightly. This causes
         the persistence and selection of fit particles in a manner similar to
@@ -330,10 +332,11 @@ class Particle:
 
         :param particles: List of particles from previous population
         :param weights: List of weights of particles from previous population
+        :param random_state: Random state for random sampling into particles
         :return: Newly created particles sampled from previous population and perturbated
         """
         while True:
-            particle = np.random.choice(particles, p=weights / np.sum(weights))
+            particle = random_state.choice(particles, p=weights / np.sum(weights))
             particle = particle.generate_perturbated()
 
             if particle.validate_particle():
@@ -356,8 +359,9 @@ class Particle:
         """ Compute pdf of the perturbation evaluated at the particle x,
         from the current particle. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
+
         .. math::
-            P_t* ~ K(P_t | P_{t-1})
+            P_t^* \sim K(P_t | P_{t-1})
 
         (Usually a uniform perturbation around the previous value).
         As all perturbations are independent the joint pdf is the product
@@ -383,7 +387,6 @@ class ABCSMC:
     Algorithm (briefly):
     Set parameters ``smc_iteration``, ``n_particles``, ``threshold``
 
-    ```
     For iteration in smc_iterations:
         While accepted_particles < n_particles:
             p = sample randomly chosen particle from accepted at previous iteration
@@ -393,7 +396,6 @@ class ABCSMC:
             if distance < threshold:
                 Particle is accepted for the current population
                 Compute weight for current particle
-    ```
 
     References:
         https://royalsocietypublishing.org/doi/pdf/10.1098/rsif.2008.0172
@@ -514,7 +516,7 @@ class ABCSMC:
             if smc_step == 0:
                 particle = Particle.generate_from_priors(self)
             else:
-                particle = Particle.resample_and_perturbate(prev_particles, prev_weights)
+                particle = Particle.resample_and_perturbate(prev_particles, prev_weights, self.random_state)
 
             result = self.run_model(particle)
             distance = self.compute_distance(result)
