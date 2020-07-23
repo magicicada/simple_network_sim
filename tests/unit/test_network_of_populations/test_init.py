@@ -8,8 +8,8 @@ import numpy
 import pandas as pd
 import pytest
 
-from simple_network_sim import network_of_populations as np
 from simple_network_sim import loaders
+from simple_network_sim import network_of_populations as np
 
 
 def _count_people_per_region(state):
@@ -310,6 +310,15 @@ def test_doInternalInfectionProcess_simple(susceptible, infectious, asymptomatic
 def test_doInternalInfectionProcess_simple_stochastic():
     current_state = {("m", "S"): 100, ("m", "A"): 50, ("m", "I"): 50}
     age_matrix = loaders.MixingMatrix({"m": {"m": 2}})
+
+    new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], True,
+                                                          numpy.random.default_rng(123))
+    assert new_infected["m"] == 93
+
+
+def test_doInternalInfectionProcess_stochastic():
+    current_state = {("m", "S"): 100, ("m", "A"): 50, ("m", "I"): 50}
+    age_matrix = loaders.MixingMatrix({"m": {"m": 1000}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], True,
                                                           numpy.random.default_rng(123))
