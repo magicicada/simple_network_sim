@@ -7,7 +7,7 @@ import logging.config
 import sys
 import time
 from abc import ABC, abstractmethod
-from typing import Tuple, List, Any, Dict, Type, ClassVar
+from typing import Tuple, List, Dict, Type, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ class InferredVariable(ABC):
     - Validate if the parameter is correct
     - Convert to frame to be initialize and run the model
     """
-    value: Any
+    value: pd.DataFrame
 
     @staticmethod
     @abstractmethod
