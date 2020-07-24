@@ -458,7 +458,7 @@ class ABCSMC:
         self.threshold = np.inf
         self.fit_statistics: Dict[int] = {}
 
-    def fit(self) -> Tuple[List[Particle], List[float]]:
+    def fit(self) -> Tuple[List[Particle], List[float], List[float]]:
         """ Performs ABC-SMC iterative procedure for finding posterior distributions
         of model parameters given priors and data. In brief, iteratively samples
         particles, keeping at each round only ones with good fitting criteria.
@@ -472,13 +472,14 @@ class ABCSMC:
         """
         prev_particles: List[Particle] = []
         prev_weights: List[float] = []
+        distances: List[float] = []
 
         for smc_step in range(self.n_smc_steps):
             logger.info("SMC step %d/%d", smc_step + 1, self.n_smc_steps)
             prev_particles, prev_weights, distances = self.sample_particles(smc_step, prev_particles, prev_weights)
             self.update_threshold(distances)
 
-        return prev_particles, prev_weights
+        return prev_particles, prev_weights, distances
 
     def update_threshold(self, distances: List[float]):
         """ Updates threshold using distances found on previous round.
@@ -634,18 +635,20 @@ class ABCSMC:
         self.fit_statistics[smc_step]["threshold"] = self.threshold
         self.fit_statistics[smc_step]["time"] = f"{time.time() - t0:.0f}s"
 
-    def summarize(self, particles: List[Particle], weights: List[float], t0: float) -> Dict:
+    def summarize(self, particles: List[Particle], weights: List[float], distances: List[float], t0: float) -> Dict:
         """ Summarize ABC-SMC run, by assembling all fit statistics
         and final list of particles into a dictionary.
 
         :param particles: Accepted particles
         :param weights: Weights of accepted particles
+        :param distances: Distances of accepted particles
         :param t0: Time just before fit started
         """
         results = {
             "fit_statistics": self.fit_statistics,
             "particles": particles,
             "weights": weights,
+            "distances": distances,
             "time": time.time() - t0
         }
 
@@ -681,8 +684,8 @@ def run_inference(config, uri: str = "", git_sha: str = "") -> Dict:
         )
 
         t0 = time.time()
-        particles, weights = abcsmc.fit()
-        summary = abcsmc.summarize(particles, weights, t0)
+        particles, weights, distances = abcsmc.fit()
+        summary = abcsmc.summarize(particles, weights, distances, t0)
 
     return summary
 

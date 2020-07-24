@@ -7,6 +7,7 @@
   verified_hash: edc81258b41eca4c234701d6de23132937ad77a2
 -
   data_product: human/compartment-transition
+  component: compartment-transition
   version: 2.0.0
   extension: h5
   filename: human/compartment-transition/2/data.h5
@@ -48,6 +49,7 @@
   verified_hash: 6b0adf70a01072ba5a2d54ef35a7b93fc2454cae
 -
   data_product: human/infectious-compartments
+  component: infectious-compartments
   version: 2.0.0
   extension: h5
   filename: human/infectious-compartments/2/data.h5
