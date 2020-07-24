@@ -213,7 +213,7 @@ class InferredInitialInfections(InferredVariable):
         perturbation from the current value:
 
         .. math::
-            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
 
         :return: New parameter which is similar to self up to a perturbation
         """
@@ -250,7 +250,7 @@ class InferredInitialInfections(InferredVariable):
         from the previous population it is slightly perturbed:
 
         .. math::
-            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
 
         As all perturbations are independent the joint pdf is the product
         of individual pdfs.
@@ -285,9 +285,9 @@ class Particle:
     @staticmethod
     def generate_from_priors(fitter: ABCSMC) -> Particle:
         """ Generate a particle from the prior distribution. All parameters in the
-        particle are independent and therefore we simply random each parameter from
-        its prior distribution. The fitter object provides the random state used for
-        random variable generation but also the prior parameters, which are
+        particle are independent and therefore we simply random select each parameter
+        from its prior distribution. The fitter object provides the random state used
+        for random variable generation but also the prior parameters, which are
         the values in the data pipeline.
 
         :return: New particle generated from prior
@@ -382,7 +382,9 @@ class ABCSMC:
     """
     Class to wrap inference routines for the ABC SMC inference fitting. This algorithm
     provides a list of samples distribution with the posterior pdf of parameters
-    given the data.
+    given the data. This class is fairly tightly coupled to the simple network
+    sim network, sacrificing abstraction for speed and clarity. We rely on the
+    ``Particle`` class in which all the abstraction about parameters reside.
 
     Algorithm (briefly):
     Set parameters ``smc_iteration``, ``n_particles``, ``threshold``
@@ -400,6 +402,7 @@ class ABCSMC:
     References:
         https://royalsocietypublishing.org/doi/pdf/10.1098/rsif.2008.0172
         https://en.wikipedia.org/wiki/Approximate_Bayesian_computation
+        https://pyabc.readthedocs.io/en/latest/index.html
     """
 
     # pylint: disable=too-many-arguments
@@ -563,10 +566,15 @@ class ABCSMC:
 
     def compute_distance(self, result: pd.DataFrame) -> float:
         """ Computes distance between target and model run with current particle.
-        The distance is the root mean squared distance between model and historical
-        death rates:
+        For dynamical systems such as epidemiological models, the distance generally
+        used is the root mean squared distance between model and historical outputs.
+        e.g. for a dynamical system which outputs `y(t)` (number of deaths, number
+        of infected, etc):
 
-        sqrt(mean((Target_death_rate - Model_death_rate)**2))
+        .. math::
+            \sqrt{\sum_{t=1,...,T} ( y_{model}(t) - y_{reality}(t) )^2}
+
+        In our case, `y(t)` is the number of deaths per node and per week.
 
         :param result: Model run results
         :return: distance value between model run and target
@@ -594,7 +602,18 @@ class ABCSMC:
             weights: List[float],
             particle: Particle
     ) -> float:
-        """ Compute weights of particle as per the ABC-SMC algorithm
+        """ Compute weights of particle as per the ABC-SMC algorithm.
+        As per the reference article [#tonistumpf]_, the weights are
+        updated as per the formula:
+
+        .. math::
+            w_t^i = \frac{\PI(\Theta_t^i)}{\sum_{j=1}^N w_{t-1}^j K(\Theta_t^{j-1}, \Theta_t^{j})}
+
+        .. [#tonistumpf] Toni, Tina, and Michael P. H. Stumpf.
+                      “Simulation-Based Model Selection for Dynamical
+                      Systems in Systems and Population Biology”.
+                      Bioinformatics 26, no. 1, 104–10, 2010.
+                      doi:10.1093/bioinformatics/btp619.
 
         :param smc_step: Step number of ABC-SMC algorithm
         :param particles: List of accepted particles in the previous run

@@ -1,8 +1,8 @@
 """This module contains functions and classes to read and check input files."""
 
+import datetime
 import json
 import math
-import datetime
 from typing import Any, Dict, NamedTuple, List, Tuple, Union
 
 import networkx as nx  # type: ignore
@@ -217,10 +217,6 @@ def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("With an empty target no inference can take place")
 
     historical_deaths = historical_deaths.set_index("Week beginning")
-
-    if len(historical_deaths.columns) != 14:
-        raise ValueError("The historical deaths should contain a column for every HB")
-
     historical_deaths.index = pd.to_datetime(historical_deaths.index)
 
     return historical_deaths
