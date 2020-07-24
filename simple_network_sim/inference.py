@@ -275,7 +275,7 @@ class Particle:
     """
 
     inferred_variables_classes: ClassVar[Dict[str, Type[InferredVariable]]] = {
-        "infection_probability": InferredInfectionProbability,
+        "infection-probability": InferredInfectionProbability,
         "initial-infections": InferredInitialInfections
     }
 
@@ -549,7 +549,7 @@ class ABCSMC:
             self.commutes_table,
             self.mixing_matrix_table,
             self.infectious_states,
-            particle.inferred_variables["infection_probability"].value,
+            particle.inferred_variables["infection-probability"].value,
             particle.inferred_variables["initial-infections"].value,
             self.trials,
             self.start_end_date,
