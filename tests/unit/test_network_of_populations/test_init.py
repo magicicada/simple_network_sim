@@ -412,7 +412,7 @@ def test_doInternalInfectionProcess_between_ages():
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], True,
                                                           numpy.random.default_rng(123))
-    assert new_infected == {"m": 11, "o": 11}
+    assert new_infected == {"m": 12, "o": 13}
 
 
 def test_doInternalInfectionProcessAllNodes_single_compartment():
@@ -1269,3 +1269,8 @@ def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
     assert len(infections) == regions
     assert list(age_groups[0] in infection for infection in infections.values())
     assert all(infection[age_groups[0]] == infected for infection in infections.values())
+
+
+def test_computeInfectiousContactsStochastic_arg_mismatch():
+    with pytest.raises(ValueError):
+        np._computeInfectiousContactsStochastic([1.0], [1.2, 1.3], 10, 10, numpy.random.default_rng(1))

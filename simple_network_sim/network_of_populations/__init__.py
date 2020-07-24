@@ -19,7 +19,7 @@ objects passed as inputs.
 import copy
 import datetime as dt
 import logging
-from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any
+from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any, Union
 
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
@@ -536,61 +536,69 @@ def getInternalInfectiousContactsInNode(
         susceptibles = getSusceptibles(ageTo, currentInternalStateDict)
         totalInAge = getTotalInAge(currentInternalStateDict, ageTo)
 
+        contacts_series: List[float] = []
+        infectious_series: List[float] = []
+
+        acc = 0.0
+
         if susceptibles > 0 and totalInAge > 0.0:
             for ageFrom in mixingMatrix[ageTo]:
-                infectious = getInfectious(ageFrom, currentInternalStateDict, infectiousStates)
+                contacts_series.append(mixingMatrix[ageTo][ageFrom] * contactsMultiplier)
+                infectious_series.append(getInfectious(ageFrom, currentInternalStateDict, infectiousStates))
+                acc += contacts_series[-1] * infectious_series[-1] * (susceptibles / totalInAge)
 
-                if stochastic:
-                    infectiousContacts[ageTo] += _computeInfectiousContactsStochastic(
-                        mixingMatrix[ageTo][ageFrom] * contactsMultiplier,
-                        infectious,
-                        susceptibles,
-                        totalInAge,
-                        random_state,
-                    )
-                else:
-                    infectiousContacts[ageTo] += \
-                        mixingMatrix[ageTo][ageFrom] * contactsMultiplier * infectious * (susceptibles / totalInAge)
+            if stochastic:
+                infectiousContacts[ageTo] = _computeInfectiousContactsStochastic(
+                    contacts_series,
+                    infectious_series,
+                    susceptibles,
+                    totalInAge,
+                    random_state,
+                )
+            else:
+                infectiousContacts[ageTo] = acc
 
     return infectiousContacts
 
 
 def _computeInfectiousContactsStochastic(
-        contacts: float,
-        infectious: float,
-        susceptibles: float,
-        totalInAge: float,
-        random_state: np.random.Generator,
+        contacts: List[float],
+        infectious: List[float],
+        susceptibles: Union[int, float],
+        totalInAge: Union[int, float],
+        random_state: np.random.Generator
 ) -> float:
     """
-    From raw contacts (between any two people in different age groups), filters only those contacts that originated from
-    an infectious person and received by a susceptible person. The contact did not yet lead to a new infection, we need
-    to multiply by the infection probability.
+    Takes a list of contacts (usually coming from other age groups) which should be paired with a list of infectious
+    people from the same group. This function will then estimate the number of infectious contacts those people will
+    produce.
 
-    :param contacts: The number of reported contacts
-    :param infectious: The number of infectious people from which the contacts
-                       can originate
-    :param susceptibles: The number of susceptible people to which the contacts
-                         can target
+    :param contacts: A list with the number of contacts per incoming group
+    :param infectious: The number of incoming infectious people, paired with the the list of contacts
+    :param susceptibles: The number of susceptible people to which the contacts can target
     :param totalInAge: Total number of people in target population
     :param random_state: Random number generator used for the model
-    :return: The number of potentially infectious contacts.
+    :return: The number of potentially infectious contacts
     """
-    assert isinstance(infectious, int) or infectious.is_integer()
+    if len(contacts) != len(infectious):
+        raise ValueError("contacts and infectious must have the same length")
     assert isinstance(totalInAge, int) or totalInAge.is_integer()
     assert isinstance(susceptibles, int) or susceptibles.is_integer()
 
-    numberOfContacts = random_state.poisson(contacts, size=int(infectious))
-    # If 0, the hypergeometric calls fails, but mathematically is 0
-    numberOfContacts = numberOfContacts[numberOfContacts > 0]
+    inf_max = int(round(max(infectious)))
+    # each np.array represent one original (contact, infectious) pair
+    numbersOfContacts: np.array = np.zeros((len(contacts), inf_max), dtype=int)
+    for n, (contact, infected) in enumerate(zip(contacts, infectious)):
+        x = random_state.poisson(contact, int(round(infected)))
+        numbersOfContacts[n, :len(x)] = x
     # Number of contacts cannot be higher than the number of people in the node
-    numberOfContacts = np.minimum(numberOfContacts, int(totalInAge))
-    numberOfContacts = random_state.hypergeometric(
-        int(susceptibles),
-        int(totalInAge) - int(susceptibles),
-        numberOfContacts
-    )
-    return cast(float, np.sum(numberOfContacts))
+    numbersOfContacts = np.minimum(np.array(numbersOfContacts).T, int(totalInAge))
+    result = random_state.hypergeometric(
+        np.full(len(contacts), int(susceptibles)),
+        np.full(len(contacts), int(totalInAge - susceptibles)),
+        numbersOfContacts,
+    ).T
+    return cast(float, np.sum(result))
 
 
 # pylint: disable=too-many-arguments
