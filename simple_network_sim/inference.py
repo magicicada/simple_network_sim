@@ -649,6 +649,7 @@ class ABCSMC:
             "particles": particles,
             "weights": weights,
             "distances": distances,
+            "best_particle": particles[int(np.argmin(distances))],
             "time": time.time() - t0
         }
 
