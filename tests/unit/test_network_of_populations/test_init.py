@@ -318,11 +318,11 @@ def test_doInternalInfectionProcess_simple_stochastic():
 
 def test_doInternalInfectionProcess_stochastic():
     current_state = {("m", "S"): 100, ("m", "A"): 50, ("m", "I"): 50}
-    age_matrix = loaders.MixingMatrix({"m": {"m": 1000}})
+    age_matrix = loaders.MixingMatrix({"m": {"m": 200}})
 
     new_infected = np.getInternalInfectiousContactsInNode(current_state, age_matrix, 1.0, ["I", "A"], True,
                                                           numpy.random.default_rng(123))
-    assert new_infected["m"] == 93
+    assert new_infected["m"] == 9678
 
 
 def test_doInternalInfectionProcess_empty_age_group():

@@ -25,7 +25,6 @@ from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-import scipy.stats as stats  # type: ignore
 
 from simple_network_sim import loaders
 from simple_network_sim.common import Lazy
@@ -584,6 +583,8 @@ def _computeInfectiousContactsStochastic(
     numberOfContacts = random_state.poisson(contacts, size=int(infectious))
     # If 0, the hypergeometric calls fails, but mathematically is 0
     numberOfContacts = numberOfContacts[numberOfContacts > 0]
+    # Number of contacts cannot be higher than the number of people in the node
+    numberOfContacts = np.minimum(numberOfContacts, int(totalInAge))
     numberOfContacts = random_state.hypergeometric(
         int(susceptibles),
         int(totalInAge) - int(susceptibles),
