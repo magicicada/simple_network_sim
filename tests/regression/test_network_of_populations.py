@@ -21,6 +21,8 @@ def _assert_baseline(result, force_update=False):
 
 def _assert_baseline_dataframe(result, force_update=False):
     with tempfile.NamedTemporaryFile(mode="w") as fp:
+        result.to_csv(fp.name, index=False)
+        fp.flush()
         baseline_filename = create_baseline(fp.name, force_update=force_update)
         pd.testing.assert_frame_equal(result, pd.read_csv(baseline_filename, dtype=np.RESULT_DTYPES))
 
