@@ -23,6 +23,11 @@ sys.path.append('..')
 logger = logging.getLogger(__name__)
 
 
+def uniform_pdf(x: float, a: float, b: float) -> float:
+    """ pdf function for uniform distribution """
+    return (a <= x <= b) / (b - a)
+
+
 class InferredVariable(ABC):
     """
     Abstract class representing a variable to infer in ABC-SMC. To be inferred,
@@ -99,12 +104,19 @@ class InferredInfectionProbability(InferredVariable):
         a newly created perturbated parameter:
 
         .. math::
-            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
+            P_t^* \sim K(P_t | P_{t-1}) \sim Uniform(max(P_{t-1} - \sigma, 0),\min(\sigma + P_{t-1}, 1))
+
+        A uniform perturbation of range 2 * kernel_sigma is targeted, with a floor at 0 so
+        that the infection probability remains valid. This is correct as the algorithm
+        states that the particle should be re-sampled as long as the perturbation brings it
+        out of bounds, and the truncation of a uniform distribution is still a uniform
+        distribution.
 
         :return: New parameter which is similar to self up to a perturbation
         """
+        sigma = self.kernel_sigma
         value = self.value.copy()
-        value.Value = value.Value.apply(lambda x: x + self.kernel_sigma * self.random_state.uniform(-1., 1.))
+        value.Value = self.random_state.uniform(np.maximum(value.Value - sigma, 0), np.minimum(value.Value + sigma, 1.))
         return InferredInfectionProbability(value, self.mean, self.shape, self.kernel_sigma, self.random_state)
 
     def validate(self) -> bool:
@@ -130,12 +142,17 @@ class InferredInfectionProbability(InferredVariable):
         from the previous population it is slightly perturbed:
 
         .. math::
-            P_t^* ~ K(P_t | P_{t-1}) ~ P_{t-1} + Uniform([-1,1]) * kernel_sigma
+            P_t^* \sim K(P_t | P_{t-1}) \sim Uniform(max(P_{t-1} - \sigma, 0),\min(\sigma + P_{t-1}, 1))
+
+        Given in the sampling the perturbation was capped and floored in [0, 1]
+        to keep the particle valid, it results in a truncated uniform
+        distribution which is reflected in the pdf.
 
         :param x: Particle to evaluate the pdf at
         :return: pdf value of perturbation from previous particle evaluated at x
         """
-        return stats.uniform.pdf(x.at[0, "Value"], self.value.at[0, "Value"] - self.kernel_sigma, 2 * self.kernel_sigma)
+        prev_x = self.value.at[0, "Value"]
+        return uniform_pdf(x.at[0, "Value"], max(prev_x - self.kernel_sigma, 0.), min(prev_x + self.kernel_sigma, 1.))
 
 
 class InferredInitialInfections(InferredVariable):
@@ -213,12 +230,19 @@ class InferredInitialInfections(InferredVariable):
         perturbation from the current value:
 
         .. math::
-            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
+            P_t^* \sim K(P_t | P_{t-1}) \sim Uniform(\max(P_{t-1} - \sigma, 0),P_{t-1} + \sigma)
+
+        A uniform perturbation of range 2 * kernel_sigma is targeted, with a floor at 0 so
+        that the infection probability remains valid. This is correct as the algorithm
+        states that the particle should be re-sampled as long as the perturbation brings it
+        out of bounds, and the truncation of a uniform distribution is still a uniform
+        distribution.
 
         :return: New parameter which is similar to self up to a perturbation
         """
+        sigma = self.kernel_sigma
         value = self.value.copy()
-        value.Infected = value.Infected.apply(lambda x: x + self.kernel_sigma * self.random_state.uniform(-1., 1.))
+        value.Infected = self.random_state.uniform(np.maximum(value.Infected - sigma, 0.), value.Infected + sigma)
         return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
                                          self.random_state)
 
@@ -250,7 +274,7 @@ class InferredInitialInfections(InferredVariable):
         from the previous population it is slightly perturbed:
 
         .. math::
-            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
+            P_t^* \sim K(P_t | P_{t-1}) \sim Uniform(\max(P_{t-1} - \sigma, 0),P_{t-1} + \sigma)
 
         As all perturbations are independent the joint pdf is the product
         of individual pdfs.
@@ -260,7 +284,8 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.value.iterrows():
-            pdf *= stats.uniform.pdf(x.at[index, "Infected"], row.Infected - self.kernel_sigma, 2 * self.kernel_sigma)
+            prev_x = row.Infected
+            pdf *= uniform_pdf(x.at[index, "Infected"], max(prev_x - self.kernel_sigma, 0.), prev_x + self.kernel_sigma)
 
         return pdf
 
@@ -456,7 +481,8 @@ class ABCSMC:
         self.random_seed = random_seed
         self.random_state = np.random.default_rng(loaders.readRandomSeed(random_seed))
 
-        assert trials.at[0, "Value"] == 1
+        assert trials.at[0, "Value"] == 1, "Only one trial should be used for both stochastic and deterministic mode"
+        assert len(infection_probability) == 1, "Only one infection probability is allowed"
 
         self.threshold = np.inf
         self.fit_statistics: Dict[int] = {}
