@@ -8,7 +8,9 @@
 
 ## Summary
 
-Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this, the SCRC owned repository is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19.
+Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this, the SCRC owned repository is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19. 
+
+The status of the software is reviewed against a [checklist](software_checklist.md).
 
 In `simple_network_sim`, a geographical area (e.g. Scotland) is represented as a series of connected nodes in a network, each of which has a population, stratified by age group. Some nodes have more movement between them than others. The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node. As simulated time incrementally moves forward, the model predicts the number of people in each disease state in each node.
 
