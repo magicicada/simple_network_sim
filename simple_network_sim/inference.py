@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def uniform_pdf(x: float, a: float, b: float) -> float:
     """ pdf function for uniform distribution """
-    return (a <= x <= b) / (b - a)
+    return ((a <= x) & (x <= b)) / (b - a)
 
 
 class InferredVariable(ABC):
@@ -72,7 +72,7 @@ class InferredInfectionProbability(InferredVariable):
     def __init__(
             self,
             value: pd.DataFrame,
-            mean: float,
+            mean: pd.DataFrame,
             shape: float,
             kernel_sigma: float,
             random_state: np.random.Generator
@@ -94,7 +94,7 @@ class InferredInfectionProbability(InferredVariable):
         """
         shape = fitter.infection_probability_shape
         kernel_sigma = fitter.infection_probability_kernel_sigma
-        mean = fitter.infection_probability.at[0, "Value"]
+        mean = fitter.infection_probability
         value = fitter.infection_probability.copy().assign(
             Value=lambda x: fitter.random_state.beta(shape, shape * (1 - x.Value) / x.Value))
         return InferredInfectionProbability(value, mean, shape, kernel_sigma, fitter.random_state)
@@ -127,16 +127,17 @@ class InferredInfectionProbability(InferredVariable):
         """
         return np.all(self.value.Value > 0.) and np.all(self.value.Value < 1.)
 
-    def prior_pdf(self) -> float:
+    def prior_pdf(self) -> np.ndarray:
         """ Compute pdf of the prior distribution evaluated at the parameter x.
         Infection probability has a prior a beta distribution. The pdf is evaluated
         at the current value of the parameter.
 
         :return: pdf value of prior distribution evaluated at x
         """
-        return stats.beta.pdf(self.value.at[0, "Value"], self.shape, self.shape * (1 - self.mean) / self.mean)
+        return np.prod(stats.beta.pdf(self.value.Value, self.shape,
+                                      self.shape * (1 - self.mean.Value) / self.mean.Value))
 
-    def perturbation_pdf(self, x: pd.DataFrame) -> float:
+    def perturbation_pdf(self, x: pd.DataFrame) -> np.ndarray:
         """ Compute pdf of the perturbation evaluated at the parameter x,
         from the current parameter. In ABC-SMC when a particle is sampled
         from the previous population it is slightly perturbed:
@@ -151,8 +152,8 @@ class InferredInfectionProbability(InferredVariable):
         :param x: Particle to evaluate the pdf at
         :return: pdf value of perturbation from previous particle evaluated at x
         """
-        prev_x = self.value.at[0, "Value"]
-        return uniform_pdf(x.at[0, "Value"], max(prev_x - self.kernel_sigma, 0.), min(prev_x + self.kernel_sigma, 1.))
+        return np.prod(uniform_pdf(x.Value, np.maximum(self.value.Value - self.kernel_sigma, 0),
+                                   np.minimum(self.value.Value + self.kernel_sigma, 1)))
 
 
 class InferredInitialInfections(InferredVariable):
