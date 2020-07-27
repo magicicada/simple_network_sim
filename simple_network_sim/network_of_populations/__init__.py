@@ -19,7 +19,6 @@ objects passed as inputs.
 import copy
 import datetime as dt
 import logging
-import random
 from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any
 
 import networkx as nx  # type: ignore
@@ -1052,6 +1051,7 @@ def randomlyInfectRegions(
         regions: int,
         age_groups: List[Age],
         infected: float,
+        random_state: np.random.Generator
 ) -> Dict[NodeName, Dict[Age, float]]:
     """Randomly infect regions to initialize the random simulation
 
@@ -1059,10 +1059,11 @@ def randomlyInfectRegions(
     :param regions: The number of regions to expose.
     :param age_groups: Age groups to infect
     :param infected: People to infect
+    :param random_state: Random state for random number generation
     :return: Structure of initially infected regions with number
     """
     infections: Dict[NodeName, Dict[Age, float]] = {}
-    for regionID in random.choices(list(network.graph.nodes()), k=regions):
+    for regionID in random_state.choice(list(network.graph.nodes()), size=regions):
         infections[regionID] = {}
         for age in age_groups:
             infections[regionID][age] = infected
