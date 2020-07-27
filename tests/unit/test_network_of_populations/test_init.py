@@ -33,7 +33,7 @@ def test_basicSimulationInternalAgeStructure_invariants(data_api, region, num_in
     initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    result = np.basicSimulationInternalAgeStructure(network, {region: {"[0,17)": num_infected}})
+    result = np.basicSimulationInternalAgeStructure(network, {region: {"[0,17)": num_infected}}, numpy.random.default_rng(123))
 
     # population remains constant
     populations = result.groupby("date").total.sum()
@@ -70,7 +70,7 @@ def test_basicSimulationInternalAgeStructure_no_movement_of_people_invariants(da
     initial_population = sum(_count_people_per_region(network.initialState))
     old_network = copy.deepcopy(network)
 
-    result = np.basicSimulationInternalAgeStructure(network, {region: {"[0,17)": num_infected}})
+    result = np.basicSimulationInternalAgeStructure(network, {region: {"[0,17)": num_infected}}, numpy.random.default_rng(123))
 
     # population remains constant
     populations = result.groupby("date").total.sum()
@@ -114,7 +114,7 @@ def test_basicSimulationInternalAgeStructure_no_node_infection_invariant(data_ap
 
     initial_population = sum(_count_people_per_region(network.initialState))
 
-    result = np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": n_infected}})
+    result = np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": n_infected}}, numpy.random.default_rng(123))
 
     # population remains constant
     populations = result.groupby("date").total.sum()
@@ -144,7 +144,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob(data_api, short_s
                 susceptibles += region[(age, state)]
 
     people_to_infect = 30
-    result = np.basicSimulationInternalAgeStructure(network, {"S08000024": {"[0,17)": people_to_infect}})
+    result = np.basicSimulationInternalAgeStructure(network, {"S08000024": {"[0,17)": people_to_infect}}, numpy.random.default_rng(123))
 
     new_susceptibles = result[(result.date == result.date.max()) & (result.state == "S")].total.sum()
     assert new_susceptibles + people_to_infect == susceptibles
@@ -173,7 +173,7 @@ def test_basicSimulationInternalAgeStructure_no_infection_prob_before_time_25(da
     people_to_infect = 30
     susceptibles = count_susceptibles(network.initialState) - people_to_infect
 
-    result = np.basicSimulationInternalAgeStructure(network, {"S08000024": {"[0,17)": people_to_infect}})
+    result = np.basicSimulationInternalAgeStructure(network, {"S08000024": {"[0,17)": people_to_infect}}, numpy.random.default_rng(123))
     result.date = pd.to_datetime(result.date)
     inflection_date = pd.Timestamp(network.startDate + dt.timedelta(days=25))
 
@@ -218,7 +218,7 @@ def test_createNetworkOfPopulation_missing_population_table_nodes(data_api, shor
         short_simulation_dates
     )
 
-    result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}})
+    result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}}, numpy.random.default_rng(123))
 
     assert result[result.node == "S08000015"].total.sum() == 0
     assert pytest.approx(result[(result.date == "2020-04-16") & (result.state == "D")].total.sum(), 31950)
@@ -256,7 +256,7 @@ def test_createNetworkOfPopulation_missing_connections(data_api, short_simulatio
         short_simulation_dates
     )
 
-    result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}})
+    result = np.basicSimulationInternalAgeStructure(model, {"S08000016": {"70+": 40}}, numpy.random.default_rng(123))
 
     assert pytest.approx(result[(result.date == "2020-04-16") & (result.state == "D")].total.sum(), 31950)
     assert result[result.node == "S08000015"].empty
@@ -889,7 +889,7 @@ def test_createNetworkOfPopulation_invalid_infection_probability_date(data_api, 
             short_simulation_dates,
         )
 
-        np.basicSimulationInternalAgeStructure(network, network.initialInfections)
+        np.basicSimulationInternalAgeStructure(network, network.initialInfections, numpy.random.default_rng(123))
 
     network = np.createNetworkOfPopulation(
         data_api.read_table("human/compartment-transition", "compartment-transition"),
@@ -903,7 +903,7 @@ def test_createNetworkOfPopulation_invalid_infection_probability_date(data_api, 
         short_simulation_dates,
     )
 
-    np.basicSimulationInternalAgeStructure(network, network.initialInfections)
+    np.basicSimulationInternalAgeStructure(network, network.initialInfections, numpy.random.default_rng(123))
 
 
 def test_createNetworkOfPopulation_age_mismatch_matrix(data_api):

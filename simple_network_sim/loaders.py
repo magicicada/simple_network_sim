@@ -217,7 +217,10 @@ def readRandomSeed(df: pd.DataFrame) -> int:
     assert df.columns == ["Value"]
 
     for row in df.to_dict(orient="row"):
-        seed = row["Value"]
+        if isinstance(row["Value"], str):
+            seed = int(row["Value"])
+        else:
+            seed = row["Value"]
 
         if not isinstance(seed, int):
             raise ValueError("Seed must be an int")

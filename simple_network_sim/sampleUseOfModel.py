@@ -3,6 +3,7 @@ This is the main module used to run simulations based on network of populations
 """
 # pylint: disable=import-error
 import argparse
+from concurrent import futures
 from functools import reduce
 import logging
 import logging.config
@@ -12,9 +13,10 @@ import time
 from typing import Optional, List, NamedTuple
 
 from data_pipeline_api import standard_api  # type: ignore
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
-from . import common
+from . import common, loaders
 from . import network_of_populations as ss
 
 # Default logger, used if module not called as __main__
@@ -55,10 +57,10 @@ def main(argv):
             store.read_table("human/start-end-date", "start-end-date"),
             store.read_table("human/movement-multipliers", "movement-multipliers") if args.use_movement_multipliers else None,
             store.read_table("human/stochastic-mode", "stochastic-mode"),
-            store.read_table("human/random-seed", "random-seed"),
         )
 
-        results = runSimulation(network)
+        random_seed = loaders.readRandomSeed(store.read_table("human/random-seed", "random-seed"))
+        results = runSimulation(network, random_seed, max_workers=None if not args.workers else args.workers)
         aggregated = aggregateResults(results)
 
         logger.info("Writing output")
@@ -77,17 +79,30 @@ def main(argv):
         )
 
 
-def runSimulation(network: ss.NetworkOfPopulation) -> List[pd.DataFrame]:
+def runSimulation(network: ss.NetworkOfPopulation, random_seed: int, max_workers: Optional[int] = None) -> List[pd.DataFrame]:
     """Run pre-created network
 
     :param network: object representing the network of populations
+    :param random_seed: seed to use when instantiating the SeedSequence object
+    :param max_workers: maximum number of processes to spawn when running multiple simulations
     :return: Result runs for all trials of the simulation
     """
     results = []
-    for i in range(network.trials):
-        logger.info("Running simulation (%s/%s)", i + 1, network.trials)
-        result = ss.basicSimulationInternalAgeStructure(network, network.initialInfections)
-        results.append(result)
+    with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        delayed: List[futures.Future] = []
+        for seq in np.random.SeedSequence(random_seed).spawn(network.trials):
+            delayed.append(
+                executor.submit(
+                    ss.basicSimulationInternalAgeStructure,
+                    network,
+                    network.initialInfections,
+                    np.random.default_rng(seq),
+                )
+            )
+
+        for t, future in enumerate(futures.as_completed(delayed), start=1):
+            logger.info("Running simulation (%s/%s)", t, network.trials)
+            results.append(future.result())
 
     return results
 
@@ -225,6 +240,12 @@ def build_args(argv):
         "--data-pipeline-config",
         default="config.yaml",
         help="Base directory with the input parameters",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="Defaults to the number of CPUs in the machine",
     )
 
     return parser.parse_args(argv)

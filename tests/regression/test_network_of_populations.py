@@ -1,11 +1,12 @@
 import json
 import random
 import tempfile
-import pandas as pd
 
+import numpy
+import pandas as pd
 import pytest
 
-from simple_network_sim import common, network_of_populations as np
+from simple_network_sim import common, network_of_populations as np, loaders
 from tests.utils import create_baseline, calculateInfectiousOverTime
 
 
@@ -38,7 +39,7 @@ def test_basic_simulation(data_api):
     )
 
     result = calculateInfectiousOverTime(
-        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}),
+        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}, numpy.random.default_rng(123)),
         network.infectiousStates
     )
 
@@ -60,7 +61,7 @@ def test_basic_simulation_with_dampening(data_api):
     )
 
     result = calculateInfectiousOverTime(
-        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}),
+        np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10.0}}, numpy.random.default_rng(123)),
         network.infectiousStates,
     )
 
@@ -80,10 +81,9 @@ def test_basic_simulation_stochastic(data_api_stochastic):
         data_api_stochastic.read_table("human/start-end-date", "start-end-date"),
         data_api_stochastic.read_table("human/movement-multipliers", "movement-multipliers"),
         data_api_stochastic.read_table("human/stochastic-mode", "stochastic-mode"),
-        data_api_stochastic.read_table("human/random-seed", "random-seed"),
     )
-
-    result = np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10}})
+    seed = loaders.readRandomSeed(data_api_stochastic.read_table("human/random-seed", "random-seed"))
+    result = np.basicSimulationInternalAgeStructure(network, {"S08000016": {"[17,70)": 10}}, numpy.random.default_rng(seed))
 
     _assert_baseline_dataframe(result)
 
@@ -107,7 +107,7 @@ def test_basic_simulation_100_runs(data_api):
         regions = rand.choices(list(network.graph.nodes()), k=1)
         assert network.initialState[regions[0]][("[17,70)", "E")] == 0
         result = calculateInfectiousOverTime(
-            np.basicSimulationInternalAgeStructure(network, {regions[0]: {"[17,70)": 10.0}}),
+            np.basicSimulationInternalAgeStructure(network, {regions[0]: {"[17,70)": 10.0}}, numpy.random.default_rng(123)),
             network.infectiousStates,
         )
         result.pop()  # TODO: due to historical reasons we have to ignore the last entry
