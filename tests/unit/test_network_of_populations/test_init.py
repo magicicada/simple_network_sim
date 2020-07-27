@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import copy
 import datetime as dt
-import random
 
 import networkx as nx
 import numpy
@@ -1265,8 +1264,7 @@ def test_randomlyInfectRegions(data_api, regions, age_groups, infected):
         data_api.read_table("human/start-end-date", "start-end-date"),
     )
 
-    random.seed(3)
-    infections = np.randomlyInfectRegions(network, regions, age_groups, infected)
+    infections = np.randomlyInfectRegions(network, regions, age_groups, infected, numpy.random.default_rng(1))
 
     assert len(infections) == regions
     assert list(age_groups[0] in infection for infection in infections.values())
