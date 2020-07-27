@@ -80,7 +80,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> We use [pylint, automated by codacy](README.md##Static-analysis), to check code going into the repository. We make some exceptions to the pylint defaults – these are [specified in the repo](.pylintrc). New and altered code is checked and issues dealt with prior to being integrated into the `master` branch.
+> We use [pylint, automated by codacy](README.md#static-analysis), to check code going into the repository. We make some exceptions to the pylint defaults – these are [specified in the repo](.pylintrc). New and altered code is checked and issues dealt with prior to being integrated into the `master` branch.
 
 ### Is the code clean, generally understandable and readable and written according to good software engineering principles?
 
