@@ -21,6 +21,7 @@ https://repo.anaconda.com/pkgs/main/linux-64/libxcb-1.13-h1bed415_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/ncurses-6.2-he6710b0_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/openssl-1.1.1g-h7b6447c_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/pcre-8.43-he6710b0_0.conda
+https://repo.anaconda.com/pkgs/main/linux-64/perl-5.26.2-h14c3975_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/xz-5.2.5-h7b6447c_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/yaml-0.1.7-had09818_2.conda
 https://repo.anaconda.com/pkgs/main/linux-64/zlib-1.2.11-h7b6447c_3.conda
@@ -28,15 +29,18 @@ https://repo.anaconda.com/pkgs/main/linux-64/glib-2.63.1-h3eb4bd4_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/hdf5-1.10.4-hb1b8bf9_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/libedit-3.1.20191231-h7b6447c_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/libpng-1.6.37-hbc83047_0.conda
+https://repo.anaconda.com/pkgs/main/linux-64/libssh2-1.9.0-h1ba5d50_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/libxml2-2.9.10-he19cac6_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/readline-8.0-h7b6447c_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/tk-8.6.10-hbc83047_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/dbus-1.13.14-hb2f20db_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/freetype-2.10.2-h5ab3b9f_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/gstreamer-1.14.0-hb31296c_0.conda
+https://repo.anaconda.com/pkgs/main/linux-64/krb5-1.18.2-h173b8e3_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/sqlite-3.32.3-h62c20be_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/fontconfig-2.13.0-h9420a91_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/gst-plugins-base-1.14.0-hbbd80ab_1.conda
+https://repo.anaconda.com/pkgs/main/linux-64/libcurl-7.71.1-h20c2e04_1.conda
 https://repo.anaconda.com/pkgs/main/linux-64/python-3.7.7-hcff3b4d_5.conda
 https://repo.anaconda.com/pkgs/main/noarch/attrs-19.3.0-py_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/certifi-2020.6.20-py37_0.conda
@@ -46,6 +50,7 @@ https://repo.anaconda.com/pkgs/main/linux-64/coverage-5.0-py37h7b6447c_0.conda
 https://repo.anaconda.com/pkgs/main/noarch/decorator-4.4.2-py_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/docutils-0.16-py37_1.conda
 https://repo.anaconda.com/pkgs/main/noarch/fsspec-0.7.4-py_0.conda
+https://repo.anaconda.com/pkgs/main/linux-64/git-2.23.0-pl526hacde149_0.conda
 https://repo.anaconda.com/pkgs/main/noarch/idna-2.10-py_0.conda
 https://repo.anaconda.com/pkgs/main/noarch/jmespath-0.10.0-py_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/kiwisolver-1.2.0-py37hfd86e86_0.conda
