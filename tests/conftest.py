@@ -14,7 +14,7 @@ FIXTURE_DIR = Path(__file__).parents[0] / "test_data"
 
 def _data_api(base_data_dir, config):  # pylint: disable=redefined-outer-name
     try:
-        with standard_api.StandardAPI(str(base_data_dir / config), uri="", git_sha="") as store:
+        with standard_api.StandardAPI.from_config(str(base_data_dir / config), uri="", git_sha="") as store:
             yield store
     finally:
         # TODO; remove this once https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/505 is in prod
