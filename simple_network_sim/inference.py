@@ -3,16 +3,18 @@ main module used for running the inference on simple network sim
 """
 from __future__ import annotations
 
+import datetime as dt
 import logging.config
 import sys
 import time
 from abc import ABC, abstractmethod
-from typing import Tuple, List, Dict, Type, ClassVar
+from typing import Tuple, List, Dict, Type, ClassVar, Union
 
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
 from data_pipeline_api import standard_api
+from more_itertools import pairwise
 
 from simple_network_sim import loaders
 from simple_network_sim import network_of_populations as ss
@@ -23,9 +25,53 @@ sys.path.append('..')
 logger = logging.getLogger(__name__)
 
 
-def uniform_pdf(x: float, a: float, b: float) -> float:
-    """ pdf function for uniform distribution """
+def uniform_pdf(
+        x: Union[float, np.array],
+        a: Union[float, np.array],
+        b: Union[float, np.array]
+) -> Union[float, np.array]:
+    """pdf function for uniform distribution
+
+    :param x: value at which to evaluate the pdf
+    :param a: lower bound of the distribution
+    :param b: upper bound of the distribution
+    """
     return ((a <= x) & (x <= b)) / (b - a)
+
+
+def lognormal(mean: float, stddev: float, stddev_min: float = -np.inf):
+    """Constructs Scipy lognormal object to match a given mean and std
+    dev passed as input. The parameters to input in the model are inverted
+    from the formulas:
+
+    .. math::
+            if X~LogNormal(mu, scale)
+        then:
+            E[X] = exp{mu + sigma^2 * 0.5}
+            Var[X] = (exp{sigma^2} - 1) * exp{2 * mu + sigma^2}
+
+    The stddev is taken as a % of the mean, floored at 10. This
+    allows natural scaling with the size of the population inside the
+    nodes, always allowing for a minimal uncertainty.
+
+    :param mean: Mean to match
+    :param stddev: Std dev to match
+    :param stddev_min: Minimum std dev to match
+    :return: Distribution object representing a lognormal distribution with
+    the given mean and std dev
+    """
+    stddev = np.maximum(mean * stddev, stddev_min)
+    sigma = np.sqrt(np.log(1 + (stddev**2 / mean**2)))
+    mu = np.log(mean / np.sqrt(1 + (stddev**2 / mean**2)))
+    return stats.lognorm(s=sigma, loc=0., scale=np.exp(mu))
+
+
+def split_dataframe(multipliers, partitions, col="Contact_Multiplier"):
+    df = multipliers.copy()
+    df.Date = pd.to_datetime(df.Date)
+    for prev_date, curr_date in pairwise(partitions):
+        index = (df.Date.dt.date < curr_date) & (df.Date.dt.date >= prev_date)
+        yield df.loc[index, col].values[0], index
 
 
 class InferredVariable(ABC):
@@ -75,13 +121,13 @@ class InferredInfectionProbability(InferredVariable):
             mean: pd.DataFrame,
             shape: float,
             kernel_sigma: float,
-            random_state: np.random.Generator
+            rng: np.random.Generator
     ):
         self.value = value
         self.mean = mean
         self.shape = shape
         self.kernel_sigma = kernel_sigma
-        self.random_state = random_state
+        self.rng = rng
 
     @staticmethod
     def generate_from_prior(fitter: ABCSMC) -> InferredInfectionProbability:
@@ -93,11 +139,13 @@ class InferredInfectionProbability(InferredVariable):
         :return: New InferredInitialInfections randomly sampled from prior
         """
         shape = fitter.infection_probability_shape
-        kernel_sigma = fitter.infection_probability_kernel_sigma
+        sigma = fitter.infection_probability_kernel_sigma
         mean = fitter.infection_probability
-        value = fitter.infection_probability.copy().assign(
-            Value=lambda x: fitter.random_state.beta(shape, shape * (1 - x.Value) / x.Value))
-        return InferredInfectionProbability(value, mean, shape, kernel_sigma, fitter.random_state)
+
+        value = fitter.infection_probability.copy()
+        value.Value = fitter.rng.beta(shape, shape * (1 - mean.Value) / mean.Value)
+
+        return InferredInfectionProbability(value, mean, shape, sigma, fitter.rng)
 
     def generate_perturbated(self) -> InferredInfectionProbability:
         """ From current parameter, add a perturbation to infection probability and return
@@ -116,8 +164,8 @@ class InferredInfectionProbability(InferredVariable):
         """
         sigma = self.kernel_sigma
         value = self.value.copy()
-        value.Value = self.random_state.uniform(np.maximum(value.Value - sigma, 0), np.minimum(value.Value + sigma, 1.))
-        return InferredInfectionProbability(value, self.mean, self.shape, self.kernel_sigma, self.random_state)
+        value.Value = self.rng.uniform(np.maximum(value.Value - sigma, 0), np.minimum(value.Value + sigma, 1.))
+        return InferredInfectionProbability(value, self.mean, self.shape, sigma, self.rng)
 
     def validate(self) -> bool:
         """ Checks that the particle is valid, i.e. that infection probability is
@@ -171,40 +219,14 @@ class InferredInitialInfections(InferredVariable):
             stddev: float,
             stddev_min: float,
             kernel_sigma: float,
-            random_state: np.random.Generator
+            rng: np.random.Generator
     ):
         self.value = value
         self.mean = mean
         self.stddev = stddev
         self.stddev_min = stddev_min
-        self.random_state = random_state
         self.kernel_sigma = kernel_sigma
-
-    @staticmethod
-    def _rvs_lognormal(mean: float, stddev: float, stddev_min: float):
-        """ Constructs Scipy lognormal object to match a given mean and std
-        dev passed as input. The parameters to input in the model are inverted
-        from the formulas:
-
-        .. math::
-                if X~LogNormal(mu, scale)
-            then:
-                E[X] = exp{mu + sigma^2 * 0.5}
-                Var[X] = (exp{sigma^2} - 1) * exp{2 * mu + sigma^2}
-
-        The stddev is taken as a % of the mean, floored at 10. This
-        allows natural scaling with the size of the population inside the
-        nodes, always allowing for a minimal uncertainty.
-
-        :param mean: Mean to match
-        :param stddev: Std dev to match
-        :return: Distribution object representing a lognormal distribution with
-        the given mean and std dev
-        """
-        var = np.maximum((mean * stddev)**2, stddev_min)
-        sigma = np.sqrt(np.log(1 + (var / mean**2)))
-        mu = np.log(mean / np.sqrt(1 + (var / mean**2)))
-        return stats.lognorm(s=sigma, loc=0., scale=np.exp(mu))
+        self.rng = rng
 
     @staticmethod
     def generate_from_prior(fitter: ABCSMC) -> InferredInitialInfections:
@@ -218,15 +240,15 @@ class InferredInitialInfections(InferredVariable):
         """
         stddev = fitter.initial_infections_stddev
         stddev_min = fitter.initial_infections_stddev_min
-        kernel_sigma = fitter.initial_infections_kernel_sigma
-        value = fitter.initial_infections.copy().assign(Infected=lambda x: InferredInitialInfections
-                                                        ._rvs_lognormal(x.Infected, stddev, stddev_min)
-                                                        .rvs(random_state=fitter.random_state))
-        return InferredInitialInfections(value, fitter.initial_infections, stddev, stddev_min, kernel_sigma,
-                                         fitter.random_state)
+        sigma = fitter.initial_infections_kernel_sigma
+
+        value = fitter.initial_infections.copy()
+        value.Infected = lognormal(value.Infected, stddev, stddev_min).rvs(random_state=fitter.rng)
+
+        return InferredInitialInfections(value, fitter.initial_infections, stddev, stddev_min, sigma, fitter.rng)
 
     def generate_perturbated(self) -> InferredInitialInfections:
-        """ From current parameter, add a perturbation to every parameter and return
+        """ From current table, add a perturbation to every parameter and return
         a newly created perturbated particle. For initial infections, we apply a uniform
         perturbation from the current value:
 
@@ -243,9 +265,8 @@ class InferredInitialInfections(InferredVariable):
         """
         sigma = self.kernel_sigma
         value = self.value.copy()
-        value.Infected = self.random_state.uniform(np.maximum(value.Infected - sigma, 0.), value.Infected + sigma)
-        return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma,
-                                         self.random_state)
+        value.Infected = self.rng.uniform(np.maximum(value.Infected - sigma, 0.), value.Infected + sigma)
+        return InferredInitialInfections(value, self.mean, self.stddev, self.stddev_min, self.kernel_sigma, self.rng)
 
     def validate(self) -> bool:
         """ Checks that the particle is valid, i.e. that all initial infections are
@@ -264,8 +285,7 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.mean.iterrows():
-            pdf *= InferredInitialInfections._rvs_lognormal(row.Infected, self.stddev, self.stddev_min)\
-                                            .pdf(self.value.at[index, "Infected"])
+            pdf *= lognormal(row.Infected, self.stddev, self.stddev_min).pdf(self.value.at[index, "Infected"])
 
         return pdf
 
@@ -285,8 +305,119 @@ class InferredInitialInfections(InferredVariable):
         """
         pdf = 1.
         for index, row in self.value.iterrows():
-            prev_x = row.Infected
-            pdf *= uniform_pdf(x.at[index, "Infected"], max(prev_x - self.kernel_sigma, 0.), prev_x + self.kernel_sigma)
+            pdf *= uniform_pdf(x.at[index, "Infected"], max(row.Infected - self.kernel_sigma, 0.),
+                               row.Infected + self.kernel_sigma)
+
+        return pdf
+
+
+class InferredContactMultipliers(InferredVariable):
+    """
+    Class representing inferred contact multipliers to be used inside ABC-SMC fitter.
+    Contact multipliers are adjustment numbers by which we adjust the contact to
+    simulate the effect of quarantine and social distancing.
+    """
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+            self,
+            value: pd.DataFrame,
+            mean: pd.DataFrame,
+            stddev: float,
+            kernel_sigma: float,
+            partitions: List[dt.date],
+            rng: np.random.Generator
+    ):
+        self.value = value
+        self.mean = mean
+        self.stddev = stddev
+        self.rng = rng
+        self.kernel_sigma = kernel_sigma
+        self.partitions = partitions
+
+    @staticmethod
+    def generate_from_prior(fitter: ABCSMC) -> InferredContactMultipliers:
+        """ Sample from prior distribution. For contact multipliers, we use
+        the values in the data pipeline as mean of our priors, and the std dev
+        is taken as a fixed number. We use a lognormal prior.
+
+        :param fitter: ABC-SMC fitter object
+        :return: New InferredInitialInfections randomly sampled from prior
+        """
+        stddev = fitter.contact_multipliers_stddev
+        sigma = fitter.contact_multipliers_kernel_sigma
+        partitions = fitter.contact_multipliers_partitions
+
+        value = fitter.movement_multipliers.copy()
+        for multiplier, index in split_dataframe(value, partitions):
+            value.loc[index, "Contact_Multiplier"] = lognormal(multiplier, stddev).rvs(random_state=fitter.rng)
+
+        return InferredContactMultipliers(value, fitter.movement_multipliers, stddev, sigma, partitions, fitter.rng)
+
+    def generate_perturbated(self) -> InferredContactMultipliers:
+        """ From current table, add a perturbation to every parameter and return
+        a newly created perturbated particle. For contact multipliers, we apply a uniform
+        perturbation from the current value:
+
+        .. math::
+            P_t^* \sim K(P_t | P_{t-1}) \sim Uniform(\max(P_{t-1} - \sigma, 0),P_{t-1} + \sigma)
+
+        A uniform perturbation of range 2 * kernel_sigma is targeted, with a floor at 0 so
+        that the infection probability remains valid. This is correct as the algorithm
+        states that the particle should be re-sampled as long as the perturbation brings it
+        out of bounds, and the truncation of a uniform distribution is still a uniform
+        distribution.
+
+        :return: New parameter which is similar to self up to a perturbation
+        """
+        value = self.value.copy()
+        for multiplier, index in split_dataframe(value, self.partitions):
+            value.loc[index, "Contact_Multiplier"] = self.rng.uniform(np.maximum(multiplier - self.kernel_sigma, 0.),
+                                                                      multiplier + self.kernel_sigma)
+
+        return InferredContactMultipliers(value, self.mean, self.stddev, self.kernel_sigma, self.partitions, self.rng)
+
+    def validate(self) -> bool:
+        """ Checks that the particle is valid, i.e. that all contact multipliers are
+        strictly positive 0.
+
+        :return: Whether the particle is valid
+        """
+        return np.all(self.value.Contact_Multiplier > 0.)
+
+    def prior_pdf(self) -> float:
+        """ Compute pdf of the prior distribution evaluated at the parameter x.
+        As all priors are independent the joint pdf is the product of individual pdfs.
+        The pdf is evaluated at the current value of the parameter.
+
+        :return: pdf value of prior distribution evaluated at x
+        """
+        pdf = 1.
+
+        for multiplier, index in split_dataframe(self.value, self.partitions):
+            mean_x = self.mean.loc[index, "Contact_Multiplier"].values[0]
+            pdf *= lognormal(mean_x, self.stddev).pdf(multiplier)
+
+        return pdf
+
+    def perturbation_pdf(self, x: pd.DataFrame) -> float:
+        """ Compute pdf of the perturbation evaluated at the parameter ``x``,
+        from the current parameter. In ABC-SMC when a particle is sampled
+        from the previous population it is slightly perturbed:
+
+        .. math::
+            P_t^* \sim K(P_t | P_{t-1}) \sim P_{t-1} + \sigma * Uniform([-1,1])
+
+        As all perturbations are independent the joint pdf is the product
+        of individual pdfs.
+
+        :param x: Particle to evaluate the pdf at
+        :return: pdf value of perturbation from previous particle evaluated at x
+        """
+        pdf = 1.
+        for multiplier, index in split_dataframe(self.value, self.partitions):
+            curr_x = x.loc[index, "Contact_Multiplier"].values[0]
+            pdf *= uniform_pdf(curr_x, max(multiplier - self.kernel_sigma, 0.), multiplier + self.kernel_sigma)
 
         return pdf
 
@@ -302,7 +433,8 @@ class Particle:
 
     inferred_variables_classes: ClassVar[Dict[str, Type[InferredVariable]]] = {
         "infection-probability": InferredInfectionProbability,
-        "initial-infections": InferredInitialInfections
+        "initial-infections": InferredInitialInfections,
+        "contact-multipliers": InferredContactMultipliers
     }
 
     def __init__(self, inferred_variables: Dict[str, InferredVariable]):
@@ -347,7 +479,7 @@ class Particle:
     def resample_and_perturbate(
             particles: List[Particle],
             weights: List[float],
-            random_state: np.random.Generator
+            rng: np.random.Generator
     ) -> Particle:
         """ Resampling part of ABC-SMC, selects randomly a new particle from the
         list of previously accepted. Then perturb it slightly. This causes
@@ -358,11 +490,11 @@ class Particle:
 
         :param particles: List of particles from previous population
         :param weights: List of weights of particles from previous population
-        :param random_state: Random state for random sampling into particles
+        :param rng: Random state for random sampling into particles
         :return: Newly created particles sampled from previous population and perturbated
         """
         while True:
-            particle = random_state.choice(particles, p=weights / np.sum(weights))
+            particle = rng.choice(particles, p=weights / np.sum(weights))
             particle = particle.generate_perturbated()
 
             if particle.validate_particle():
@@ -445,7 +577,7 @@ class ABCSMC:
             infectious_states: pd.DataFrame,
             trials: pd.DataFrame,
             start_end_date: pd.DataFrame,
-            movement_multipliers_table: pd.DataFrame,
+            movement_multipliers: pd.DataFrame,
             stochastic_mode: pd.DataFrame,
             random_seed: pd.DataFrame
     ):
@@ -459,6 +591,9 @@ class ABCSMC:
         self.initial_infections_stddev = parameters["initial_infections_stddev"]
         self.initial_infections_stddev_min = parameters["initial_infections_stddev_min"]
         self.initial_infections_kernel_sigma = parameters["initial_infections_kernel_sigma"]
+        self.contact_multipliers_stddev = parameters["contact_multipliers_stddev"]
+        self.contact_multipliers_kernel_sigma = parameters["contact_multipliers_kernel_sigma"]
+        self.contact_multipliers_partitions = parameters["contact_multipliers_partitions"]
 
         assert self.n_smc_steps > 0
         assert self.n_particles > 0
@@ -477,10 +612,10 @@ class ABCSMC:
         self.infectious_states = infectious_states
         self.trials = trials
         self.start_end_date = start_end_date
-        self.movement_multipliers_table = movement_multipliers_table
+        self.movement_multipliers = movement_multipliers
         self.stochastic_mode = stochastic_mode
         self.random_seed = random_seed
-        self.random_state = np.random.default_rng(loaders.readRandomSeed(random_seed))
+        self.rng = np.random.default_rng(loaders.readRandomSeed(random_seed))
 
         assert trials.at[0, "Value"] == 1, "Only one trial should be used for both stochastic and deterministic mode"
         assert len(infection_probability) == 1, "Only one infection probability is allowed"
@@ -547,7 +682,7 @@ class ABCSMC:
             if smc_step == 0:
                 particle = Particle.generate_from_priors(self)
             else:
-                particle = Particle.resample_and_perturbate(prev_particles, prev_weights, self.random_state)
+                particle = Particle.resample_and_perturbate(prev_particles, prev_weights, self.rng)
 
             result = self.run_model(particle)
             distance = self.compute_distance(result)
@@ -583,7 +718,7 @@ class ABCSMC:
             particle.inferred_variables["initial-infections"].value,
             self.trials,
             self.start_end_date,
-            self.movement_multipliers_table,
+            particle.inferred_variables["contact-multipliers"].value,
             self.stochastic_mode,
             self.random_seed
         )
@@ -699,6 +834,7 @@ class ABCSMC:
             "weights": weights,
             "distances": distances,
             "best_particle": particles[int(np.argmin(distances))],
+            "best_distance": distances[int(np.argmin(distances))],
             "time": time.time() - t0
         }
 

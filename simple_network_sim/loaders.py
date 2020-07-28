@@ -203,6 +203,14 @@ def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
     parameters["initial_infections_stddev"] = float(parameters["initial_infections_stddev"])
     parameters["initial_infections_stddev_min"] = float(parameters["initial_infections_stddev_min"])
     parameters["initial_infections_kernel_sigma"] = float(parameters["initial_infections_kernel_sigma"])
+    parameters["contact_multipliers_stddev"] = float(parameters["contact_multipliers_stddev"])
+    parameters["contact_multipliers_kernel_sigma"] = float(parameters["contact_multipliers_kernel_sigma"])
+
+    partitions = [datetime.datetime.strptime(d, '%Y-%m-%d').date()
+                  for d in parameters["contact_multipliers_partitions"].split(", ")]
+    partitions.append(datetime.date.max)
+    partitions.insert(0, datetime.date.min)
+    parameters["contact_multipliers_partitions"] = partitions
 
     return parameters
 
