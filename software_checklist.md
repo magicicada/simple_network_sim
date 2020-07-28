@@ -106,7 +106,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [x] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> We have (slightly outdated) [user](README.md), [developer](https://readthedocs.org/projects/simple-network-sim/badge/?version=latest) and (slightly outdated) [algorithm](model_overview_simple_network_sim.md) documentation. A GitHub issue has been raised to address the areas of documentation that need to be updated.
+> We have [user](README.md), [developer](https://readthedocs.org/projects/simple-network-sim/badge/?version=latest) and (slightly outdated) [algorithm](model_overview_simple_network_sim.md) documentation. A GitHub issue has been raised to address the areas of documentation that need to be updated.
 
 ### Is there suitable collaboration infrastructure?
 
