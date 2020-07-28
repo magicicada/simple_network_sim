@@ -228,10 +228,15 @@ def test_readInfectionProbability_invalid_prob(prob):
         loaders.readInfectionProbability(pd.DataFrame([{"Date": "2020-02-01", "Value": prob}]))
 
 
-def test_readRandomSeed():
-    df = pd.DataFrame([123], columns=["Value"])
+@pytest.mark.parametrize("seed,expected", [(123, 123), (34700715133619517192394997874797195519, 34700715133619517192394997874797195519), ("12", 12)])
+def test_readRandomSeed(seed, expected):
+    df = pd.DataFrame([seed], columns=["Value"])
 
-    assert loaders.readRandomSeed(df) == 123
+    assert loaders.readRandomSeed(df) == expected
+
+
+def test_readRandomSeed_none():
+    assert loaders.readRandomSeed(None) == 0
 
 
 def test_readRandomSeed_bad_shape():

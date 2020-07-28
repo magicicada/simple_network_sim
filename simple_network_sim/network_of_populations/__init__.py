@@ -54,7 +54,6 @@ class NetworkOfPopulation(NamedTuple):
     startDate: dt.date
     endDate: dt.date
     stochastic: bool
-    randomState: np.random.Generator
 
 
 def dateRange(startDate: dt.date, endDate: dt.date) -> Iterable[dt.date]:
@@ -101,11 +100,13 @@ def getInitialParameter(
 def basicSimulationInternalAgeStructure(
         network: NetworkOfPopulation,
         initialInfections: Dict[NodeName, Dict[Age, float]],
+        generator: np.random.Generator,
 ) -> pd.DataFrame:
     """Run the simulation of a disease progressing through a network of regions.
 
     :param network: This is a NetworkOfPopulation instance which will have the states field modified by this function.
     :param initialInfections: Initial infections of the disease
+    :param generator: Seeded random number generated to use in this simulation
     :return: A time series of the size of the infectious population.
     """
     history = []
@@ -127,7 +128,7 @@ def basicSimulationInternalAgeStructure(
             current,
             network.progression,
             network.stochastic,
-            network.randomState
+            generator,
         )
 
         internalContacts = getInternalInfectiousContacts(
@@ -136,7 +137,7 @@ def basicSimulationInternalAgeStructure(
             multipliers.contact,
             network.infectiousStates,
             network.stochastic,
-            network.randomState
+            generator,
         )
         externalContacts = getExternalInfectiousContacts(
             network.graph,
@@ -144,7 +145,7 @@ def basicSimulationInternalAgeStructure(
             multipliers.movement,
             network.infectiousStates,
             network.stochastic,
-            network.randomState
+            generator,
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
@@ -154,7 +155,7 @@ def basicSimulationInternalAgeStructure(
             current,
             infectionProb,
             network.stochastic,
-            network.randomState
+            generator,
         )
 
         df = nodesToPandas(date, current)
@@ -801,7 +802,6 @@ def createNetworkOfPopulation(
         start_end_date: pd.DataFrame,
         movement_multipliers_table: pd.DataFrame = None,
         stochastic_mode: pd.DataFrame = None,
-        random_seed: pd.DataFrame = None,
 ) -> NetworkOfPopulation:
     """Create the network of the population, loading data from files.
 
@@ -817,7 +817,6 @@ def createNetworkOfPopulation(
     :param movement_multipliers_table: pd.Dataframe with the movement multipliers. This may be None, in
                                        which case no multipliers are applied to the movements.
     :param stochastic_mode: Use stochastic mode for the model
-    :param random_seed: Random number generator seed used for stochastic mode
     :return: The constructed network
     """
     infection_prob = loaders.readInfectionProbability(infection_prob)
@@ -827,7 +826,6 @@ def createNetworkOfPopulation(
     trials = loaders.readTrials(trials)
     start_date, end_date = loaders.readStartEndDate(start_end_date)
     stochastic_mode = loaders.readStochasticMode(stochastic_mode)
-    random_seed = loaders.readRandomSeed(random_seed)
 
     # diseases progression matrix
     progression = loaders.readCompartmentRatesByAge(compartment_transition_table)
@@ -855,7 +853,7 @@ def createNetworkOfPopulation(
     if movement_multipliers_table is not None:
         movementMultipliers = loaders.readMovementMultipliers(movement_multipliers_table)
     else:
-        movementMultipliers: Dict[dt.date, loaders.Multiplier] = {}
+        movementMultipliers = {}
 
     # age-based infection matrix
     mixingMatrix = loaders.MixingMatrix(mixing_matrix_table)
@@ -899,7 +897,6 @@ def createNetworkOfPopulation(
         startDate=start_date,
         endDate=end_date,
         stochastic=stochastic_mode,
-        randomState=np.random.default_rng(random_seed)
     )
 
 
