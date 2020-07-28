@@ -10,7 +10,7 @@ This checklist is part of ongoing work on a model scoresheet for SCRC models. It
 
 ### Date
 
-> 20200727
+> 20200728
 
 ### Version identifier
 
@@ -40,7 +40,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> Stochasticity is handled by using a seed from the data pipeline to generate a “random state” object which is passed to functions that generate random numbers. Git url and sha are saved when the software is run. Files that specify the conda environment are present: [spec-file.txt](spec-file.txt) and [environment.yml](environment.yml). Documentation explaining how to run the software with some test data can be found in the [readme](readme.md). We have not yet produced "real" results based on provenanced, reliable source data - this work is ongoing and reproducibility will be assured by a combination of this software and the SCRC data pipeline.
+> Stochasticity is handled by using a seed from the data pipeline to generate a “random state” object which is passed to functions that generate random numbers. Where multiple processes are used, seeds for each process / iteration are generated based on a single initial seed, these are assured by `numpy` to be independently random. Git url and sha are saved when the software is run. Files that specify the `conda` environment are present: [spec-file.txt](spec-file.txt) and [environment.yml](environment.yml). Documentation explaining how to run the software with some test data can be found in the [readme](readme.md). We have not yet produced "real" results based on provenanced, reliable source data - this work is ongoing and reproducibility will be assured by a combination of this software and the SCRC data pipeline.
 
 ### Are there appropriate tests?  (And are they automated?)
 
@@ -69,7 +69,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> This applies to our test data and (can’t guarantee that it will run on any system) but regression tests have been run (informally) on a range of platforms (e.g. HPC, Windows 10, OSX). We do not use multiple processes at present - this will change very soon.
+> This applies to our test data and (can’t guarantee that it will run on any system) but regression tests have been run (informally) on a range of platforms (e.g. HPC, Windows 10, OSX). We use multiple processes only to run the stochastic model multiple times with different random seeds, not to accelerate an single model run.
 
 ### Has any sort of automated code checking been applied?
 
