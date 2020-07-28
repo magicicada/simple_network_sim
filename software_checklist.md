@@ -127,7 +127,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [x] Needs to be addressed
 >
-> Dependencies are specified in a conda [spec-file](spec-file.txt). We are investigating how best to handle `git` as a binary dependency in the conda paradigm, but this is not a major issue. We depend on the SCRC Data Pipeline and [SCRC Data Pipeline API](https://github.com/ScottishCovidResponse/data_pipeline_api) which are not yet sufficiently developed to ensure robust, reproducible operation - they are under intensive development and we expect to have this soon.
+> Dependencies are specified in a conda [spec-file](spec-file.txt). We depend on the SCRC Data Pipeline and [SCRC Data Pipeline API](https://github.com/ScottishCovidResponse/data_pipeline_api) which are not yet sufficiently developed to ensure robust, reproducible operation - they are under intensive development and we expect to have this soon.
 
 ### Is input and output data handled carefully?
 
