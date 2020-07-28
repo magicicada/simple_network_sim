@@ -135,7 +135,7 @@ Additionally, for each question please explain the situation and include any rel
 - Is the code appropriately parameterized (i.e. have hard coded parameters been removed)?
 
 > - [ ] Sufficiently addressed
-> - [ ] Some work remaining or caveats
-> - [x] Needs to be addressed
+> - [x] Some work remaining or caveats
+> - [ ] Needs to be addressed
 > 
-> The SCRC Data Pipeline is not being used fully as it is under intensive development. We expect to have this soon. Code is parameterised.
+> From as software engineering perspective, simple_network_sim uses the data pipeline api as fully as is currently possible. Work is ongoing to run with "real" data via the pipeline. Code is parameterised.
