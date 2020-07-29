@@ -64,7 +64,7 @@ Related both to the inputs and the internal state of the model at each timestep,
 \item $p$ the infection probability of a contact between an infectious person and a susceptible person (unique value for all age groups, nodes and times)
 \item $x_t$ is the (optional) movement modifier at time $t$, supplied as part of an input file
 \item $y_t$ is the (optional) contact modifier at time $t$, supplied as part of an input file
-\item $A_{u,k}$ is age class $k$ at node $u$ (Where it is clear that we are talking about individuals in all nodes we may abuse notation and use $A_k$)
+\item $A_{u,k}$ is age class $k$ at node $u$. Where it is clear that we are talking about individuals in all nodes we may abuse notation and use $A_k$, and when talking about individuals in a node of all ages, we use $A_u$.
 \item $X_t(A_{u,k})$ where $X$ is a compartment in the compartmental model is the number of individuals in compartment $X$ in age class $A_k$ in node $u$ at time $t$
 \item $N_t(A_{u,k})$ is the total number of individuals in age class $A_k$ in node $u$ at time $t$
 \item For convenience, we also define $\mathcal{I}_t(A_{u,k})$ as the number of individuals in \emph{any} infectious compartment in age class $A_k$ in node $u$ at time $t$
@@ -83,19 +83,44 @@ The central mechanism of infection uses the notion of a number of infectious con
 
 \subsubsection{Calculating the number of within-node infectious contacts}
 
-Within node, the number of infectious contacts targeting susceptible individuals in age class $A_i$ at time $t$ is a function of the proportion of infectious individuals in each age class  within the node and the expected number of contacts between an individual in $A_i$ and individuals in each of the source age classes at time $t-1$. 
+Within node, the number of infectious contacts targeting susceptible individuals in age class $A_i$ at time $t$ is a function of the proportion of infectious individuals in each age class within the node and the expected number of contacts between an individual in $A_i$ and individuals in each of the source age classes at time $t-1$. 
 
-Within node $u$, for a single source age class $A_j$ where $C_{i,j}$ is the number of contacts that an individual in $A_i$ expects to have with individuals in $A_j$, $y_{t-1}$ is the time-varying contact modifier (defaulting to 1.0 if none is supplied), then the number of within-node infectious contacts from $A_j$ to $A_i$ in the deterministic model is: 
-$$
-y_{t-1}~C_{i,j}~p_{t-1, \mathcal{I}}(A_{u,j})~ p_{t-1, S}(A_{u,i}) 
-$$
+Within node $u$, for a single source age class $A_j$ where $C_{i,j}$ is the number of contacts that an individual in $A_i$ expects to have with individuals in $A_j$, $y_{t-1}$ is the time-varying contact modifier (defaulting to 1.0 if none is supplied), then the number of within-node infectious contacts from $A_j$ to $A_i$ is defined as follows:
+
+\paragraph{Deterministic mode}\hfill \break
+The number of infectious contacts is given by:
+$$y_{t-1}~C_{i,j}~p_{t-1, \mathcal{I}}(A_{u,j})~ p_{t-1, S}(A_{u,i})$$
+
+\paragraph{Stochastic mode}\hfill \break
+For each infected person in $A_j$, we ramdomly sample from a Poisson distribution, $\mathcal{P}(y_{t-1}~C_{i,j})$ to generate how many contacts this person had with people in $A_i$. The average of the Poisson distribution will be the same value as the one in the deterministic model. Then for each infectious person, and it's random number of contacts $contacts$, we randomly sample from a hypergeometric distribution (the hypergeometric distribution is used instead of binomial because we assume the contacts are with unique people, hence the random sampling must be done without replacement), with parameters $Hypergeometric(M=N_t(A_{u,i}), n=S_t(A_{u,i}), N=contacts)$, i.e. we sample $contact$ times in a the total population of node $u$, with a "success" being a susceptible person. These infectious contacts for all people are then summed.
+
+Remarks:
+\begin{itemize}
+\item This is a compound probability system, and it allows retaining individual level heterogeneity even with group level parameters. They are often used to allow more variability in systems where simple distributions do not allow for enough variability (in this case, running the hypergeometric with the same $contacts$ for every individual)
+\item The modelling of super spreaders could be investigated by replacing the Poisson distribution by a heavier tailed one (Negative Binomial, Zeta, etc)
+\item Replacing all values by distribution averages converges to the result of the deterministic version
+\end{itemize}
 
 \subsubsection{Calculating the number of between-node infectious contacts}
 
-For between-node infectious contact calculations, we use an input file of expected directional contacts, an optional time-varying movement modifier, and the disease state at the previous time of the nodes involved.  For a particular pair of nodes $u, v$ at time $t$, let $w(u, v)$ be the number of expected directional contacts, $x_t$ the appropriate time's movement modifier, $p_{v,\mathcal{I}}$ the proportion of individuals in $u$ in an infectious class, the expected number of infectious contacts from $u$ targetting $v$ is $x_t(p_{v,\mathcal{I}}w(u, v))$.  We sum over all nodes that have directed contact toward $v$, and then distribute those infectious contacts amongst the population within $v$.
+For between-node infectious contact calculations, we use an input file of expected directional contacts, an optional time-varying movement modifier, and the disease state at the previous time of the nodes involved.  For a particular pair of nodes $u, v$ at time $t$, let $w(u, v)$ be the number of expected directional contacts, $x_t$ the appropriate time's movement modifier, $p_{v,\mathcal{I}}$ the proportion of individuals in $u$ in an infectious class, the expected number of infectious contacts from $u$ targetting $v$ is defined as following. At this stage, all age groups are mixed in together.
+
+\paragraph{Deterministic mode}\hfill \break
+The number of infectious contacts is given by:
+$$x_{t-1} p_{t-1, \mathcal{I}}(A_u) p_{t-1, S}(A_v) w(u, v)$$
+
+\paragraph{Stochastic mode}\hfill \break
+The stochastic version attempts at randomly generating those commutes that are generated from infectious people in $u$, to susceptible people in $v$. Therefore we first sample the number of commutes originating from infectious people in $u$, using a Binomial distribution, 
+$$commutes \ from \ infectious \sim Bin(p=p_{t-1, \mathcal{I}}(A_u), N=x_{t-1} * w(u, v))$$
+
+Then given a number of such commutes, we select those that targeted susceptible people in $v$.
+$$commutes \ from \ infectious \ to \ susceptible \sim Bin(p=p_{t-1, S}(A_v), N=commutes \ from \ infectious)$$
+
+\paragraph{Assignment to age groups}\hfill \break
+We then sum over all nodes that have directed contact toward $v$, and then distribute those infectious contacts amongst the population within $v$. In the deterministic mode we assign the contacts using the ratios of people in each age group to total number of people. In the stochastic mode we use a multinomial distribution to randomly assign the contacts into age groups, with the probabilities being the ratios of people in each age group.
 
 \subsection{Disease progression}
-Progression through disease states from exposed onward as well as the compartmental model in use is specified by an input file of compartmental transition rates.   As of the first writing of this document (28th July, 2020) we have encoded two compartmental models (as in Figure \ref{fig:compartments}) for use with simple network sim: both are essentially SEIR models, but with additional compartments for severely ill (assumed hospitalised) and asymptomatic infectious individuals.  In a deterministic run of the model, at each time step the (fractional) number of people flowing from a state $s_i$ to a state $s_j$ given a rate of $r_{i,j}$ is simply calculated as $|s_i|r_{i,j}$, where $|s_i|$ is the number of people in $s_i$.  In a stochastic run, the integer number of people flowing from $s_i$ to $s_j$ given rate $r_{i,j}$ is a sample from a multinomial distribution with parameters $|s_i|$, $r_{i,j}$.
+Progression through disease states from exposed onward as well as the compartmental model in use is specified by an input file of compartmental transition rates. As of the first writing of this document (28th July, 2020) we have encoded two compartmental models (as in Figure \ref{fig:compartments}) for use with simple network sim: both are essentially SEIR models, but with additional compartments for severely ill (assumed hospitalised) and asymptomatic infectious individuals. In a deterministic run of the model, at each time step the (fractional) number of people flowing from a state $s_i$ to a state $s_j$ given a rate of $r_{i,j}$ is simply calculated as $|s_i|r_{i,j}$, where $|s_i|$ is the number of people in $s_i$.  In a stochastic run, the integer number of people flowing from $s_i$ to $s_j$ given rate $r_{i,j}$ is a sample from a multinomial distribution with parameters $|s_i|$, $r_{i,j}$.
 
 \begin{figure}[h!]
 \scalebox{0.8}{\includegraphics{images/compartments.jpg}}
@@ -105,7 +130,7 @@ Progression through disease states from exposed onward as well as the compartmen
 
 
 \subsection{Infection Seeding}
-Infection seeding is currently from an input file which specifies the number of individuals in compartment $E$ in some set of specified nodes.  
+Infection seeding is currently from an input file which specifies the number of individuals in compartment $E$ in some set of specified nodes. As this parameter cannot be accurately observed, it is inferred.
 
 \section{ABC-SMC Inference}
 
