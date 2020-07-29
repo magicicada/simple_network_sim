@@ -68,7 +68,7 @@ Related both to the inputs and the internal state of the model at each timestep,
 \item $X_t(A_{u,k})$ where $X$ is a compartment in the compartmental model is the number of individuals in compartment $X$ in age class $A_k$ in node $u$ at time $t$
 \item $N_t(A_{u,k})$ is the total number of individuals in age class $A_k$ in node $u$ at time $t$
 \item For convenience, we also define $\mathcal{I}_t(A_{u,k})$ as the number of individuals in \emph{any} infectious compartment in age class $A_k$ in node $u$ at time $t$
-\item Similarly for convenience, we define as $p_{t, \mathcal{I}}(A_{u,k}) = \frac{\mathcal{I}_t(A_{u,k})}{N(A_{u,k})}$ the proportion of age class $A_k$ in node $u$ at time $t$ that is infectious, and as $p_{t, S}(A_{u,k}) = \frac{S_t(A_{u,k})}{N(A_{u,k})}$ the proportion of age class $A_k$ in node $u$ at time $t$ that is susceptible.
+\item Similarly for convenience, we define as $p_{t, \mathcal{I}}(A_{u,k}) = \frac{\mathcal{I}_t(A_{u,k})}{N(A_{u,k})}$ the proportion of age class $A_k$ in node $u$ at time $t$ that is infectious, and as $p_{t, S}(A_{u,k}) = \frac{S_t(A_{u,k})}{N(A_{u,k})}$ the proportion of age class $A_k$ in node $u$ at time $t$ that is susceptible
 \item $C$ is a matrix describing contact between age classes, where $C_{i,j}$ is the expected number of contacts that an individual in age class $A_i$ has with an individual in age class $A_j$.
 \end{itemize}
 
@@ -92,7 +92,7 @@ The number of infectious contacts is given by:
 $$y_{t-1}~C_{i,j}~p_{t-1, \mathcal{I}}(A_{u,j})~ p_{t-1, S}(A_{u,i})$$
 
 \paragraph{Stochastic mode}\hfill \break
-For each infected person in $A_j$, we ramdomly sample from a Poisson distribution, $\mathcal{P}(y_{t-1}~C_{i,j})$ to generate how many contacts this person had with people in $A_i$. The average of the Poisson distribution will be the same value as the one in the deterministic model. Then for each infectious person, and it's random number of contacts $contacts$, we randomly sample from a hypergeometric distribution (the hypergeometric distribution is used instead of binomial because we assume the contacts are with unique people, hence the random sampling must be done without replacement), with parameters $Hypergeometric(M=N_t(A_{u,i}), n=S_t(A_{u,i}), N=contacts)$, i.e. we sample $contact$ times in a the total population of node $u$, with a "success" being a susceptible person. These infectious contacts for all people are then summed.
+For each infected person in $A_j$, we randomly sample from a Poisson distribution, $\mathcal{P}(y_{t-1}~C_{i,j})$ to generate how many contacts this person had with people in $A_i$. The average of the Poisson distribution will be the same value as the one in the deterministic model. Then for each infectious person, and it's random number of contacts $contacts$, we randomly sample from a hypergeometric distribution (the hypergeometric distribution is used instead of binomial because we assume the contacts are with unique people, hence the random sampling must be done without replacement), with parameters $Hypergeometric(M=N_t(A_{u,i}), n=S_t(A_{u,i}), N=contacts)$, i.e. we sample $contact$ times in a the total population of node $u$, with a "success" being a susceptible person. These infectious contacts for all people are then summed.
 
 Remarks:
 \begin{itemize}
@@ -103,14 +103,14 @@ Remarks:
 
 \subsubsection{Calculating the number of between-node infectious contacts}
 
-For between-node infectious contact calculations, we use an input file of expected directional contacts, an optional time-varying movement modifier, and the disease state at the previous time of the nodes involved.  For a particular pair of nodes $u, v$ at time $t$, let $w(u, v)$ be the number of expected directional contacts, $x_t$ the appropriate time's movement modifier, $p_{v,\mathcal{I}}$ the proportion of individuals in $u$ in an infectious class, the expected number of infectious contacts from $u$ targetting $v$ is defined as following. At this stage, all age groups are mixed in together.
+For between-node infectious contact calculations, we use an input file of expected directional contacts, an optional time-varying movement modifier, and the disease state at the previous time of the nodes involved.  For a particular pair of nodes $u, v$ at time $t$, let $w(u, v)$ be the number of expected directional contacts, $x_t$ the appropriate time's movement modifier, $p_{v,\mathcal{I}}$ the proportion of individuals in $u$ in an infectious class, the expected number of infectious contacts from $u$ targeting $v$ is defined as following. At this stage, all age groups are mixed in together.
 
 \paragraph{Deterministic mode}\hfill \break
 The number of infectious contacts is given by:
 $$x_{t-1} p_{t-1, \mathcal{I}}(A_u) p_{t-1, S}(A_v) w(u, v)$$
 
 \paragraph{Stochastic mode}\hfill \break
-The stochastic version attempts at randomly generating those commutes that are generated from infectious people in $u$, to susceptible people in $v$. Therefore we first sample the number of commutes originating from infectious people in $u$, using a Binomial distribution, 
+The stochastic version attempts at randomly generating those commutes that are generated from infectious people in $u$, to susceptible people in $v$. Therefore, we first sample the number of commutes originating from infectious people in $u$, using a Binomial distribution, 
 $$commutes \ from \ infectious \sim Bin(p=p_{t-1, \mathcal{I}}(A_u), N=x_{t-1} * w(u, v))$$
 
 Then given a number of such commutes, we select those that targeted susceptible people in $v$.
@@ -124,7 +124,7 @@ Progression through disease states from exposed onward as well as the compartmen
 
 \begin{figure}[h!]
 \scalebox{0.8}{\includegraphics{images/compartmentsFig.png}}
-\caption{Two compartmental models currently available as input files to simple network sim.  In both, $S$ are susceptible individuals, $E$ are exposed individuals who are not yet infectious, $I$ are infectious individuals with symptoms,  $H$ are hospitalised individuals, $R$ are recovered individuals, $D$ are dead individuals. On the left, $A$  are asymptomatic individuals who may or may not ever develop symptoms, whereas on the right, $A$ are asymptomatic individuals who will eventually develop symptoms and \textbf{$A_2$} are \emph{truly asymptomatic} individuals who will never develop symptoms}
+\caption{Two compartmental models currently available as input files to simple network sim.  In both, $S$ are susceptible individuals, $E$ are exposed individuals who are not yet infectious, $I$ are infectious individuals with symptoms, $H$ are hospitalised individuals, $R$ are recovered individuals, $D$ are dead individuals. On the left, $A$ are asymptomatic individuals who may or may not ever develop symptoms, whereas on the right, $A$ are asymptomatic individuals who will eventually develop symptoms and \textbf{$A_2$} are \emph{truly asymptomatic} individuals who will never develop symptoms}
 \label{fig:compartments}
 \end{figure}
 
@@ -174,16 +174,16 @@ Based on ABC (Approximate Bayesian Computation, see \cite{ABC}), and inspired fr
 We aim at inferring:
 \begin{itemize}
 \item The infection probability $p$
-\item The initial state of the model which we assume as $E_0(A_{u,[17, 70)})$, the number of exposed people in age group $[17,70)$ in every node at time 0. For a total of 14 parameters
+\item The initial state of the model which we assume as $E_0(A_{u,[17, 70)})$, the number of exposed people in age group $[17,70)$ in every node at time 0. There are 14 such parameters
 \item The contact multipliers $y_t$, which is a constant-by-parts function with 2 changes
 \end{itemize}
 
-This is a total of 18 parameters to infer, which is quite a large problem. For starting time of the model we use the date of 9 March 2020, 2 weeks before the first recorded death in Scotland. The perturbation kernel used is the uniform noise $K_t(\theta, \theta^*) \sim \mathcal{U}(-\sigma, \sigma)$ where $\sigma$ is different for every inferred parameter. The distance used is the root mean sum of squares in the time series of deaths per healthboard, $$d(x^*, x_0)=\sqrt{\frac{1}{\#hb * \#t}\sum_{hb, t} (model \ deaths^{hb}_t - historical \ deaths^{hb}_t)^2}$$ where the time series are aggregated by weeks for increasing smoothing. The time series of deaths is one of the few reliable numbers (compared for example to the number of infected people, which is mostly unknown due to insufficient testing). We use $T=5$, $N=100$, and the $\epsilon$ strategy is to use the median of the distances at the previous SMC iteration, with an infinite threshold for the first iteration. Finally the following priors are used:
+This is a total of 18 parameters to infer, which is quite a large problem. For starting time of the model, we use the date of 9 March 2020, 2 weeks before the first recorded death in Scotland. The perturbation kernel used is the uniform noise $K_t(\theta, \theta^*) \sim \mathcal{U}(-\sigma, \sigma)$ where $\sigma$ is different for every inferred parameter. The distance used is the root mean sum of squares in the time series of deaths per healthboard, $$d(x^*, x_0)=\sqrt{\frac{1}{\#hb * \#t}\sum_{hb, t} (model \ deaths^{hb}_t - historical \ deaths^{hb}_t)^2}$$ where the time series are aggregated by weeks for increasing smoothing. The time series of deaths is one of the few reliable numbers (compared for example to the number of infected people, which is mostly unknown due to insufficient testing). We use $T=5$, $N=100$, and the $\epsilon$ strategy is to use the median of the distances at the previous SMC iteration, with an infinite threshold for the first iteration. Finally, the following priors are used:
 
 \begin{itemize}
 \item $p \sim Beta(4, 76)$ which allows to have a distribution peaked around a mean value of $5\%$ which is our prior
-\item for every region $u$, $E_0(A_{u,[17, 70)}) \sim Lognormal(mean=estimated \ infected, std=max(0.2 * mean, 10))$, i.e. the parameters are chosen such that we match our manually estimated numbers, with a standard deviation proportional to the mean to account for the fact that different regions have very different estimations due to different remoteness
-\item $y_t \sim Lognormal(mean=estimated \ infected, std=0.2 * mean)$, with a similar logic as above
+\item for every region $u$, $E_0(A_{u,[17, 70)}) \sim LogNormal(mean=estimated \ infected, std=max(0.2 * mean, 10))$, i.e. the parameters are chosen such that we match our manually estimated numbers, with a standard deviation proportional to the mean to account for the fact that different regions have very different estimations due to different remoteness
+\item $y_t \sim LogNormal(mean=estimated \ infected, std=0.2 * mean)$, with a similar logic as above
 \end{itemize}
 
 The inference results for the infection probability are shown in Figures [\ref{fig:abcsmc_statistics}] and [\ref{fig:inferred_infection_probability}].
