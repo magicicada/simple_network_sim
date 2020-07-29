@@ -22,6 +22,10 @@ Do we have sufficient confidence in the correctness of the software to trust the
 
 This is your overall judgement on the level of confidence based on all the aspects of the checklist. There is no formulaic way to arrive at this overall assessment based on the individual checklist answers but please explain how the measures in place combine to reach this level of confidence and make clear any caveats (eg applies for certain ways of using the software and not others).
 
+> - [ ] Yes
+> - [x] Yes, with caveats
+> - [ ] No
+>
 > The code is well crafted and organised, with documentation, and automated unit and regression testing via continuous integration. Execution environment is specified using [conda](https://docs.conda.io/en/latest/). It is planned that data integrity and provenance for reproducible model runs will be assured by use of the SCRC data pipeline, which is not yet fully available. Further work will be required to integrate with this. There are some areas where important improvements can are still being made (see below and the [project board](https://github.com/orgs/ScottishCovidResponse/projects/6)).
 
 ## Checklist
