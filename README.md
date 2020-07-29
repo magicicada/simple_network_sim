@@ -188,6 +188,14 @@ cd doc
 sphinx-build -b html -d build/doctrees source build/html
 ```
 
+## Building the latex documentation
+
+To build the [latex document](doc/model_documentation/model_description.pdf), you need a recent installation of a latex distribution (e.g. MiKTeX, and an editor, e.g. TeXMaker), and use the "PDFLaTex" compiler to generate the pdf file, through the command:
+
+```{shell}
+pdflatex doc/model_documentation/model_description.tex
+```
+
 ## Continuous integration
 
 [Continuous integration uses Travis, codacy and Codecov](ci.md).
