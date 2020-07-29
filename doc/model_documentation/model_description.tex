@@ -98,8 +98,9 @@ For between-node infectious contact calculations, we use an input file of expect
 Progression through disease states from exposed onward as well as the compartmental model in use is specified by an input file of compartmental transition rates.   As of the first writing of this document (28th July, 2020) we have encoded two compartmental models (as in Figure \ref{fig:compartments}) for use with simple network sim: both are essentially SEIR models, but with additional compartments for severely ill (assumed hospitalised) and asymptomatic infectious individuals.  In a deterministic run of the model, at each time step the (fractional) number of people flowing from a state $s_i$ to a state $s_j$ given a rate of $r_{i,j}$ is simply calculated as $|s_i|r_{i,j}$, where $|s_i|$ is the number of people in $s_i$.  In a stochastic run, the integer number of people flowing from $s_i$ to $s_j$ given rate $r_{i,j}$ is a sample from a multinomial distribution with parameters $|s_i|$, $r_{i,j}$.
 
 \begin{figure}[h!]
-%\scalebox{1.0}{\includegraphics{Nothing here yet}}
+\scalebox{0.8}{\includegraphics{images/compartments.jpg}}
 \caption{Two compartmental models currently available as input files to simple network sim.  In both, $S$ are susceptible individuals, $E$ are exposed individuals who are not yet infectious, $I$ are infectious individuals with symptoms,  $H$ are hospitalised individuals, $R$ are recovered individuals, $D$ are dead individuals. In model (L), $A$  are asymptomatic individuals who may or may not ever develop symptoms, whereas in model (R), $A$ are asymptomatic individuals who will eventually develop symptoms and \textbf{$A_2$} are \emph{truly asymptomatic} individuals who will never develop symptoms}
+\label{fig:compartments}
 \end{figure}
 
 
