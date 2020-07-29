@@ -188,15 +188,29 @@ This is a total of 18 parameters to infer, which is quite a large problem. For s
 The inference results for the infection probability are shown in figures [\ref{fig:abcsmc_statistics}] and [\ref{fig:inferred_infection_probability}].
 
 \begin{figure}
-  \includegraphics[width=\linewidth, scale=1]{images/abcsmc_statistics.jpg}
-  \caption{ABC-SMC run statistics. We notice the distances of particles quickly decrease and converge to a value of approximately 6.6, which seems to be the minimum attainable using this model parametrization. We also notice an increasing number of particles simulated in order to fill the required population, but remains in the thousands. The total run-time is about 1h30 on a somewhat powerful personal computer.}
+\scalebox{0.3}{\hspace*{-13cm}\includegraphics{images/abcsmc_statistics.png}}
+  \caption{ABC-SMC run statistics. We notice the distances of particles quickly decrease and converge to a value of approximately 6.6, which seems to be the minimum attainable using this model parametrization. The weights start off uniformly distributed but subsequentially target more particles. We also notice an increasing number of particles simulated in order to fill the required population, but remains in the thousands. The total run-time is about 1h30 on a somewhat powerful personal computer.}
   \label{fig:abcsmc_statistics}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[width=\linewidth, scale=1]{images/inferred_infection_probability.jpg}
+\scalebox{0.3}{\hspace*{-13cm}\includegraphics{images/inferred_infection_probability.png}}
   \caption{Inferrence results for infection probability. We observe that each intermediate distribution becomes more and more peaked and concentrated around what seems to be the posterior value, as evidenced by a converging interquantile range. The resulting approximation of the posterior distribution is peaking at $5.3\%$, very close to our prior. We observe similarly good convergence for the other inferred parameters.}
   \label{fig:inferred_infection_probability}
+\end{figure}
+
+Finally we show a run from a fitted model, in figures [\ref{fig:fitted_model_run}] and [\ref{fig:fitted_model_total_vs_historical}].
+
+\begin{figure}
+\scalebox{0.36}{\hspace*{-10cm}\includegraphics{images/fitted_model_run.png}}
+  \caption{Evolution of different disease compartments for fitted model.}
+  \label{fig:fitted_model_run}
+\end{figure}
+
+\begin{figure}
+\scalebox{0.5}{\hspace*{3cm}\includegraphics{images/fitted_model_total_vs_historical.png}}
+  \caption{Fitted vs historical death time series for all Scotland.}
+  \label{fig:fitted_model_total_vs_historical}
 \end{figure}
 
 \begin{thebibliography}{9}
