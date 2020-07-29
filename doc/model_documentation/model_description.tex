@@ -12,12 +12,12 @@
 \usepackage{epstopdf}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
-\title{Brief Article}
-\author{The Author}
-%\date{}                                           % Activate to display a given date or no date
+\title{Model Documentation - Simple Network Sim}
+%\author{Simple Network Sim Team}
+\date{29 July 2020}                                           % Activate to display a given date or no date
 
 \begin{document}
-%\maketitle
+\maketitle
 %\section{}
 %\subsection{}
 \section{Overview}
@@ -79,7 +79,7 @@ Simple network sim uses a notionally daily timestep, and forward-simulates by pe
 
 \subsection{Central infection mechanism: infectious contacts }
 
-The central mechanism of infection uses the notion of a number of infectious contacts that are distributed amongst the population in a node, structured by age class.  A single infectious contact allocated to a node is a contact that is between a person in an infectious class either within the node or from another node and a person who is susceptible within the node.  In addition to age-structured within-node infection, we take the total number of all of the infectious contacts exerted from other nodes, and then using that total number distribute the infectious contacts to a number of target individuals within the node using either a fixed combinatorial expression or a hypergeometric distribution to draw (with replacement) the number of susceptible people who are subject to those infectious contacts, subject to a specified probability of transmission given a single infectious contact.  This takes account of the possibility of a single susceptible individual in a node being the recipient of multiple infectious contacts.   All infectious classes are considered to have the same infectivity.  
+The central mechanism of infection uses the notion of a number of infectious contacts that are distributed amongst the population in a node, structured by age class.  A single infectious contact allocated to a node is a contact that is between a person in an infectious class either within the node or from another node and a person who is susceptible within the node.  In addition to age-structured within-node infection, we take the total number of all of the infectious contacts exerted from other nodes, and then using that total number distribute the infectious contacts to a number of target individuals within the node using either a fixed combinatorial expression or in the stochastic case a hypergeometric distribution to draw (with replacement) the number of susceptible people who are subject to those infectious contacts, subject to a specified probability of transmission given a single infectious contact.  This takes account of the possibility of a single susceptible individual in a node being the recipient of multiple infectious contacts.   All infectious classes are considered to have the same infectivity.  
 
 \subsubsection{Calculating the number of within-node infectious contacts}
 
@@ -120,11 +120,11 @@ $$commutes \ from \ infectious \ to \ susceptible \sim Bin(p=p_{t-1, S}(A_v), N=
 We then sum over all nodes that have directed contact toward $v$, and then distribute those infectious contacts amongst the population within $v$. In the deterministic mode we assign the contacts using the ratios of people in each age group to total number of people. In the stochastic mode we use a multinomial distribution to randomly assign the contacts into age groups, with the probabilities being the ratios of people in each age group.
 
 \subsection{Disease progression}
-Progression through disease states from exposed onward as well as the compartmental model in use is specified by an input file of compartmental transition rates. As of the first writing of this document (28th July, 2020) we have encoded two compartmental models (as in Figure \ref{fig:compartments}) for use with simple network sim: both are essentially SEIR models, but with additional compartments for severely ill (assumed hospitalised) and asymptomatic infectious individuals. In a deterministic run of the model, at each time step the (fractional) number of people flowing from a state $s_i$ to a state $s_j$ given a rate of $r_{i,j}$ is simply calculated as $|s_i|r_{i,j}$, where $|s_i|$ is the number of people in $s_i$.  In a stochastic run, the integer number of people flowing from $s_i$ to $s_j$ given rate $r_{i,j}$ is a sample from a multinomial distribution with parameters $|s_i|$, $r_{i,j}$.
+Progression through disease states from exposed onward as well as the compartmental model in use is specified by an input file of compartmental transition rates. We have encoded two compartmental models (as in Figure \ref{fig:compartments}) for use with simple network sim: both are essentially SEIR models, but with additional compartments for severely ill (assumed hospitalised) and asymptomatic infectious individuals. In a deterministic run of the model, at each time step the (fractional) number of people flowing from a state $s_i$ to a state $s_j$ given a rate of $r_{i,j}$ is simply calculated as $|s_i|r_{i,j}$, where $|s_i|$ is the number of people in $s_i$.  In a stochastic run, the integer number of people flowing from $s_i$ to $s_j$ given rate $r_{i,j}$ is a sample from a multinomial distribution with parameters $|s_i|$, $r_{i,j}$.
 
 \begin{figure}[h!]
-\scalebox{0.8}{\includegraphics{images/compartments.jpg}}
-\caption{Two compartmental models currently available as input files to simple network sim.  In both, $S$ are susceptible individuals, $E$ are exposed individuals who are not yet infectious, $I$ are infectious individuals with symptoms,  $H$ are hospitalised individuals, $R$ are recovered individuals, $D$ are dead individuals. In model (L), $A$  are asymptomatic individuals who may or may not ever develop symptoms, whereas in model (R), $A$ are asymptomatic individuals who will eventually develop symptoms and \textbf{$A_2$} are \emph{truly asymptomatic} individuals who will never develop symptoms}
+\scalebox{0.8}{\includegraphics{images/compartmentsFig.png}}
+\caption{Two compartmental models currently available as input files to simple network sim.  In both, $S$ are susceptible individuals, $E$ are exposed individuals who are not yet infectious, $I$ are infectious individuals with symptoms,  $H$ are hospitalised individuals, $R$ are recovered individuals, $D$ are dead individuals. On the left, $A$  are asymptomatic individuals who may or may not ever develop symptoms, whereas on the right, $A$ are asymptomatic individuals who will eventually develop symptoms and \textbf{$A_2$} are \emph{truly asymptomatic} individuals who will never develop symptoms}
 \label{fig:compartments}
 \end{figure}
 
@@ -186,7 +186,7 @@ This is a total of 18 parameters to infer, which is quite a large problem. For s
 \item $y_t \sim Lognormal(mean=estimated \ infected, std=0.2 * mean)$, with a similar logic as above
 \end{itemize}
 
-The inference results for the infection probability are shown in figures [\ref{fig:abcsmc_statistics}] and [\ref{fig:inferred_infection_probability}].
+The inference results for the infection probability are shown in Figures [\ref{fig:abcsmc_statistics}] and [\ref{fig:inferred_infection_probability}].
 
 \begin{figure}
 \scalebox{0.3}{\hspace*{-13cm}\includegraphics{images/abcsmc_statistics.png}}
@@ -200,7 +200,7 @@ The inference results for the infection probability are shown in figures [\ref{f
   \label{fig:inferred_infection_probability}
 \end{figure}
 
-Finally we show a run from a fitted model, in figures [\ref{fig:fitted_model_run}] and [\ref{fig:fitted_model_total_vs_historical}].
+Finally we show a run from a fitted model, in Figures [\ref{fig:fitted_model_run}] and [\ref{fig:fitted_model_total_vs_historical}].
 
 \begin{figure}
 \scalebox{0.36}{\hspace*{-10cm}\includegraphics{images/fitted_model_run.png}}
