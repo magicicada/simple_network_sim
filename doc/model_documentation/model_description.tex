@@ -148,8 +148,9 @@ Based on ABC (Approximate Bayesian Computation, see \cite{ABC}), and inspired fr
   \eIf{$t=0$}{
    Sample $\theta^{**}$ from $\pi(\theta)$\;
    }{
+   \While{$\pi(\theta^{**}) = 0$}{
    Sample a particle $\theta^{*}$ from the previous population $\{\theta_{t-1}^i\}_i$ with normalized weights $\{w_{t-1}^i\}_i$ and perturb the particle to obtain $\theta^{**}\sim K_t(\theta|\theta^{*})$, where $K_t$ is the perturbation kernel\;
-   If $\pi(\theta^{**}) = 0$, retry the sampling and perturbation\;
+   }
   }
   
   Simulate a candidate dataset $x^* \sim f(x|\theta^{**})$\;
@@ -214,7 +215,7 @@ Finally we show a run from a fitted model, in figures [\ref{fig:fitted_model_run
 \end{figure}
 
 \begin{thebibliography}{9}
-\bibitem{ABCSMC} 
+\bibitem{ABCSMC}
 Tina Toni, David Welch, Natalja Strelkowa, Andreas Ipsen and Michael P.H Stumpf, Approximate Bayesian computation scheme for parameter inference and model selection in dynamical systems, J. R. Soc. Interface.6187–202
 \\\texttt{http://doi.org/10.1098/rsif.2008.0172}
 
