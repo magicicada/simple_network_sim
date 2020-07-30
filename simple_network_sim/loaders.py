@@ -6,6 +6,7 @@ import math
 from typing import Any, Dict, NamedTuple, List, Tuple, Union
 
 import networkx as nx  # type: ignore
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 # Type aliases used to make the types for the functions below easier to read
@@ -186,7 +187,7 @@ def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
     :return: a dict of inference parameters
     """
     if parameters.size == 0:
-        return {}
+        raise ValueError("Parameters cannot be empty")
 
     if "Parameter" not in parameters.columns:
         raise ValueError("'Parameter' column should be in ABCSMC parameters")
@@ -225,6 +226,10 @@ def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("With an empty target no inference can take place")
 
     historical_deaths = historical_deaths.set_index("Week beginning")
+
+    if np.any(historical_deaths.values < 0):
+        raise ValueError("Cannot have negative deaths")
+
     historical_deaths.index = pd.to_datetime(historical_deaths.index)
 
     return historical_deaths

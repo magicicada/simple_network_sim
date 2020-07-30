@@ -39,7 +39,7 @@ def uniform_pdf(
     return ((a <= x) & (x <= b)) / (b - a)
 
 
-def lognormal(mean: float, stddev: float, stddev_min: float = -np.inf):
+def lognormal(mean: float, stddev: float, stddev_min: float = -np.inf) -> stats.rv_continuous:
     """Constructs Scipy lognormal object to match a given mean and std
     dev passed as input. The parameters to input in the model are inverted
     from the formulas:
@@ -71,7 +71,12 @@ def split_dataframe(multipliers, partitions, col="Contact_Multiplier"):
     df.Date = pd.to_datetime(df.Date)
     for prev_date, curr_date in pairwise(partitions):
         index = (df.Date.dt.date < curr_date) & (df.Date.dt.date >= prev_date)
-        yield df.loc[index, col].values[0], index
+        values = df.loc[index, col].values
+
+        if len(values) == 0:
+            continue
+
+        yield values[0], index
 
 
 class InferredVariable(ABC):
@@ -84,6 +89,10 @@ class InferredVariable(ABC):
     - Convert to frame to be initialize and run the model
     """
     value: pd.DataFrame
+
+    def __init__(self, value: pd.DataFrame, mean: pd.DataFrame):
+        self.value = value
+        self.mean = mean
 
     @staticmethod
     @abstractmethod
@@ -123,8 +132,7 @@ class InferredInfectionProbability(InferredVariable):
             kernel_sigma: float,
             rng: np.random.Generator
     ):
-        self.value = value
-        self.mean = mean
+        super().__init__(value, mean)
         self.shape = shape
         self.kernel_sigma = kernel_sigma
         self.rng = rng
@@ -221,8 +229,7 @@ class InferredInitialInfections(InferredVariable):
             kernel_sigma: float,
             rng: np.random.Generator
     ):
-        self.value = value
-        self.mean = mean
+        super().__init__(value, mean)
         self.stddev = stddev
         self.stddev_min = stddev_min
         self.kernel_sigma = kernel_sigma
@@ -328,8 +335,7 @@ class InferredContactMultipliers(InferredVariable):
             partitions: List[dt.date],
             rng: np.random.Generator
     ):
-        self.value = value
-        self.mean = mean
+        super().__init__(value, mean)
         self.stddev = stddev
         self.rng = rng
         self.kernel_sigma = kernel_sigma
@@ -602,6 +608,8 @@ class ABCSMC:
         assert self.initial_infections_stddev > 0.
         assert self.initial_infections_stddev_min > 0.
         assert self.initial_infections_kernel_sigma > 0.
+        assert self.contact_multipliers_stddev > 0
+        assert self.contact_multipliers_kernel_sigma > 0
 
         self.compartment_transition_table = compartment_transition_table
         self.population_table = population_table
@@ -720,9 +728,9 @@ class ABCSMC:
             self.start_end_date,
             particle.inferred_variables["contact-multipliers"].value,
             self.stochastic_mode,
-            self.random_seed
         )
-        results = sm.runSimulation(network)
+        random_seed = loaders.readRandomSeed(self.random_seed)
+        results = sm.runSimulation(network, random_seed)
         aggregated = sm.aggregateResults(results)
         return aggregated.output
 

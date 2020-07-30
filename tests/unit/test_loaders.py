@@ -258,6 +258,108 @@ def test_readInfectionProbability_invalid_seed():
         loaders.readRandomSeed(pd.DataFrame([-1], columns=["Value"]))
 
 
+def test_readHistoricalDeaths():
+    historical_deaths = pd.DataFrame([
+        {"Week beginning": "2020-01-01", "HB1": 100.},
+        {"Week beginning": "2020-01-02", "HB1": 150.},
+        {"Week beginning": "2020-01-03", "HB1": 200.},
+    ])
+    df = loaders.readHistoricalDeaths(historical_deaths)
+    pd.testing.assert_frame_equal(df, pd.DataFrame(
+        index=pd.DatetimeIndex([dt.datetime(2020, 1, 1), dt.datetime(2020, 1, 2), dt.datetime(2020, 1, 3)],
+                               name="Week beginning"),
+        data=[100., 150., 200.],
+        columns=["HB1"]
+    ))
+
+
+def test_readHistoricalDeaths_empty():
+    historical_deaths = pd.DataFrame()
+
+    with pytest.raises(ValueError):
+        loaders.readHistoricalDeaths(historical_deaths)
+
+
+def test_readHistoricalDeaths_bad_input():
+    historical_deaths = pd.DataFrame([
+        {"Week beginning": "2020-01-01", "HB1": 100.},
+        {"Week beginning": "2020-37-02", "HB1": 150.},
+        {"Week beginning": "2020-01-03", "HB1": 200.},
+    ])
+
+    with pytest.raises(ValueError):
+        loaders.readHistoricalDeaths(historical_deaths)
+
+    historical_deaths = pd.DataFrame([
+        {"Week beginning": "2020-01-01", "HB1": 100.},
+        {"Week beginning": "2020-01-02", "HB1": -150.},
+        {"Week beginning": "2020-01-03", "HB1": 200.},
+    ])
+
+    with pytest.raises(ValueError):
+        loaders.readHistoricalDeaths(historical_deaths)
+
+
+def test_readABCSMCParameters():
+    parameters = pd.DataFrame([
+        {"Parameter": "n_smc_steps", "Value": 5},
+        {"Parameter": "n_particles", "Value": 100},
+        {"Parameter": "infection_probability_shape", "Value": 4.},
+        {"Parameter": "infection_probability_kernel_sigma", "Value": 0.1},
+        {"Parameter": "initial_infections_stddev", "Value": 0.2},
+        {"Parameter": "initial_infections_stddev_min", "Value": 10.},
+        {"Parameter": "initial_infections_kernel_sigma", "Value": 10.},
+        {"Parameter": "contact_multipliers_stddev", "Value": 0.2},
+        {"Parameter": "contact_multipliers_kernel_sigma", "Value": 0.2},
+        {"Parameter": "contact_multipliers_partitions", "Value": "2020-03-24, 2020-04-03"},
+    ])
+    parameters = loaders.readABCSMCParameters(parameters)
+    assert parameters["n_smc_steps"] == 5
+    assert parameters["n_particles"] == 100
+    assert parameters["infection_probability_shape"] == 4.
+    assert parameters["infection_probability_kernel_sigma"] == 0.1
+    assert parameters["initial_infections_stddev"] == 0.2
+    assert parameters["initial_infections_stddev_min"] == 10.
+    assert parameters["initial_infections_kernel_sigma"] == 10.
+    assert parameters["contact_multipliers_stddev"] == 0.2
+    assert parameters["contact_multipliers_kernel_sigma"] == 0.2
+    assert parameters["contact_multipliers_partitions"] == [dt.date.min, dt.date(2020, 3, 24), dt.date(2020, 4, 3),
+                                                            dt.date.max]
+
+
+def test_readABCSMCParameters_empty():
+    parameters = pd.DataFrame()
+
+    with pytest.raises(ValueError):
+        loaders.readABCSMCParameters(parameters)
+
+
+def test_readABCSMCParameters_bad_input():
+    parameters = pd.DataFrame([
+        {"Parameter": "n_smc_steps", "Value": 5},
+        {"Parameter": "n_particles", "Value": 100},
+        {"Parameter": "infection_probability_shape", "Value": 4.},
+        {"Parameter": "infection_probability_kernel_sigma", "Value": 0.1},
+        {"Parameter": "initial_infections_stddev", "Value": 0.2},
+        {"Parameter": "initial_infections_stddev_min", "Value": 10.},
+        {"Parameter": "initial_infections_kernel_sigma", "Value": 10.},
+        {"Parameter": "contact_multipliers_stddev", "Value": 0.2},
+        {"Parameter": "contact_multipliers_kernel_sigma", "Value": 0.2},
+        {"Parameter": "contact_multipliers_partitions", "Value": "2020-03-24, 2020-04-03"},
+    ])
+    with pytest.raises(ValueError):
+        loaders.readABCSMCParameters(parameters.rename({"Parameter": "Parameters"}, axis=1))
+
+    with pytest.raises(ValueError):
+        loaders.readABCSMCParameters(parameters.rename({"Value": "Values"}, axis=1))
+
+    with pytest.raises(KeyError):
+        loaders.readABCSMCParameters(parameters.head(5))
+
+    with pytest.raises(ValueError):
+        loaders.readABCSMCParameters(parameters.replace("2020-03-24, 2020-04-03", "2020-37-24, 2020-04-03"))
+
+
 def test_readStartEndDate():
     df = pd.DataFrame(
         [["start_date", "2020-01-01"], ["end_date", "2020-12-27"]],
