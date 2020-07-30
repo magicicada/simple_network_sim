@@ -16,9 +16,9 @@ import scipy.stats as stats
 from data_pipeline_api import standard_api
 from more_itertools import pairwise
 
-from simple_network_sim import loaders
-from simple_network_sim import network_of_populations as ss
-from simple_network_sim import sampleUseOfModel as sm
+from . import loaders, common
+from . import network_of_populations as ss
+from . import sampleUseOfModel as sm
 
 sys.path.append('..')
 
@@ -849,17 +849,15 @@ class ABCSMC:
         return results
 
 
-def run_inference(config, uri: str = "", git_sha: str = "") -> Dict:
+def run_inference(config) -> Dict:
     """Run inference routine
 
     :param config: Config file name
     :type config: string
-    :param uri: Git uri used
-    :param git_sha: git_sha used
     :return: Result runs for inference
     """
-
-    with standard_api.StandardAPI(config, uri=uri, git_sha=git_sha) as store:
+    info = common.get_repo_info()
+    with standard_api.StandardAPI(config, uri=info.uri, git_sha=info.git_sha) as store:
         abcsmc = ABCSMC(
             store.read_table("human/abcsmc-parameters", "abcsmc-parameters"),
             store.read_table("human/historical-deaths", "historical-deaths"),
