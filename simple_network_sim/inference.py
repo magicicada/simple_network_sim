@@ -857,7 +857,7 @@ def run_inference(config) -> Dict:
     :return: Result runs for inference
     """
     info = common.get_repo_info()
-    with standard_api.StandardAPI(config, uri=info.uri, git_sha=info.git_sha) as store:
+    with standard_api.StandardAPI.from_config(config, uri=info.uri, git_sha=info.git_sha) as store:
         abcsmc = ABCSMC(
             store.read_table("human/abcsmc-parameters", "abcsmc-parameters"),
             store.read_table("human/historical-deaths", "historical-deaths"),

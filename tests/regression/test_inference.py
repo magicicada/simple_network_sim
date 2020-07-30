@@ -4,7 +4,7 @@ from simple_network_sim import inference as inf
 
 
 def test_inference(base_data_dir):
-    summary = inf.run_inference(base_data_dir / "config_inference.yaml")
+    summary = inf.run_inference(str(base_data_dir / "config_inference.yaml"))
 
     assert summary["best_distance"] == 21.23091271317998
     assert summary["weights"] == [4.535230195917359e-12, 1.2577973135105333e-14]
