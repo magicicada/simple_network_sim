@@ -12,7 +12,7 @@ Adaptation of a simple network simulation model to COVID-19 (forked from https:/
 
 In `simple_network_sim`, a geographical area (e.g. Scotland) is represented as a series of connected nodes in a network, each of which has a population, stratified by age group. Some nodes have more movement between them than others. The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node. As simulated time incrementally moves forward, the model predicts the number of people in each disease state in each node.
 
-A more detailed [model overview is available](model_overview_simple_network_sim.md).
+A more detailed [model overview is available](doc/model_documentation/model_description.pdf).
 
 ## Contributing
 
@@ -186,6 +186,14 @@ Then:
 ```{shell}
 cd doc
 sphinx-build -b html -d build/doctrees source build/html
+```
+
+## Building the latex documentation
+
+To build the [latex document](doc/model_documentation/model_description.pdf), you need a recent installation of a latex distribution (e.g. MiKTeX, and an editor, e.g. TeXMaker), and use the "PDFLaTex" compiler to generate the pdf file, through the command:
+
+```{shell}
+pdflatex doc/model_documentation/model_description.tex
 ```
 
 ## Continuous integration
