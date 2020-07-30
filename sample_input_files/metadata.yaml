@@ -6,6 +6,13 @@
   filename: human/compartment-transition/1/data.h5
   verified_hash: edc81258b41eca4c234701d6de23132937ad77a2
 -
+  data_product: human/compartment-transition
+  component: compartment-transition
+  version: 2.0.0
+  extension: h5
+  filename: human/compartment-transition/2/data.h5
+  verified_hash: 09c4396f3bfe3724d2c1e12b86fb90aece718b35
+-
   data_product: human/population
   component: population
   version: 1.0.0
@@ -27,12 +34,26 @@
   filename: human/mixing-matrix/1/data.h5
   verified_hash: 98e4f03348ebd056d9aedf79d6f9277084133660
 -
+  data_product: human/mixing-matrix
+  component: mixing-matrix
+  version: 2.0.0
+  extension: h5
+  filename: human/mixing-matrix/2/data.h5
+  verified_hash: 075abd810909918419cf7495c16f1afec6fa010c
+-
   data_product: human/infectious-compartments
   component: infectious-compartments
   version: 1.0.0
   extension: h5
   filename: human/infectious-compartments/1/data.h5
   verified_hash: 6b0adf70a01072ba5a2d54ef35a7b93fc2454cae
+-
+  data_product: human/infectious-compartments
+  component: infectious-compartments
+  version: 2.0.0
+  extension: h5
+  filename: human/infectious-compartments/2/data.h5
+  verified_hash: b0ccd3ef92d1d2bf3a7dd3d8c3eba6e3cc8c0042
 -
   data_product: human/infection-probability
   component: infection-probability
@@ -41,6 +62,13 @@
   filename: human/infection-probability/1/data.h5
   verified_hash: d24283ee95e26827a4f3d2f04a06aea3548c5ded
 -
+  data_product: human/infection-probability
+  component: infection-probability
+  version: 2.0.0
+  extension: h5
+  filename: human/infection-probability/2/data.h5
+  verified_hash: 0a17fd106ab88118471143bffa10ff396366b89e
+-
   data_product: human/movement-multipliers
   component: movement-multipliers
   version: 1.0.0
@@ -48,12 +76,26 @@
   filename: human/movement-multipliers/1/data.h5
   verified_hash: 2c8777f89e18b8c73e234961da4670aab4c7f4c8
 -
+  data_product: human/movement-multipliers
+  component: movement-multipliers
+  version: 2.0.0
+  extension: h5
+  filename: human/movement-multipliers/2/data.h5
+  verified_hash: d0b5a1e5d66829b105af3d90c8732a4df879c2a6
+-
   data_product: human/initial-infections
   component: initial-infections
   version: 1.0.0
   extension: h5
   filename: human/initial-infections/1/data.h5
   verified_hash: c6603a48367f6df152f63258995542fc29483285
+-
+  data_product: human/initial-infections
+  component: initial-infections
+  version: 2.0.0
+  extension: h5
+  filename: human/initial-infections/2/data.h5
+  verified_hash: 574e68a10d9d40cd1ab0132e68d417ec0166d19b
 -
   data_product: human/trials
   component: trials
@@ -69,6 +111,13 @@
   filename: human/start-end-date/1/data.h5
   verified_hash: 17ffb2595bfd237229162558c5b1ac188812b052
 -
+  data_product: human/start-end-date
+  component: start-end-date
+  version: 2.0.0
+  extension: h5
+  filename: human/start-end-date/2/data.h5
+  verified_hash: 17ffb2595bfd237229162558c5b1ac188812b052
+-
   data_product: human/stochastic-mode
   component: stochastic-mode
   version: 1.0.0
@@ -82,3 +131,24 @@
   extension: h5
   filename: human/random-seed/1/data.h5
   verified_hash: c471116ae478124d19493c7ebdf497f039e931f8
+-
+  data_product: human/abcsmc-parameters
+  component: abcsmc-parameters
+  version: 1.0.0
+  extension: h5
+  filename: human/abcsmc-parameters/1/data.h5
+  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6
+-
+  data_product: human/historical-deaths
+  component: historical-deaths
+  version: 1.0.0
+  extension: h5
+  filename: human/historical-deaths/1/data.h5
+  verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743
+-
+  data_product: human/historical-deaths
+  component: historical-deaths
+  version: 2.0.0
+  extension: h5
+  filename: human/historical-deaths/2/data.h5
+  verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743

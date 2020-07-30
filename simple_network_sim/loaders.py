@@ -1,11 +1,12 @@
 """This module contains functions and classes to read and check input files."""
 
+import datetime
 import json
 import math
-import datetime
 from typing import Any, Dict, NamedTuple, List, Tuple, Union
 
 import networkx as nx  # type: ignore
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 # Type aliases used to make the types for the functions below easier to read
@@ -177,6 +178,61 @@ def readInfectiousStates(infectious_states: pd.DataFrame) -> List[Compartment]:
     if infectious_states.size == 0:
         return []
     return list(infectious_states.Compartment)
+
+
+def readABCSMCParameters(parameters: pd.DataFrame) -> Dict:
+    """
+    Transforms the API output of parameters into the internal representation: a dict
+    :param parameters: pandas DataFrame with the raw data from the API
+    :return: a dict of inference parameters
+    """
+    if parameters.size == 0:
+        raise ValueError("Parameters cannot be empty")
+
+    if "Parameter" not in parameters.columns:
+        raise ValueError("'Parameter' column should be in ABCSMC parameters")
+
+    if "Value" not in parameters.columns:
+        raise ValueError("'Value' column should be in ABCSMC parameters")
+
+    parameters = parameters.set_index("Parameter").Value.to_dict()
+
+    parameters["n_smc_steps"] = int(parameters["n_smc_steps"])
+    parameters["n_particles"] = int(parameters["n_particles"])
+    parameters["infection_probability_shape"] = float(parameters["infection_probability_shape"])
+    parameters["infection_probability_kernel_sigma"] = float(parameters["infection_probability_kernel_sigma"])
+    parameters["initial_infections_stddev"] = float(parameters["initial_infections_stddev"])
+    parameters["initial_infections_stddev_min"] = float(parameters["initial_infections_stddev_min"])
+    parameters["initial_infections_kernel_sigma"] = float(parameters["initial_infections_kernel_sigma"])
+    parameters["contact_multipliers_stddev"] = float(parameters["contact_multipliers_stddev"])
+    parameters["contact_multipliers_kernel_sigma"] = float(parameters["contact_multipliers_kernel_sigma"])
+
+    partitions = [datetime.datetime.strptime(d, '%Y-%m-%d').date()
+                  for d in parameters["contact_multipliers_partitions"].split(", ")]
+    partitions.append(datetime.date.max)
+    partitions.insert(0, datetime.date.min)
+    parameters["contact_multipliers_partitions"] = partitions
+
+    return parameters
+
+
+def readHistoricalDeaths(historical_deaths: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transforms the API output of target into the internal representation: a pd.DataFrame
+    :param historical_deaths: pandas DataFrame with the raw data from the API
+    :return: a pd.DataFrame of historical deaths by HB
+    """
+    if historical_deaths.size == 0:
+        raise ValueError("With an empty target no inference can take place")
+
+    historical_deaths = historical_deaths.set_index("Week beginning")
+
+    if np.any(historical_deaths.values < 0):
+        raise ValueError("Cannot have negative deaths")
+
+    historical_deaths.index = pd.to_datetime(historical_deaths.index)
+
+    return historical_deaths
 
 
 def readInfectionProbability(df: pd.DataFrame) -> Dict[datetime.date, float]:

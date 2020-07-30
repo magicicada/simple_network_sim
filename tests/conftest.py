@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 from data_pipeline_api import standard_api
+from simple_network_sim import inference
 import pandas as pd
 import pytest
 
@@ -65,3 +66,23 @@ def teardown_remove_data():
     # Tests may drop access*.log files in the fixtures directory
     for logpath in (FIXTURE_DIR / "data_pipeline_inputs").glob("access*.log"):
         shutil.rmtree(logpath, ignore_errors=True)
+
+
+@pytest.fixture
+def abcsmc(data_api):  # pylint: disable=redefined-outer-name
+    yield inference.ABCSMC(
+        data_api.read_table("human/abcsmc-parameters", "abcsmc-parameters"),
+        data_api.read_table("human/historical-deaths", "historical-deaths"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population"),
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        pd.DataFrame([{"Date": "2020-01-01", "Value": 0.5}]),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/trials", "trials"),
+        data_api.read_table("human/start-end-date", "start-end-date"),
+        data_api.read_table("human/movement-multipliers", "movement-multipliers"),
+        data_api.read_table("human/stochastic-mode", "stochastic-mode"),
+        data_api.read_table("human/random-seed", "random-seed"),
+    )

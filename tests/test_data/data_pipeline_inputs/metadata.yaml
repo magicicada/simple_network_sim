@@ -70,3 +70,17 @@
   extension: h5
   component: start-end-date
   filename: human/start-end-date/1/data.h5
+-
+  data_product: human/historical-deaths
+  component: historical-deaths
+  version: 1.0.0
+  extension: h5
+  filename: human/historical-deaths/1/data.h5
+  verified_hash: 4678029990d9b6a76d48d4c7294141d3821e6743
+-
+  data_product: human/abcsmc-parameters
+  component: abcsmc-parameters
+  version: 1.0.0
+  extension: h5
+  filename: human/abcsmc-parameters/1/data.h5
+  verified_hash: 09883f0bb5c8566ea097dc289243f45233d969c6
