@@ -27,6 +27,8 @@ This is your overall judgement on the level of confidence based on all the aspec
 > - [ ] No
 >
 > The code is well crafted and organised, with documentation, and automated unit and regression testing via continuous integration. Execution environment is specified using [conda](https://docs.conda.io/en/latest/). It is planned that data integrity and provenance for reproducible model runs will be assured by use of the SCRC data pipeline, which is not yet fully available. Further work will be required to integrate with this. There are some areas where important improvements can are still being made (see below and the [project board](https://github.com/orgs/ScottishCovidResponse/projects/6)).
+>
+> **Note that `extractors` are not covered by this checklist as they will ultimately form part of a different repository.**
 
 ## Checklist
 
