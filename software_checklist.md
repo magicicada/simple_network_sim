@@ -44,7 +44,9 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> Stochasticity is handled by using a seed from the data pipeline to generate a “random state” object which is passed to functions that generate random numbers. Where multiple processes are used, seeds for each process / iteration are generated based on a single initial seed, these are assured by `numpy` to be independently random. Git url and sha are saved when the software is run. Files that specify the `conda` environment are present: [spec-file.txt](spec-file.txt) and [environment.yml](environment.yml). Documentation explaining how to run the software with some test data can be found in the [readme](readme.md). We have not yet produced "real" results based on provenanced, reliable source data - this work is ongoing and reproducibility will be assured by a combination of this software and the SCRC data pipeline.
+> Stochasticity is handled by using a seed from the data pipeline to generate a “random state” object which is passed to functions that generate random numbers. Where multiple processes are used, seeds for each process are generated based on a single initial seed using [`numpy.random.SeedSequence`](https://numpy.org/doc/stable/reference/random/bit_generators/generated/numpy.random.SeedSequence.html) which gives assurance that random numbers for each run are independent.
+>
+> Git url and sha are saved when the software is run. Files that specify the `conda` environment are present: [spec-file.txt](spec-file.txt) and [environment.yml](environment.yml). Documentation explaining how to run the software with some test data can be found in the [readme](readme.md). We have not yet produced "real" results based on provenanced, reliable source data - this work is ongoing and reproducibility will be assured by a combination of this software and the SCRC data pipeline.
 
 ### Are there appropriate tests?  (And are they automated?)
 
