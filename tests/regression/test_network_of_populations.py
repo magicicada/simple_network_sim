@@ -11,7 +11,7 @@ from tests.utils import create_baseline, calculateInfectiousOverTime
 
 
 def _assert_baseline(result, force_update=False):
-    with tempfile.NamedTemporaryFile(mode="w") as fp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
         json.dump(result, fp, indent=4)
         baseline_filename = create_baseline(fp.name, force_update=force_update)
 
@@ -20,7 +20,7 @@ def _assert_baseline(result, force_update=False):
 
 
 def _assert_baseline_dataframe(result, force_update=False):
-    with tempfile.NamedTemporaryFile(mode="w") as fp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
         result.to_csv(fp.name, index=False)
         fp.flush()
         baseline_filename = create_baseline(fp.name, force_update=force_update)
