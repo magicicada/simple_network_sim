@@ -158,7 +158,7 @@ def test_genGraphFromContactFile_negative_delta_adjustment():
     df = pd.DataFrame([
         {"source": "a", "target": "b", "weight": 0, "delta_adjustment": -1.0}
     ])
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         loaders.genGraphFromContactFile(df)
 
 
@@ -167,7 +167,25 @@ def test_genGraphFromContactFile_negative_weight():
         {"source": "a", "target": "b", "weight": -30.0, "delta_adjustment": 1.0}
     ])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
+        loaders.genGraphFromContactFile(df)
+
+
+def test_genGraphFromContactFile_missing_weight():
+    df = pd.DataFrame([
+        {"source": "a", "target": "b", "delta_adjustment": 1.0}
+    ])
+
+    with pytest.raises(ValueError):
+        loaders.genGraphFromContactFile(df)
+
+
+def test_genGraphFromContactFile_missing_adjustmentt():
+    df = pd.DataFrame([
+        {"source": "a", "target": "b", "weight": 30.0}
+    ])
+
+    with pytest.raises(ValueError):
         loaders.genGraphFromContactFile(df)
 
 

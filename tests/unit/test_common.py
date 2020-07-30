@@ -1,9 +1,11 @@
 import os
+from unittest import mock
 
 import git
 import pytest
+from data_pipeline_api import standard_api
 
-from simple_network_sim.common import Lazy, get_repo_info
+from simple_network_sim.common import Lazy, get_repo_info, log_issue, IssueSeverity
 
 
 def test_lazy_never_evaluated():
@@ -77,3 +79,30 @@ def test_get_repo_info_no_repo(no_git_repo):
     assert info.is_dirty
     assert info.git_sha == ""
     assert info.uri == "https://github.com/ScottishCovidResponse/simple_network_sim.git"
+
+
+def test_log_low_issue():
+    logger = mock.MagicMock()
+    issues = []
+    log_issue(logger, "hi", IssueSeverity.LOW, issues)
+
+    assert issues == [standard_api.Issue(description="hi", severity=1)]
+    logger.info.assert_called_once_with("hi")
+
+
+def test_log_medium_issue():
+    logger = mock.MagicMock()
+    issues = []
+    log_issue(logger, "hi", IssueSeverity.MEDIUM, issues)
+
+    assert issues == [standard_api.Issue(description="hi", severity=5)]
+    logger.warning.assert_called_once_with("hi")
+
+
+def test_log_high_issue():
+    logger = mock.MagicMock()
+    issues = []
+    log_issue(logger, "hi", IssueSeverity.HIGH, issues)
+
+    assert issues == [standard_api.Issue(description="hi", severity=10)]
+    logger.error.assert_called_once_with("hi")

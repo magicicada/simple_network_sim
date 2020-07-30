@@ -4,16 +4,51 @@ Assortment of useful functions
 # pylint: disable=import-error
 # pylint: disable=duplicate-code
 import logging
-from typing import Callable, Any, NamedTuple
+from enum import Enum
+from typing import Callable, Any, NamedTuple, List
 
 import git  # type: ignore
+from data_pipeline_api import standard_api
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_GITHUB_REPO = "https://github.com/ScottishCovidResponse/simple_network_sim.git"
 
 
-# CurrentlyInUse
+class IssueSeverity(Enum):
+    """
+    This class defines the severity levels for issues found while running the model or loading data.
+    """
+    LOW = 1
+    MEDIUM = 5
+    HIGH = 10
+
+
+def log_issue(
+        logger: logging.Logger,
+        description: str,
+        severity: IssueSeverity,
+        issues: List[standard_api.Issue]
+) -> List[standard_api.Issue]:
+    """
+    Appends issue to the issues list whilst logging its description at the appropriate log level
+
+    :param logger: a python logger object
+    :param description: an explanation of the issue found
+    :param severity: the severity of the issue, from an enum of severities
+    :param issues: list of issues, it will be modified in-place
+    :return: Returns the same list of issues passed as a parameter for convenience
+    """
+    log = {
+        IssueSeverity.LOW: logger.info,
+        IssueSeverity.MEDIUM: logger.warning,
+        IssueSeverity.HIGH: logger.error,
+    }[severity]
+    log(description)
+    issues.append(standard_api.Issue(description=description, severity=severity.value))
+    return issues
+
+
 def generateMeanPlot(listOfPlots):
     """From a list of disease evolution timeseries, compute the average evolution.
 

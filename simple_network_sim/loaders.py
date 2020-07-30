@@ -111,8 +111,11 @@ def genGraphFromContactFile(commutes: pd.DataFrame) -> nx.DiGraph:
     """
     G = nx.convert_matrix.from_pandas_edgelist(commutes, edge_attr=True, create_using=nx.DiGraph)
     for edge in G.edges.data():
-        assert edge[2]["weight"] >= 0.0
-        assert edge[2]["delta_adjustment"] >= 0.0
+        if "weight" not in edge[2] or edge[2]["weight"] < 0.0:
+            raise ValueError("missing weight or weight less than zero")
+        if "delta_adjustment" not in edge[2] or edge[2]["delta_adjustment"] < 0.0:
+            raise ValueError("missing delta_adjustment or delta_adjustment less than zero")
+
     return G
 
 
@@ -358,7 +361,7 @@ def readStochasticMode(df: pd.DataFrame) -> bool:
 
 class AgeRange:
     """A helper class for an age range.
-    
+
     The age_group parameter can be any string, but it is usually in the format [a,b) or 70+
     """
 
@@ -414,7 +417,7 @@ class MixingRow:
 
     def __getitem__(self, age: str) -> float:
         """Return expected number of interactions.
-        
+
         Return the expected number of interactions (per day) that someone from
         this MixingRow would have with someone with the given age, or age
         range.
@@ -473,7 +476,7 @@ class MixingMatrix:
 
     def __getitem__(self, age: str) -> MixingRow:
         """Return MixingRow for given age.
-        
+
         Gets a MixingRow for the given age, which in turn can give the
         expected number of interactions. Most often, you will probably want to
         just use MixingMatrix[age1][age2] to get the expected number of

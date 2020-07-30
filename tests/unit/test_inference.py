@@ -1,4 +1,6 @@
 import datetime as dt
+from unittest.mock import patch, call
+
 import pytest
 
 import numpy as np
@@ -731,3 +733,28 @@ def test_ABCSMC_compute_weights(abcsmc):
 
     assert inf.ABCSMC.compute_weight(0, particles, [1., 1., 1.], particle) == 1.
     assert inf.ABCSMC.compute_weight(1, particles, [1., 1., 1.], particle) == 0.09444160575494241
+
+
+@patch("simple_network_sim.inference.logger.warning")
+def test_ABCSMC_run_model_with_issues(mock_warn_logger, data_api):
+    abcsmc = inf.ABCSMC(
+        data_api.read_table("human/abcsmc-parameters", "abcsmc-parameters"),
+        data_api.read_table("human/historical-deaths", "historical-deaths"),
+        data_api.read_table("human/compartment-transition", "compartment-transition"),
+        data_api.read_table("human/population", "population").iloc[:10],
+        data_api.read_table("human/commutes", "commutes"),
+        data_api.read_table("human/mixing-matrix", "mixing-matrix"),
+        pd.DataFrame([{"Date": "2020-01-01", "Value": 0.5}]),
+        data_api.read_table("human/initial-infections", "initial-infections"),
+        data_api.read_table("human/infectious-compartments", "infectious-compartments"),
+        data_api.read_table("human/trials", "trials"),
+        data_api.read_table("human/start-end-date", "start-end-date"),
+        data_api.read_table("human/movement-multipliers", "movement-multipliers"),
+        data_api.read_table("human/stochastic-mode", "stochastic-mode"),
+        data_api.read_table("human/random-seed", "random-seed"),
+    )
+
+    particle = inf.Particle.generate_from_priors(abcsmc)
+    abcsmc.run_model(particle)
+
+    mock_warn_logger.assert_has_calls([call("We had %s issues when running the model:", 36)])
