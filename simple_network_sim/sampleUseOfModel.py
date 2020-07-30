@@ -44,7 +44,7 @@ def main(argv):
         desc = "Running out of a dirty git repo"
         logger.warning(desc)
         issues.append(standard_api.Issue(severity=10, description=desc))
-    with standard_api.StandardAPI(args.data_pipeline_config, uri=info.uri, git_sha=info.git_sha) as store:
+    with standard_api.StandardAPI.from_config(args.data_pipeline_config, uri=info.uri, git_sha=info.git_sha) as store:
         network = ss.createNetworkOfPopulation(
             store.read_table("human/compartment-transition", "compartment-transition"),
             store.read_table("human/population", "population"),
