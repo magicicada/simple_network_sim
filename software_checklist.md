@@ -106,11 +106,11 @@ Additionally, for each question please explain the situation and include any rel
 - Does the code have algorithm documentation? e.g. something that describes how the model is actually simulated, or inference is performed?
 - Is all the documentation up to date?
 
-> - [ ] Sufficiently addressed
-> - [x] Some work remaining or caveats
+> - [x] Sufficiently addressed
+> - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 >
-> We have [user](README.md), [developer](https://readthedocs.org/projects/simple-network-sim/badge/?version=latest) and (slightly outdated) [algorithm](model_overview_simple_network_sim.md) documentation. A GitHub issue has been raised to address the areas of documentation that need to be updated.
+> We have [user](README.md), [developer](https://readthedocs.org/projects/simple-network-sim/badge/?version=latest) and [algorithm](doc/model_documentation/model_description.pdf) documentation. A GitHub issue has been raised to address the areas of documentation that need to be updated.
 
 ### Is there suitable collaboration infrastructure?
 
