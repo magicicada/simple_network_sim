@@ -13,7 +13,7 @@ def test_cli_run(base_data_dir):
         hdf5_to_csv.main([str(h5_file), str(csv_file)])
         baseline = create_baseline(csv_file)
 
-        test_df = pd.read_csv(csv_file).drop(columns="std").rename(columns={"mean": "total"})
+        test_df = pd.read_csv(csv_file)
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
@@ -37,7 +37,7 @@ def test_stochastic_cli_run(base_data_dir):
         hdf5_to_csv.main([str(h5_file), str(csv_file)])
         baseline = create_baseline(csv_file)
 
-        test_df = pd.read_csv(csv_file).drop(columns="std").rename(columns={"mean": "total"})
+        test_df = pd.read_csv(csv_file)
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
