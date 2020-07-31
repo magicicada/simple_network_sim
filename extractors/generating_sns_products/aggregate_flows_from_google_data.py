@@ -78,7 +78,7 @@ def download_pop_table():
 
 def download_lookup_table():
     """
-    Downloads the mapping of iso_3166_2 codes to local authority from the SCRC database, 
+    Downloads the mapping of iso_3166_2 codes to local authority from the SCRC database,
     if it doesn't exist, upload it
     :return: A dataframe containing the full ISO code (GB-iso_3166_2) and the corresponding local authority code.
     """
@@ -159,7 +159,7 @@ def main():
     movement_multiplier_table = "movement_multiplier.csv"
     dfScotGoogle.to_csv(movement_multiplier_table)
     with DataProcessingAPI.from_config(
-        config_filename, uri=uri, git_sha=git_sha
+            config_filename, uri=uri, git_sha=git_sha
     ) as api:
         api.write_table(
             "generated_sns_products/movement_multiplier",
