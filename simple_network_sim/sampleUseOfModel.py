@@ -16,6 +16,7 @@ from data_pipeline_api import standard_api  # type: ignore
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
+from simple_network_sim.common import IssueSeverity, log_issue
 from . import common, loaders
 from . import network_of_populations as ss
 
@@ -37,15 +38,16 @@ def main(argv):
 
     info = common.get_repo_info()
     if not info.git_sha:
-        desc = "Not running from a git repo, so no git_sha associated with the run"
-        logger.warning(desc)
-        issues.append(standard_api.Issue(severity=10, description=desc))
+        log_issue(
+            logger,
+            "Not running from a git repo, so no git_sha associated with the run",
+            IssueSeverity.HIGH,
+            issues,
+        )
     elif info.is_dirty:
-        desc = "Running out of a dirty git repo"
-        logger.warning(desc)
-        issues.append(standard_api.Issue(severity=10, description=desc))
+        log_issue(logger, "Running out of a dirty git repo", IssueSeverity.HIGH, issues)
     with standard_api.StandardAPI.from_config(args.data_pipeline_config, uri=info.uri, git_sha=info.git_sha) as store:
-        network = ss.createNetworkOfPopulation(
+        network, new_issues = ss.createNetworkOfPopulation(
             store.read_table("human/compartment-transition", "compartment-transition"),
             store.read_table("human/population", "population"),
             store.read_table("human/commutes", "commutes"),
@@ -58,9 +60,10 @@ def main(argv):
             store.read_table("human/movement-multipliers", "movement-multipliers") if args.use_movement_multipliers else None,
             store.read_table("human/stochastic-mode", "stochastic-mode"),
         )
+        issues.extend(new_issues)
 
         random_seed = loaders.readRandomSeed(store.read_table("human/random-seed", "random-seed"))
-        results = runSimulation(network, random_seed, max_workers=None if not args.workers else args.workers)
+        results = runSimulation(network, random_seed, issues=issues, max_workers=None if not args.workers else args.workers)
         aggregated = aggregateResults(results)
 
         logger.info("Writing output")
@@ -79,11 +82,17 @@ def main(argv):
         )
 
 
-def runSimulation(network: ss.NetworkOfPopulation, random_seed: int, max_workers: Optional[int] = None) -> List[pd.DataFrame]:
+def runSimulation(
+        network: ss.NetworkOfPopulation,
+        random_seed: int,
+        issues: List[standard_api.Issue],
+        max_workers: Optional[int] = None,
+) -> List[pd.DataFrame]:
     """Run pre-created network
 
     :param network: object representing the network of populations
     :param random_seed: seed to use when instantiating the SeedSequence object
+    :param issues: list of issues to report to the pipeline
     :param max_workers: maximum number of processes to spawn when running multiple simulations
     :return: Result runs for all trials of the simulation
     """
@@ -102,7 +111,9 @@ def runSimulation(network: ss.NetworkOfPopulation, random_seed: int, max_workers
 
         for t, future in enumerate(futures.as_completed(delayed), start=1):
             logger.info("Running simulation (%s/%s)", t, network.trials)
-            results.append(future.result())
+            df, new_issues = future.result()
+            issues.extend(new_issues)
+            results.append(df)
 
     return results
 

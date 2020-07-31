@@ -716,7 +716,7 @@ class ABCSMC:
         :param particle: Particle under consideration
         :return: Model run results for current particle
         """
-        network = ss.createNetworkOfPopulation(
+        network, issues = ss.createNetworkOfPopulation(
             self.compartment_transition_table,
             self.population_table,
             self.commutes_table,
@@ -730,7 +730,11 @@ class ABCSMC:
             self.stochastic_mode,
         )
         random_seed = loaders.readRandomSeed(self.random_seed)
-        results = sm.runSimulation(network, random_seed)
+        results = sm.runSimulation(network, random_seed, issues=issues)
+        if issues:
+            logger.warning("We had %s issues when running the model:", len(issues))
+            for issue in issues:
+                logger.warning("%s (severity: %s)", issue.description, issue.severity)
         aggregated = sm.aggregateResults(results)
         return aggregated.output
 

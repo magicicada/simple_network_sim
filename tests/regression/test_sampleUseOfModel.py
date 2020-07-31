@@ -53,7 +53,7 @@ def test_stochastic_cli_run(base_data_dir):
 
 
 def test_stochastic_seed_sequence(data_api_stochastic):
-    network = network_of_populations.createNetworkOfPopulation(
+    network, _ = network_of_populations.createNetworkOfPopulation(
         data_api_stochastic.read_table("human/compartment-transition", "compartment-transition"),
         data_api_stochastic.read_table("human/population", "population"),
         data_api_stochastic.read_table("human/commutes", "commutes"),
@@ -67,7 +67,9 @@ def test_stochastic_seed_sequence(data_api_stochastic):
         pd.DataFrame({"Value": [True]}),
     )
 
-    df1, df2 = sampleUseOfModel.runSimulation(network, random_seed=123, max_workers=2)
+    issues = []
+    df1, df2 = sampleUseOfModel.runSimulation(network, random_seed=123, issues=issues, max_workers=2)
 
     # It's very unlikely these numbers would match unless both runs produce the same numbers
     assert df1[df1.state == "D"].total.sum() != df2[df2.state == "D"].total.sum()
+    assert not issues

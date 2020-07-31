@@ -21,12 +21,13 @@ import datetime as dt
 import logging
 from typing import Dict, Tuple, NamedTuple, List, Optional, Iterable, cast, Any, Union
 
+from data_pipeline_api import standard_api
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 from simple_network_sim import loaders
-from simple_network_sim.common import Lazy
+from simple_network_sim.common import Lazy, IssueSeverity, log_issue
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ def basicSimulationInternalAgeStructure(
         network: NetworkOfPopulation,
         initialInfections: Dict[NodeName, Dict[Age, float]],
         generator: np.random.Generator,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, List[standard_api.Issue]]:
     """Run the simulation of a disease progressing through a network of regions.
 
     :param network: This is a NetworkOfPopulation instance which will have the states field modified by this function.
@@ -109,7 +110,8 @@ def basicSimulationInternalAgeStructure(
     :param generator: Seeded random number generated to use in this simulation
     :return: A time series of the size of the infectious population.
     """
-    history = []
+    history: List[pd.DataFrame] = []
+    issues: List[standard_api.Issue] = []
 
     defaultMultipliers = loaders.Multiplier(contact=1.0, movement=1.0)
     multipliers = getInitialParameter(network.startDate, network.movementMultipliers, defaultMultipliers)
@@ -146,6 +148,7 @@ def basicSimulationInternalAgeStructure(
             network.infectiousStates,
             network.stochastic,
             generator,
+            issues=issues,
         )
         contacts = mergeContacts(internalContacts, externalContacts)
 
@@ -167,7 +170,7 @@ def basicSimulationInternalAgeStructure(
         )
         history.append(df)
 
-    return pd.concat(history, copy=False, ignore_index=True)
+    return (pd.concat(history, copy=False, ignore_index=True), issues)
 
 
 def nodesToPandas(date: dt.date, nodes: Dict[NodeName, Dict[Tuple[Age, Compartment], float]]) -> pd.DataFrame:
@@ -262,6 +265,7 @@ def distributeContactsOverAges(
         newContacts: float,
         stochastic: bool,
         random_state: Optional[np.random.Generator],
+        issues: Optional[List[standard_api.Issue]] = None,
 ) -> Dict[Age, float]:
     r"""
     Distribute the number of new contacts across a region. There are two possible implementations:
@@ -276,6 +280,8 @@ def distributeContactsOverAges(
     :param newContacts: The number of new contacts to be distributed across age ranges.
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :param random_state: Random number generator used for the model
+    :param issues: if any issues are found and a list is passed as this parameter, append the issues to it. Logging will
+                   happen regardless.
     :return: The number of new infections in each age group.
     """
     ageToSus = {}
@@ -286,7 +292,12 @@ def distributeContactsOverAges(
         totalSus += sus
 
     if totalSus < newContacts:
-        logger.error("totalSus < incoming contacts (%s < %s) - adjusting to totalSus", totalSus, newContacts)
+        log_issue(
+            logger,
+            f"totalSus < incoming contacts ({totalSus} < {newContacts}) - adjusting to totalSus",
+            IssueSeverity.HIGH,
+            issues if issues is not None else [],
+        )
         newContacts = totalSus
 
     if totalSus > 0:
@@ -440,17 +451,10 @@ def getWeight(graph: nx.DiGraph, orig: str, dest: str, multiplier: float) -> flo
     :return: The final weight value
     """
     edge = graph.get_edge_data(orig, dest)
-    if "weight" not in edge:
-        logger.error("No weight available for edge %s,%s assuming 1.0", orig, dest)
-        weight = 1.0
-    else:
-        weight = edge["weight"]
 
-    if "delta_adjustment" not in edge:
-        logger.error("delta_adjustment not available for edge %s,%s assuming 1.0", orig, dest)
-        delta_adjustment = 1.0
-    else:
-        delta_adjustment = edge["delta_adjustment"]
+    # The data loaders force weight and delta_adjustment to always be present
+    weight = edge["weight"]
+    delta_adjustment = edge["delta_adjustment"]
 
     delta = weight - (weight * multiplier)
     # The delta_adjustment is applied on the delta. It can either completely cancel any changes (factor = 0.0) or
@@ -467,6 +471,7 @@ def getExternalInfectiousContacts(
         infectiousStates: List[Compartment],
         stochastic: bool,
         random_state: Optional[np.random.Generator],
+        issues: Optional[List[standard_api.Issue]] = None,
 ) -> Dict[NodeName, Dict[Age, float]]:
     """Calculate the number of new infections in each region. The infections are distributed
     proportionally to the number of susceptibles in the destination node and infected in the origin
@@ -481,6 +486,7 @@ def getExternalInfectiousContacts(
     :param infectiousStates: States that are considered infectious
     :param stochastic: Whether to run the model in a stochastic or deterministic mode
     :param random_state: Random number generator used for the model
+    :param issues: if any issues are found and a list is passed as this parameter, append the issues to it.
     :return: The number of new infections in each region stratified by age.
     """
     infectionsByNode = {}
@@ -495,7 +501,7 @@ def getExternalInfectiousContacts(
     )
 
     for name, vertex in incomingContacts.items():
-        infectionsByNode[name] = distributeContactsOverAges(nodes[name], vertex, stochastic, random_state)
+        infectionsByNode[name] = distributeContactsOverAges(nodes[name], vertex, stochastic, random_state, issues=issues)
 
     return infectionsByNode
 
@@ -810,7 +816,7 @@ def createNetworkOfPopulation(
         start_end_date: pd.DataFrame,
         movement_multipliers_table: pd.DataFrame = None,
         stochastic_mode: pd.DataFrame = None,
-) -> NetworkOfPopulation:
+) -> Tuple[NetworkOfPopulation, List[standard_api.Issue]]:
     """Create the network of the population, loading data from files.
 
     :param compartment_transition_table: pd.Dataframe specifying the transition rates between infected compartments.
@@ -825,8 +831,11 @@ def createNetworkOfPopulation(
     :param movement_multipliers_table: pd.Dataframe with the movement multipliers. This may be None, in
                                        which case no multipliers are applied to the movements.
     :param stochastic_mode: Use stochastic mode for the model
-    :return: The constructed network
+    :return: A tuple with the constructed network and a list of any issues found. Although it may look convenient,
+             storing this list inside of NetworkOfPopulation is not a good idea, as that may give the functions that
+             receive it the false impression they can just append new issues there
     """
+    issues: List[standard_api.Issue] = []
     infection_prob = loaders.readInfectionProbability(infection_prob)
 
     infectious_states = loaders.readInfectiousStates(infectious_states)
@@ -876,14 +885,24 @@ def createNetworkOfPopulation(
         "infection matrix and population ages mismatch"
     disconnected_nodes = set(population.keys()) - set(graph.nodes())
     if disconnected_nodes:
-        logger.warning("These nodes have no contacts in the current network: %s", disconnected_nodes)
+        log_issue(
+            logger,
+            f"These nodes have no contacts in the current network: {','.join(disconnected_nodes)}",
+            IssueSeverity.MEDIUM,
+            issues,
+        )
 
     state0: Dict[str, Dict[Tuple[str, str], float]] = {}
     for node in list(graph.nodes()):
         region = state0.setdefault(node, {})
         for age, compartments in progression.items():
             if node not in population:
-                logger.warning("Node %s is not in the population table, assuming population of 0 for all ages", node)
+                log_issue(
+                    logger,
+                    f"Node {node} is not in the population table, assuming population of 0 for all ages",
+                    IssueSeverity.MEDIUM,
+                    issues,
+                )
                 pop = 0.0
             else:
                 pop = population[node][age]
@@ -892,7 +911,7 @@ def createNetworkOfPopulation(
                 region[(age, compartment)] = 0
 
     logger.info("Nodes: %s, Ages: %s, States: %s", len(state0), agesInInfectionMatrix, all_states)
-    return NetworkOfPopulation(
+    nop = NetworkOfPopulation(
         progression=progression,
         graph=graph,
         initialState=state0,
@@ -906,6 +925,7 @@ def createNetworkOfPopulation(
         endDate=end_date,
         stochastic=stochastic_mode,
     )
+    return (nop, issues)
 
 
 # pylint: disable=too-many-arguments
