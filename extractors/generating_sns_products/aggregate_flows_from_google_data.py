@@ -39,7 +39,7 @@ import zipfile
 config_filename =  Path(__file__).parent / "data_processing_config.yaml"
 uri = "data_processing_uri"
 git_sha = "data_processing_git_sha"
-data_path = Path(__file__).parent / "human/external"
+
 
 
 def download_pop_table():
@@ -51,32 +51,30 @@ def download_pop_table():
     """
 
     population_table = "mid-year-pop-est-18-tabs_Table 2.csv"
-
+    #  The downloading below isn't currently in use - we want to have these script not directly download anything
+    #  but instead handle that as part of the database.  However, I've left it here as a record, in case we need to include it again    
     # If the population table doesn't exist download it.
-    if not Path(data_path / population_table).exists():
-        print(f"Could not find {data_path}/{population_table}, downloading it")
-        url = "https://www.nrscotland.gov.uk/files//statistics/population-estimates/mid-18/mid-year-pop-est-18-tabs.zip"
-        zip_filename = "mid-year-pop-est-18-tabs.zip"
-        urllib.request.urlretrieve(
-            url, zip_filename
-        )
+    # if not Path(data_path / population_table).exists():
+    #     print(f"Could not find {data_path}/{population_table}, downloading it")
+    #     url = "https://www.nrscotland.gov.uk/files//statistics/population-estimates/mid-18/mid-year-pop-est-18-tabs.zip"
+    #     zip_filename = "mid-year-pop-est-18-tabs.zip"
+    #     urllib.request.urlretrieve(
+    #         url, zip_filename
+    #     )
+    # 
+    #     with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+    #         zip_ref.extractall(data_path, members=[population_table])
+    # 
+    #     # clean up (i.e. remove) the downloaded datafile(s)
+    #     Path(zip_filename).unlink(missing_ok=False)
 
-        with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
-            zip_ref.extractall(data_path, members=[population_table])
-
-        # clean up (i.e. remove) the downloaded datafile(s)
-        Path(zip_filename).unlink(missing_ok=False)
-
-    with DataProcessingAPI(config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(population_table) as file:
+    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
+        with api.read_external_object(population_table, 'only') as file:
             dfPop = pd.read_csv(file, skiprows=5, nrows=32, usecols=[0, 1, 2])
             dfPop.columns = ['la_code', 'la_name', 'population']
             dfPop['population'] = dfPop['population'].str.replace(',', '').astype(int)
 
     total_population =  dfPop['population'].sum()
-
-    # clean up (i.e. remove) the downloaded datafile(s)
-    Path(data_path / population_table).unlink(missing_ok=False)
 
     return dfPop, total_population
 
@@ -90,8 +88,8 @@ def download_lookup_table():
     # ISO region to LA best-attempt lookup table: compiled by hand, Jess Enright, 30 June 2020
     lookup_table = "iso-3166-2_to_scottishLA.csv"
 
-    with DataProcessingAPI(data_path / config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(lookup_table) as file:
+    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
+        with api.read_external_object(lookup_table, 'only') as file:
             dfLookup = pd.read_csv(file, low_memory=False)
             dfLookup['full_iso_code'] = "GB-" + dfLookup.iso_3166_2
             codes_of_interest = list(dfLookup['full_iso_code'])
@@ -108,21 +106,10 @@ def download_google_mogility_data(la_list):
 
     google_mobility_table = "Global_Mobility_Report.csv"
 
-    # If the population table doesn't exist download it.
-    if not Path(data_path / google_mobility_table).exists():
-        print(f"Could not find {data_path}/{google_mobility_table}, downloading it")
-        url = "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv"
-        urllib.request.urlretrieve(
-                url, data_path / google_mobility_table
-                )
-
-    with DataProcessingAPI(config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(google_mobility_table) as file:
+    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
+        with api.read_external_object(google_mobility_table, 'only') as file:
             justScotGoogle = pd.read_csv(file, low_memory=False)
             justScotGoogle = justScotGoogle[justScotGoogle['iso_3166_2_code'].isin(la_list) == True]
-
-    # clean up (i.e. remove) the downloaded datafile(s)
-    Path( data_path / google_mobility_table).unlink(missing_ok=False)
 
     return justScotGoogle
 
@@ -162,15 +149,13 @@ def main():
     # Now upload this to the database; human/movement-multipliers/1/data.h5
     movement_multiplier_table = "movement_multiplier.csv"
     dfScotGoogle.to_csv(movement_multiplier_table)
-    with DataProcessingAPI(config_filename, uri=uri, git_sha=git_sha) as api:
+    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
         api.write_table(
             "generated_sns_products/movement_multiplier",
             "movement_multiplier",
             dfScotGoogle,
             )    
 
-    # clean up (i.e. remove) the downloaded datafile(s)
-    Path(movement_multiplier_table).unlink(missing_ok=False)
 
 if __name__ == "__main__":
     main()
