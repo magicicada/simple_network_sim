@@ -6,7 +6,7 @@ dependencies:
   # install dependencies
   - python=3.7
   - pandas=1.0.3
-  - data_pipeline_api=0.7.0
+  - data_pipeline_api=0.7.2
   - xlrd=1.2.0
   - h5py=2.10.0
 
