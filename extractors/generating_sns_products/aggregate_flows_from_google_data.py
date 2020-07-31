@@ -36,10 +36,9 @@ from ftplib import FTP
 import zipfile
 
 
-config_filename =  Path(__file__).parent / "data_processing_config.yaml"
+config_filename = Path(__file__).parent / "data_processing_config.yaml"
 uri = "data_processing_uri"
 git_sha = "data_processing_git_sha"
-
 
 
 def download_pop_table():
@@ -52,7 +51,7 @@ def download_pop_table():
 
     population_table = "mid-year-pop-est-18-tabs_Table 2.csv"
     #  The downloading below isn't currently in use - we want to have these script not directly download anything
-    #  but instead handle that as part of the database.  However, I've left it here as a record, in case we need to include it again    
+    #  but instead handle that as part of the database.  However, I've left it here as a record, in case we need to include it again
     # If the population table doesn't exist download it.
     # if not Path(data_path / population_table).exists():
     #     print(f"Could not find {data_path}/{population_table}, downloading it")
@@ -61,22 +60,25 @@ def download_pop_table():
     #     urllib.request.urlretrieve(
     #         url, zip_filename
     #     )
-    # 
+    #
     #     with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
     #         zip_ref.extractall(data_path, members=[population_table])
-    # 
+    #
     #     # clean up (i.e. remove) the downloaded datafile(s)
     #     Path(zip_filename).unlink(missing_ok=False)
 
-    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(population_table, 'only') as file:
+    with DataProcessingAPI.from_config(
+        config_filename, uri=uri, git_sha=git_sha
+    ) as api:
+        with api.read_external_object(population_table, "only") as file:
             dfPop = pd.read_csv(file, skiprows=5, nrows=32, usecols=[0, 1, 2])
-            dfPop.columns = ['la_code', 'la_name', 'population']
-            dfPop['population'] = dfPop['population'].str.replace(',', '').astype(int)
+            dfPop.columns = ["la_code", "la_name", "population"]
+            dfPop["population"] = dfPop["population"].str.replace(",", "").astype(int)
 
-    total_population =  dfPop['population'].sum()
+    total_population = dfPop["population"].sum()
 
     return dfPop, total_population
+
 
 def download_lookup_table():
     """
@@ -88,14 +90,17 @@ def download_lookup_table():
     # ISO region to LA best-attempt lookup table: compiled by hand, Jess Enright, 30 June 2020
     lookup_table = "iso-3166-2_to_scottishLA.csv"
 
-    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(lookup_table, 'only') as file:
+    with DataProcessingAPI.from_config(
+        config_filename, uri=uri, git_sha=git_sha
+    ) as api:
+        with api.read_external_object(lookup_table, "only") as file:
             dfLookup = pd.read_csv(file, low_memory=False)
-            dfLookup['full_iso_code'] = "GB-" + dfLookup.iso_3166_2
-            codes_of_interest = list(dfLookup['full_iso_code'])
-            dfLookup = dfLookup[['full_iso_code', 'la_code']]
+            dfLookup["full_iso_code"] = "GB-" + dfLookup.iso_3166_2
+            codes_of_interest = list(dfLookup["full_iso_code"])
+            dfLookup = dfLookup[["full_iso_code", "la_code"]]
 
     return dfLookup, codes_of_interest
+
 
 def download_google_mogility_data(la_list):
     """
@@ -106,13 +111,16 @@ def download_google_mogility_data(la_list):
 
     google_mobility_table = "Global_Mobility_Report.csv"
 
-    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
-        with api.read_external_object(google_mobility_table, 'only') as file:
+    with DataProcessingAPI.from_config(
+        config_filename, uri=uri, git_sha=git_sha
+    ) as api:
+        with api.read_external_object(google_mobility_table, "only") as file:
             justScotGoogle = pd.read_csv(file, low_memory=False)
-            justScotGoogle = justScotGoogle[justScotGoogle['iso_3166_2_code'].isin(la_list) == True]
+            justScotGoogle = justScotGoogle[
+                justScotGoogle["iso_3166_2_code"].isin(la_list) == True
+            ]
 
     return justScotGoogle
-
 
 
 def main():
@@ -121,40 +129,53 @@ def main():
     dfLookup, codes_of_interest = download_lookup_table()
 
     # We only want the iso-code and the population weighting so add a column for it and remove the extranoeus columns
-    dfLookup = dfLookup.join(dfPop.set_index('la_code'), on='la_code')
-    dfLookup['pop_weighting'] = dfLookup['population']/totalPop
+    dfLookup = dfLookup.join(dfPop.set_index("la_code"), on="la_code")
+    dfLookup["pop_weighting"] = dfLookup["population"] / totalPop
 
-    dfLookup = dfLookup[['full_iso_code','pop_weighting']]
-    dfLookup.set_index('full_iso_code',inplace = True)
+    dfLookup = dfLookup[["full_iso_code", "pop_weighting"]]
+    dfLookup.set_index("full_iso_code", inplace=True)
 
     dfScotGoogle = download_google_mogility_data(codes_of_interest)
 
-    dfScotGoogle['movements_for_decrease'] = (dfScotGoogle['transit_stations_percent_change_from_baseline'] + dfScotGoogle['workplaces_percent_change_from_baseline'] + dfScotGoogle['retail_and_recreation_percent_change_from_baseline'])/3
+    dfScotGoogle["movements_for_decrease"] = (
+        dfScotGoogle["transit_stations_percent_change_from_baseline"]
+        + dfScotGoogle["workplaces_percent_change_from_baseline"]
+        + dfScotGoogle["retail_and_recreation_percent_change_from_baseline"]
+    ) / 3
 
-    categories_for_decrease = ['transit_stations_percent_change_from_baseline', 'workplaces_percent_change_from_baseline', 'retail_and_recreation_percent_change_from_baseline']
-    dfScotGoogle = dfScotGoogle[['iso_3166_2_code', 'date', 'movements_for_decrease']]
+    categories_for_decrease = [
+        "transit_stations_percent_change_from_baseline",
+        "workplaces_percent_change_from_baseline",
+        "retail_and_recreation_percent_change_from_baseline",
+    ]
+    dfScotGoogle = dfScotGoogle[["iso_3166_2_code", "date", "movements_for_decrease"]]
 
-    dfScotGoogle = dfScotGoogle.merge(dfLookup, left_on = 'iso_3166_2_code',right_index = True,how='left')
-    dfScotGoogle ['weighted_moves'] = (dfScotGoogle['movements_for_decrease']*dfScotGoogle['pop_weighting'])
-    dfScotGoogle = dfScotGoogle [['date', 'weighted_moves']]
-    dfScotGoogle['date'] = pd.to_datetime(dfScotGoogle['date'])
+    dfScotGoogle = dfScotGoogle.merge(
+        dfLookup, left_on="iso_3166_2_code", right_index=True, how="left"
+    )
+    dfScotGoogle["weighted_moves"] = (
+        dfScotGoogle["movements_for_decrease"] * dfScotGoogle["pop_weighting"]
+    )
+    dfScotGoogle = dfScotGoogle[["date", "weighted_moves"]]
+    dfScotGoogle["date"] = pd.to_datetime(dfScotGoogle["date"])
 
-    dfScotGoogle = dfScotGoogle.groupby('date').sum()
-    dfScotGoogle['weighted_moves'] = 1.0 + dfScotGoogle['weighted_moves']/100.0
+    dfScotGoogle = dfScotGoogle.groupby("date").sum()
+    dfScotGoogle["weighted_moves"] = 1.0 + dfScotGoogle["weighted_moves"] / 100.0
     dfScotGoogle.index = pd.to_datetime(dfScotGoogle.index)
 
-    dfScotGoogle = dfScotGoogle[dfScotGoogle.index.dayofweek <5]
-
+    dfScotGoogle = dfScotGoogle[dfScotGoogle.index.dayofweek < 5]
 
     # Now upload this to the database; human/movement-multipliers/1/data.h5
     movement_multiplier_table = "movement_multiplier.csv"
     dfScotGoogle.to_csv(movement_multiplier_table)
-    with DataProcessingAPI.from_config(config_filename, uri=uri, git_sha=git_sha) as api:
+    with DataProcessingAPI.from_config(
+        config_filename, uri=uri, git_sha=git_sha
+    ) as api:
         api.write_table(
             "generated_sns_products/movement_multiplier",
             "movement_multiplier",
             dfScotGoogle,
-            )    
+        )
 
 
 if __name__ == "__main__":
