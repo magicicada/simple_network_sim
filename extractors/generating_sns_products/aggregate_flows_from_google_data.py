@@ -30,11 +30,7 @@ The script generates .h5 files in generated_sns_products/movement_multiplier
 
 from pathlib import Path
 import pandas as pd
-import urllib.request
 from data_pipeline_api.data_processing_api import DataProcessingAPI
-from ftplib import FTP
-import zipfile
-
 
 config_filename = Path(__file__).parent / "data_processing_config.yaml"
 uri = "data_processing_uri"
@@ -68,7 +64,7 @@ def download_pop_table():
     #     Path(zip_filename).unlink(missing_ok=False)
 
     with DataProcessingAPI.from_config(
-        config_filename, uri=uri, git_sha=git_sha
+            config_filename, uri=uri, git_sha=git_sha
     ) as api:
         with api.read_external_object(population_table, "only") as file:
             dfPop = pd.read_csv(file, skiprows=5, nrows=32, usecols=[0, 1, 2])
@@ -86,12 +82,11 @@ def download_lookup_table():
     if it doesn't exist, upload it
     :return: A dataframe containing the full ISO code (GB-iso_3166_2) and the corresponding local authority code.
     """
-
     # ISO region to LA best-attempt lookup table: compiled by hand, Jess Enright, 30 June 2020
     lookup_table = "iso-3166-2_to_scottishLA.csv"
 
     with DataProcessingAPI.from_config(
-        config_filename, uri=uri, git_sha=git_sha
+            config_filename, uri=uri, git_sha=git_sha
     ) as api:
         with api.read_external_object(lookup_table, "only") as file:
             dfLookup = pd.read_csv(file, low_memory=False)
@@ -112,12 +107,12 @@ def download_google_mogility_data(la_list):
     google_mobility_table = "Global_Mobility_Report.csv"
 
     with DataProcessingAPI.from_config(
-        config_filename, uri=uri, git_sha=git_sha
+            config_filename, uri=uri, git_sha=git_sha
     ) as api:
         with api.read_external_object(google_mobility_table, "only") as file:
             justScotGoogle = pd.read_csv(file, low_memory=False)
             justScotGoogle = justScotGoogle[
-                justScotGoogle["iso_3166_2_code"].isin(la_list) == True
+                justScotGoogle["iso_3166_2_code"].isin(la_list)
             ]
 
     return justScotGoogle
@@ -143,11 +138,6 @@ def main():
         + dfScotGoogle["retail_and_recreation_percent_change_from_baseline"]
     ) / 3
 
-    categories_for_decrease = [
-        "transit_stations_percent_change_from_baseline",
-        "workplaces_percent_change_from_baseline",
-        "retail_and_recreation_percent_change_from_baseline",
-    ]
     dfScotGoogle = dfScotGoogle[["iso_3166_2_code", "date", "movements_for_decrease"]]
 
     dfScotGoogle = dfScotGoogle.merge(
