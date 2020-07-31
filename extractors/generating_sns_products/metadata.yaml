@@ -36,6 +36,15 @@
 - doi_or_unique_name: 00462936.csv
   component: only
   filename: human/external/00462936.csv
+- doi_or_unique_name: mid-year-pop-est-18-tabs_Table 2.csv
+  component: only
+  filename: human/external/mid-year-pop-est-18-tabs_Table 2.csv
+- doi_or_unique_name: Global_Mobility_Report.csv
+  component: only
+  filename: human/external/Global_Mobility_Report.csv
 - doi_or_unique_name: wu03buk_oa_wz_v4.csv
   component: only
   filename: human/external/wu03buk_oa_wz_v4.csv
+- doi_or_unique_name: iso-3166-2_to_scottishLA.csv
+  component: only
+  filename: human/external/iso-3166-2_to_scottishLA.csv

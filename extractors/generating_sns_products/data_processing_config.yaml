@@ -48,6 +48,10 @@ read:
       filename: human/infection/SARS-CoV-2/infectious-period-asymptomatics/0.1.0/0.1.0.toml
 write:  
   - where:
+      data_product: generated_sns_products/movement_multiplier
+    use:
+      filename: generated_sns_products/movement_multiplier/movement_multiplier.h5
+  - where:
       data_product: generated_sns_products/compartment_transition_rates
     use:
       filename: generated_sns_products/compartment_transition_rates/compartment_transition_rates.h5
