@@ -16,6 +16,10 @@ In `simple_network_sim`, a geographical area (e.g. Scotland) is represented as a
 
 A more detailed [model overview is available](doc/model_documentation/model_description.pdf).
 
+## `extractors`
+
+Note that the [`extractors/`](extractors/README.md) package is included in this repository for convenience - it will shortly be migrated to another repository and does not form part of (and is not a dependency of) `simple_network_sim` for testing and reviewing purposes. Documentation is not included in the readthedocs site and test coverage is not reported, however tests must pass for code to be merged into the `master` branch.
+
 ## Contributing
 
 Please read our [contributing information](contributing.md).
