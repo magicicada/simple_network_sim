@@ -8,11 +8,17 @@
 
 ## Summary
 
-Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this, the SCRC owned repository is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19.
+Adaptation of a simple network simulation model to COVID-19 (forked from https://github.com/magicicada/simple_network_sim to be brought into the SCRC consortium GitHub organisation - this, the SCRC owned repository is the main repository for development). Similar models have previously been used to model other disease outbreaks with different characteristics to COVID-19. 
+
+The status of the software is reviewed against a [checklist](software_checklist.md).
 
 In `simple_network_sim`, a geographical area (e.g. Scotland) is represented as a series of connected nodes in a network, each of which has a population, stratified by age group. Some nodes have more movement between them than others. The progress of the epidemic is modelled within nodes using compartments describing the number of people in various disease states within the node. There is one of these sets of compartments per node. As simulated time incrementally moves forward, the model predicts the number of people in each disease state in each node.
 
 A more detailed [model overview is available](doc/model_documentation/model_description.pdf).
+
+## `extractors`
+
+Note that the [`extractors/`](extractors/README.md) package is included in this repository for convenience - it will shortly be migrated to another repository and does not form part of (and is not a dependency of) `simple_network_sim` for testing and reviewing purposes. Documentation is not included in the readthedocs site and test coverage is not reported, however tests must pass for code to be merged into the `master` branch.
 
 ## Contributing
 
