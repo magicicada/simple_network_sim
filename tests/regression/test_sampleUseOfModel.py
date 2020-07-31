@@ -13,7 +13,7 @@ def test_cli_run(base_data_dir):
         hdf5_to_csv.main([str(h5_file), str(csv_file)])
         baseline = create_baseline(csv_file)
 
-        test_df = pd.read_csv(csv_file)
+        test_df = pd.read_csv(csv_file).drop(columns="std").rename(columns={"mean": "total"})
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
@@ -37,7 +37,7 @@ def test_stochastic_cli_run(base_data_dir):
         hdf5_to_csv.main([str(h5_file), str(csv_file)])
         baseline = create_baseline(csv_file)
 
-        test_df = pd.read_csv(csv_file)
+        test_df = pd.read_csv(csv_file).drop(columns="std").rename(columns={"mean": "total"})
         baseline_df = pd.read_csv(baseline)
 
         pd.testing.assert_frame_equal(
@@ -68,7 +68,9 @@ def test_stochastic_seed_sequence(data_api_stochastic):
     )
 
     issues = []
-    df1, df2 = sampleUseOfModel.runSimulation(network, random_seed=123, issues=issues, max_workers=2)
+    r1, r2 = sampleUseOfModel.runSimulation(network, random_seed=123, issues=issues, max_workers=2)
+    df1 = r1.output
+    df2 = r2.output
 
     # It's very unlikely these numbers would match unless both runs produce the same numbers
     assert df1[df1.state == "D"].total.sum() != df2[df2.state == "D"].total.sum()

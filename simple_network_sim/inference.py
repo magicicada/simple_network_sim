@@ -760,7 +760,7 @@ class ABCSMC:
             .sum()
             .reset_index()
             .assign(date=lambda x: pd.to_datetime(x.date))
-            .pivot(index="date", columns="node", values="total")
+            .pivot(index="date", columns="node", values="mean")
             .diff()
             .resample('7D').sum()
         )

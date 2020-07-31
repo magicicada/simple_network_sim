@@ -10,7 +10,7 @@ import logging.config
 from pathlib import Path
 import sys
 import time
-from typing import Optional, List, NamedTuple
+from typing import Optional, List, NamedTuple, Dict, Set
 
 from data_pipeline_api import standard_api  # type: ignore
 import numpy as np  # type: ignore
@@ -70,10 +70,18 @@ def main(argv):
         store.write_table(
             "output/simple_network_sim/outbreak-timeseries",
             "outbreak-timeseries",
-            aggregated.output,
+            _convert_category_to_str(aggregated.output),
             issues=issues,
             description=aggregated.description,
         )
+        for i, result in enumerate(results):
+            store.write_table(
+                "output/simple_network_sim/outbreak-timeseries",
+                f"run-{i}",
+                _convert_category_to_str(result.output),
+                issues=result.issues,
+                description=result.description,
+            )
 
         logger.info("Took %.2fs to run the simulation.", time.time() - t0)
         logger.info(
@@ -82,12 +90,21 @@ def main(argv):
         )
 
 
+class Result(NamedTuple):
+    """
+    This object contains the results of a simulation and a small description
+    """
+    output: pd.DataFrame
+    issues: List[standard_api.Issue]
+    description: str = "A dataframe of the number of people in each node, compartment and age over time"
+
+
 def runSimulation(
         network: ss.NetworkOfPopulation,
         random_seed: int,
         issues: List[standard_api.Issue],
         max_workers: Optional[int] = None,
-) -> List[pd.DataFrame]:
+) -> List[Result]:
     """Run pre-created network
 
     :param network: object representing the network of populations
@@ -112,35 +129,37 @@ def runSimulation(
         for t, future in enumerate(futures.as_completed(delayed), start=1):
             logger.info("Running simulation (%s/%s)", t, network.trials)
             df, new_issues = future.result()
-            issues.extend(new_issues)
-            results.append(df)
+            results.append(Result(output=df, issues=issues + new_issues, description="An individual model run"))
 
     return results
 
 
-class AggregatedResults(NamedTuple):
-    """
-    This object contains the results of a simulation and a small description
-    """
-    output: pd.DataFrame
-    description: str = "A dataframe of the number of people in each node, compartment and age over time"
-
-
-def aggregateResults(results: List[pd.DataFrame]) -> AggregatedResults:
+def aggregateResults(results: List[Result]) -> Result:
     """Aggregate results from runs
 
     :param results: result runs from runSimulation
     :return: Averaged number of infection through time, for all trial
     """
-    if len(results) == 1:
-        aggregated = results[0]
-    else:
-        results = [result.set_index(["date", "node", "age", "state"]).total for result in results]
-        average = reduce(lambda x, y: x.add(y), results) / len(results)
+    issues: Set[standard_api.Issue] = set()
+    agg = results[0].output.set_index(["date", "node", "age", "state"])
+    for i, result in enumerate(results):
+        agg = agg.join(result.output.set_index(["date", "node", "age", "state"]), rsuffix=str(i))
+    agg = pd.DataFrame({"mean": agg.mean(axis=1), "std": agg.std(axis=1)})
+    return Result(output=agg.reset_index(), issues=list(issues), description="Mean and stddev for all the runs")
 
-        aggregated = average.reset_index()
-    # The data pipeline API doesn't support categorical data, so we need to convert these to strings
-    return AggregatedResults(output=aggregated.astype({"node": "str", "age": "str", "state": "str"}))
+
+def _convert_category_to_str(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    The data pipeline API does not support category type in dataframes. So, before saving it, we need to convert from
+    categorical to str.
+    :param df:
+    :return:
+    """
+    new_types: Dict[str] = {}
+    for col in df:
+        if df[col].dtype.name == "category":
+            new_types[col] = "str"
+    return df.astype(new_types)
 
 
 def setup_logger(args: Optional[argparse.Namespace] = None) -> None:
