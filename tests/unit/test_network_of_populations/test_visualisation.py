@@ -9,66 +9,66 @@ from tests.utils import compare_mpl_plots
 
 def test_plotStates_three_rows():
     simple = pd.DataFrame([
-        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
-        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
-        {"date": "2020-04-12", "node": "hb3", "state": "S", "total": 20.0},
-        {"date": "2020-04-12", "node": "hb3", "state": "E", "total": 0.0},
-        {"date": "2020-04-12", "node": "hb4", "state": "S", "total": 10.0},
-        {"date": "2020-04-12", "node": "hb5", "state": "S", "total": 10.0},
-        {"date": "2020-04-12", "node": "hb6", "state": "S", "total": 10.0},
-        {"date": "2020-04-12", "node": "hb7", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
-        {"date": "2020-04-13", "node": "hb3", "state": "S", "total": 5.0},
-        {"date": "2020-04-13", "node": "hb3", "state": "E", "total": 15.0},
-        {"date": "2020-04-13", "node": "hb4", "state": "S", "total": 0.0},
-        {"date": "2020-04-13", "node": "hb5", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb6", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb7", "state": "S", "total": 10.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "std": 0.0, "mean": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "std": 0.0, "mean": 21.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "S", "std": 0.0, "mean": 20.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "E", "std": 0.0, "mean": 0.0},
+        {"date": "2020-04-12", "node": "hb4", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-12", "node": "hb5", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-12", "node": "hb6", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-12", "node": "hb7", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "std": 0.0, "mean": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "S", "std": 0.0, "mean": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "E", "std": 0.0, "mean": 15.0},
+        {"date": "2020-04-13", "node": "hb4", "state": "S", "std": 0.0, "mean": 0.0},
+        {"date": "2020-04-13", "node": "hb5", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb6", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb7", "state": "S", "std": 0.0, "mean": 10.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 
 
 def test_plotStates_two_rows():
     simple = pd.DataFrame([
-        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
-        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
-        {"date": "2020-04-12", "node": "hb3", "state": "S", "total": 20.0},
-        {"date": "2020-04-12", "node": "hb3", "state": "E", "total": 0.0},
-        {"date": "2020-04-12", "node": "hb4", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
-        {"date": "2020-04-13", "node": "hb3", "state": "S", "total": 5.0},
-        {"date": "2020-04-13", "node": "hb3", "state": "E", "total": 15.0},
-        {"date": "2020-04-13", "node": "hb4", "state": "S", "total": 0.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "std": 0.0, "mean": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "std": 0.0, "mean": 21.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "S", "std": 0.0, "mean": 20.0},
+        {"date": "2020-04-12", "node": "hb3", "state": "E", "std": 0.0, "mean": 0.0},
+        {"date": "2020-04-12", "node": "hb4", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "std": 0.0, "mean": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "S", "std": 0.0, "mean": 5.0},
+        {"date": "2020-04-13", "node": "hb3", "state": "E", "std": 0.0, "mean": 15.0},
+        {"date": "2020-04-13", "node": "hb4", "state": "S", "std": 0.0, "mean": 0.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 
 
 def test_plotStates_single_row():
     simple = pd.DataFrame([
-        {"date": "2020-04-12", "node": "hb1", "state": "S", "total": 15.0},
-        {"date": "2020-04-12", "node": "hb2", "state": "S", "total": 21.0},
-        {"date": "2020-04-13", "node": "hb1", "state": "S", "total": 10.0},
-        {"date": "2020-04-13", "node": "hb2", "state": "S", "total": 5.0},
+        {"date": "2020-04-12", "node": "hb1", "state": "S", "std": 0.0, "mean": 15.0},
+        {"date": "2020-04-12", "node": "hb2", "state": "S", "std": 0.0, "mean": 21.0},
+        {"date": "2020-04-13", "node": "hb1", "state": "S", "std": 0.0, "mean": 10.0},
+        {"date": "2020-04-13", "node": "hb2", "state": "S", "std": 0.0, "mean": 5.0},
     ])
     compare_mpl_plots(vis.plot_nodes(pd.DataFrame(simple)))
 
 
 def test_plotStates_empty_node():
-    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
+    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "std": 0.0, "mean": 15.0}])
     with pytest.raises(ValueError):
         vis.plot_nodes(pd.DataFrame(simple), nodes=[])
 
 
 def test_plotStates_empty_states():
-    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "total": 15.0}])
+    simple = pd.DataFrame([{"time": 0, "node": "hb1", "state": "S", "std": 0.0, "mean": 15.0}])
     with pytest.raises(ValueError):
         vis.plot_nodes(pd.DataFrame(simple), states=[])
 
 
 def test_plotStates_empty_missing_column():
-    simple = pd.DataFrame([{"node": "hb1", "state": "S", "total": 15.0}])
+    simple = pd.DataFrame([{"node": "hb1", "state": "S", "std": 0.0, "mean": 15.0}])
     with pytest.raises(ValueError):
         vis.plot_nodes(pd.DataFrame(simple), states=[])
 
@@ -80,11 +80,13 @@ def test_read_output(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: write
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.h5
@@ -101,7 +103,8 @@ def test_read_output_ignore_read(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: read
   call_metadata:
@@ -111,6 +114,7 @@ io:
 - type: write
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.h5
@@ -127,17 +131,20 @@ def test_read_output_multiple_writes(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: write
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.h5
 - type: write
   call_metadata:
     data_product: other
+    component: outbreak-timeseries
   access_metadata:
     data_product: other
     filename: simple.h5
@@ -153,17 +160,20 @@ def test_read_output_duplicated(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: write
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.csv
 - type: write
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.csv
@@ -178,11 +188,13 @@ def test_read_output_no_writes(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: read
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
     filename: simple.csv
@@ -197,11 +209,13 @@ def test_read_output_use_call_metadata_data_product(tmpdir):
     path = str(tmpdir / Path("access.yaml"))
     with open(path, "w") as fp:
         fp.write(f"""
-data_directory: {str(tmpdir)}
+config:
+  data_directory: {str(tmpdir)}
 io:
 - type: read
   call_metadata:
     data_product: output/simple_network_sim/outbreak-timeseries
+    component: outbreak-timeseries
   access_metadata:
     data_product: wrong
     filename: simple.csv
