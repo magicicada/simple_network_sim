@@ -712,7 +712,7 @@ def test_ABCSMC_update_threshold(abcsmc):
 def test_ABCSMC_run_model(abcsmc):
     particle = inf.Particle.generate_from_priors(abcsmc)
     result = abcsmc.run_model(particle)
-    assert result[result.state == "D"].total.sum() == 1190.9201532330842
+    assert result[result.state == "D"]["mean"].sum() == 1190.9201532330842
 
 
 def test_ABCSMC_compute_distance(abcsmc):

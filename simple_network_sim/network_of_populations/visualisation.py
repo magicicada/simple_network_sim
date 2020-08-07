@@ -25,7 +25,7 @@ def plot_nodes(
         ncol: int = 3,
         sharey: bool = False,
         figsize: Tuple[int, int] = None,
-        cmap: List[str] = None
+        colors: List[str] = None
 ) -> plt.Figure:
     """
     Plots a grid of plots, one plot per node, filtered by disease progression states (each states will be a line). The
@@ -39,15 +39,15 @@ def plot_nodes(
     :param ncol: number of columns (the number of rows will be calculated to fit all graphs)
     :param sharey: set to true if all plots should have the same y-axis
     :param figsize: select the size of each individual plot
-    :param cmap: color map to use
+    :param colors: color map to use
     :return: returns a matplotlib figure
     """
     if nodes is None:
         nodes = df.node.unique().tolist()
     if states is None:
         states = df.state.unique().tolist()
-    if cmap is None:
-        cmap = ListedColormap(["#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#E69F00"])
+    if colors is None:
+        colors = ["#56B4E9", "#E69F00", "#999999", "#CC79A7", "#D55E00", "#0072B2", "#F0E442", "#009E73"]
     nrow = math.ceil(len(nodes) / ncol)
     if figsize is None:
         figsize = (20, nrow * 5)
@@ -70,12 +70,16 @@ def plot_nodes(
                 node = nodes[count]
                 count += 1
                 grouped = df[df.node == node].groupby(["date", "state"]).sum()
-                indexed = grouped.reset_index().pivot(index="date", columns="state", values="total")
+                mean = grouped.reset_index().pivot(index="date", columns="state", values="mean")
+                std = grouped.reset_index().pivot(index="date", columns="state", values="std")
 
                 ax = axes[i, j]
-                indexed.plot(ax=ax, legend=False, title=node, cmap=cmap)
+                for col, color in zip(mean.columns, colors):
+                    ax.plot(mean.index, mean[col], label=col, color=color)
+                    ax.fill_between(std.index, mean[col] - std[col], mean[col] + std[col], alpha=0.4, color=color)
                 ax.set_ylabel("Number of People")
                 ax.set_xlabel("Time")
+                ax.set_title(node)
 
     assert ax is not None, "ax was never assigned"
     handles, labels = ax.get_legend_handles_labels()
@@ -96,13 +100,13 @@ def read_output(data_product: str, path: str) -> pd.DataFrame:
         access_log = yaml.safe_load(fp)
     outputs = list(
         filter(
-            lambda x: x["type"] == "write" and x["call_metadata"]["data_product"] == data_product,
+            lambda x: x["type"] == "write" and x["call_metadata"]["data_product"] == data_product and x["call_metadata"]["component"] == "outbreak-timeseries",
             access_log["io"]
         )
     )
     assert len(outputs) == 1, f"More than one output selected: {outputs}"
 
-    output_path = Path(access_log["data_directory"]) / Path(outputs[0]["access_metadata"]["filename"])
+    output_path = Path(access_log["config"]["data_directory"]) / Path(outputs[0]["access_metadata"]["filename"])
     with open(output_path, "rb") as outbreak_fp:
         return object_file.read_table(outbreak_fp, "outbreak-timeseries")
 
