@@ -28,6 +28,12 @@ Please read our [contributing information](contributing.md).
 
 ## Installation
 
+Clone this repository:
+
+```
+git clone https://github.com/ScottishCovidResponse/simple_network_sim.git
+```
+
 Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) (it also works with [anaconda](https://docs.anaconda.com/anaconda/install/), but we do not need the extra packages). With conda installed, run the following commands to create the virtual environment and activate it:
 
 ```
