@@ -1,0 +1,39 @@
+# This workflow will install Python dependencies, run tests, and report the coverage with a variety of Python versions and OSs
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, python version ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          conda create --name simple_network_sim --file=environment.yml
+          conda activate simple_network_sim
+        shell: bash -l {0}
+      - name: Run unit tests
+        run: |
+          pytest --cov=simple_network_sim --doctest-modules simple_network_sim tests
+        shell: bash -l {0}
+      - name: Report coverage
+        run: |
+          coverage xml
+          bash <(curl -s https://codecov.io/bash)
+        shell: bash -l {0}
